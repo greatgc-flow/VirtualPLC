@@ -41,6 +41,9 @@ def examine_archive(source: Path):
             raise ValueError('untrusted handoff manifest SHA-256')
         manifest = json.loads(raw_manifest)
         expected = {entry['path']: entry for entry in manifest['files']}
+        unexpected = set(items) - set(expected) - {'FILE_SHA256_MANIFEST.json'}
+        if unexpected:
+            raise ValueError('unaudited archive entries: ' + sorted(unexpected)[0])
         for rel, desc in expected.items():
             if rel not in items:
                 raise ValueError('missing manifest file: ' + rel)
