@@ -1,0 +1,16 @@
+id,topic,severity,owner_role,impact,trigger,mitigation,primary_req,gate
+RK01,model/device_code/radix,HIGH,profile owner,invalid device map causes wrong read/write,device mismatch,Verify official device table,FR-005,G0-F
+RK02,per-model error code,HIGH,protocol owner,misleading error and client parser failure,unmapped command,Pin model manual + failed-payload client capture,FR-007,G0-E
+RK03,client actual raw mismatch,HIGH,integration owner,false compatibility,captured request differs,byte-diff pinned client,FR-011,G0-C
+RK04,bit nibble order,HIGH,protocol owner,wrong M state,odd/even mismatch,official diagram + contract fixtures,FR-004,G1
+RK05,atomic reset concurrency,HIGH,state owner,torn snapshot/write,version inconsistent,unified memory transaction,FR-006,G1
+RK06,bad frame/slow client,HIGH,transport owner,unbounded memory/connection exhaustion,resource metric spike,time/size cap fuzz & slowloris,FR-012,G3
+RK07,post-commit lost response,HIGH,QA owner,ambiguous duplicate client write,write timeout after commit,explicit phase + client reread,FR-016,G5
+RK08,real PLC/network accidental link,CRITICAL,safety owner,real-machine impact,nonloopback address,strict endpoint allowlist/CI network isolation,SEC-001,G3
+RK09,open source license,MEDIUM,maintainer,license breach,third-party code request,intake license/notice,GOV-003,DG0
+RK10,requirements P0 scope creep,MEDIUM,maintainer,MVP delivery stalls,unapproved frame request,P0/P1/P2 gate ADR,GOV-001,G4
+RK11,config/field drift,MEDIUM,ops owner,unreproducible client failure,version mismatch,pin/hash config/fixture/client,OPS-003,G4
+RK12,observability privacy leak,HIGH,safety owner,data exposure,value appears in logs,redaction tests/rate limit,SEC-003,G3
+RK13,CPU/device point cap assumption,HIGH,profile owner,overrun or noncompliant response,oversized legal read,confirm model/client limits,FR-005,G0-E
+RK14,no monitoring feedback,MEDIUM,QA owner,regression remains undetected,P95 drift/issue,closed loop issue + regression,GOV-004,G4
+RK15,3E pipelining matching,MEDIUM,transport owner,client replies ambiguous,multiple inflight,"FIFO same-session, separate 4E future",FR-008,G2

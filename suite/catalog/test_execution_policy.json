@@ -1,0 +1,20 @@
+{
+  "design_static": {
+    "command": "python scripts/validate_suite.py && python -m unittest discover -s suite/tests/static -p \"test_*.py\" -v",
+    "no_server": true
+  },
+  "live_executable": {
+    "command": "python -m pytest suite/tests/live -q --server-cmd \"python -m virtual_plc --host {host} --port {port}\"",
+    "requires_server": true
+  },
+  "runtime_adapter": {
+    "state": "test oracle specified; domain APIs not implemented; bind with suite/docs/ADAPTER_CONTRACT.md; MUST fail G1/G2 until executable evidence recorded"
+  },
+  "manual_gate": {
+    "state": "manual and CI evidence required (platform, performance, release); never count as automatically passed"
+  },
+  "deferred": {
+    "state": "out of P0; never make MVP gate fail merely because deferred code absent"
+  },
+  "gate_rule": "P0 release requires every P0 MUST test actual PASS with execution record, and G0-E,G0-C,G1,G2,G3,G4 closed. Static-only completeness cannot satisfy release gate."
+}

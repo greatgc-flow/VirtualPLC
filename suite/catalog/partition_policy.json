@@ -1,0 +1,138 @@
+{
+  "primary_axis": "primary_domain (exactly one: domain,wire,end_to_end,transport,security,performance,platform,governance,scenario)",
+  "primary_domain_values": [
+    "domain",
+    "wire",
+    "end_to_end",
+    "transport",
+    "security",
+    "performance",
+    "platform",
+    "governance",
+    "scenario"
+  ],
+  "secondary_independent_axes": {
+    "phase": [
+      "P0",
+      "P1",
+      "P2"
+    ],
+    "outcome": [
+      "success",
+      "reject_no_mutation",
+      "close_no_mutation",
+      "future_only"
+    ],
+    "partition": "extensible under each primary_domain; documented instances in partitions",
+    "test_level": [
+      "design_static",
+      "unit",
+      "wire",
+      "integration",
+      "system",
+      "performance",
+      "platform"
+    ],
+    "source_grade": [
+      "OFFICIAL",
+      "CLIENT_CAPTURE",
+      "DERIVED",
+      "BASELINE_V1.1",
+      "DESIGN",
+      "UNKNOWN"
+    ]
+  },
+  "partitions": {
+    "domain": [
+      "valid_min",
+      "valid_typical",
+      "valid_max",
+      "invalid_below",
+      "invalid_above",
+      "invalid_type",
+      "invalid_cross_boundary",
+      "atomic_failure",
+      "idempotent_read"
+    ],
+    "wire": [
+      "valid_request",
+      "valid_response",
+      "malformed_header",
+      "invalid_length",
+      "truncated",
+      "trailing_bytes",
+      "unsupported_command",
+      "unsupported_subcommand",
+      "unsupported_device",
+      "invalid_payload",
+      "odd_even_bit",
+      "route"
+    ],
+    "end_to_end": [
+      "connect",
+      "session_fifo",
+      "cross_client",
+      "reconnect",
+      "startup",
+      "shutdown",
+      "client_compatibility",
+      "persistence_reset"
+    ],
+    "transport": [
+      "fragment",
+      "coalesce",
+      "idle",
+      "rst",
+      "eof",
+      "slow_sender",
+      "slow_reader",
+      "backpressure",
+      "socket_limit"
+    ],
+    "security": [
+      "loopback_only",
+      "unsafe_command",
+      "resource_limit",
+      "log_redaction",
+      "fuzz",
+      "no_real_plc"
+    ],
+    "performance": [
+      "throughput",
+      "p50_p95_p99",
+      "rss",
+      "timing_flake",
+      "load_baseline"
+    ],
+    "platform": [
+      "windows",
+      "linux",
+      "python_311",
+      "python_312",
+      "python_313"
+    ],
+    "governance": [
+      "sources",
+      "license",
+      "change_control",
+      "traceability",
+      "risk_link",
+      "gating",
+      "evidence_integrity"
+    ],
+    "scenario": [
+      "pre_commit",
+      "post_commit",
+      "repeat_seed",
+      "virtual_clock",
+      "invariant"
+    ]
+  },
+  "classification_rule": "Exactly one primary_domain, phase, outcome and runner per case. Multiple reqs/risks legitimate cross-links; never count those as duplicate cases.",
+  "completeness": "All 34 P0 requirements, 69 legacy TC IDs and 15 risks referenced; >=2 cases per P0 requirement; critical scenarios split by distinct oracle; P1/P2 explicitly deferred.",
+  "non_claims": [
+    "Coverage of declared profile only, not complete Mitsubishi products",
+    "Static pass is not live pass",
+    "Known error codes and client raw captures remain open before G2 compatibility claim"
+  ]
+}

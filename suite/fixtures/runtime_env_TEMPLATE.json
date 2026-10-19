@@ -1,0 +1,10 @@
+{
+  "server_command_example": "python -m virtual_plc --host {host} --port {port}",
+  "network": "loopback-only",
+  "python_client_pinned": null,
+  "python_client_verified": false,
+  "platform_matrix": [
+    "linux-python3.11+",
+    "windows-python3.11+"
+  ]
+}

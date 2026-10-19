@@ -1,0 +1,32 @@
+{
+  "note": "Deliberately corrupted TEMPORARY COPIES of design files to test static check; not server TDD",
+  "attacks": [
+    {
+      "mutation": "orphan_ref",
+      "checker_exit": 1,
+      "checker_verdict": "FAIL_STATIC",
+      "relevant_findings": [
+        "orphan testcase TC-001 FR-NOTFOUND"
+      ],
+      "pass": true
+    },
+    {
+      "mutation": "wrong_frame_length",
+      "checker_exit": 1,
+      "checker_verdict": "FAIL_STATIC",
+      "relevant_findings": [
+        "bad request header or length VEC001"
+      ],
+      "pass": true
+    },
+    {
+      "mutation": "missing_req_test",
+      "checker_exit": 1,
+      "checker_verdict": "FAIL_STATIC",
+      "relevant_findings": [
+        "uncovered P0 req GOV-004"
+      ],
+      "pass": true
+    }
+  ]
+}

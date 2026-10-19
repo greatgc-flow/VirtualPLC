@@ -1,0 +1,70 @@
+id,req_ids,phase,layer,scenario,oracle,gate,status,evidence
+TC-001,FR-001,P0,integration,TCP loopback accepts connection,connected socket exchanges valid 3E frame,G2,SPECIFIED_NOT_RUN,NONE
+TC-002,FR-001,P0,integration,sequential requests same connection,two replies and socket remains active,G2,SPECIFIED_NOT_RUN,NONE
+TC-003,FR-002,P0,wire,1-byte fragmentation,one decoded valid frame after last byte,G1,SPECIFIED_NOT_RUN,NONE
+TC-004,FR-002,P0,wire,two frames one send,two typed decoded frames in FIFO,G1,SPECIFIED_NOT_RUN,NONE
+TC-005,FR-002,P0,wire,bad subheader,FrameFatal; 0 writes; closed,G1,SPECIFIED_NOT_RUN,NONE
+TC-006,FR-003,P0,wire,D100 read raw vector VEC001,request bytes exactly VEC001; response exact,G1,SPECIFIED_NOT_RUN,NONE
+TC-007,FR-003,P0,wire,D100..D102 write VEC002,"D values 0x1995 0x1202 0x1130, success",G1,SPECIFIED_NOT_RUN,NONE
+TC-008,FR-003,P0,unit,D min and max values,0 and 65535 allowed; signed view separate,G1,SPECIFIED_NOT_RUN,NONE
+TC-009,FR-004,P0,wire,M10 odd bits raw VEC003,"write payload 101010; bank [1,0,1,0,1]",G1,SPECIFIED_NOT_RUN,NONE
+TC-010,FR-004,P0,wire,M10 read five bits VEC005,nibble response 101010 with correct length,G1,SPECIFIED_NOT_RUN,NONE
+TC-011,FR-004,P0,unit,M odd count 1 and even count 6,"last low nibble zero, no padding bit mutation",G1,SPECIFIED_NOT_RUN,NONE
+TC-012,FR-005,P0,unit,D and M code/radix parsing,D=A8 M=90 start D100 raw=0x64,G0-E,SPECIFIED_NOT_RUN,NONE
+TC-013,FR-005,P0,unit,out of bounds device/count,reject negative/zero/oversize without writes,G0-E,SPECIFIED_NOT_RUN,NONE
+TC-014,FR-005,P0,unit,M word access unsupported MVP,handled as decoded unsupported and no mutate,G0-E,SPECIFIED_NOT_RUN,NONE
+TC-015,FR-006,P0,unit,multiword writes atomic,read never sees partially written vector,G1,SPECIFIED_NOT_RUN,NONE
+TC-016,FR-006,P0,unit,reset concurrently with write,snapshot yields serialized consistent state,G1,SPECIFIED_NOT_RUN,NONE
+TC-017,FR-006,P0,unit,snapshot version consistency,version and all banks same point in time,G1,SPECIFIED_NOT_RUN,NONE
+TC-018,FR-007,P0,wire,unsupported command endcode,model-verified endcode and full failed payload,G0-E,SPECIFIED_NOT_RUN,NONE
+TC-019,FR-007,P0,wire,invalid device endcode,correct 5+2+2 error detail; response length,G0-E,SPECIFIED_NOT_RUN,NONE
+TC-020,FR-007,P0,wire,valid request error vs fatal frame,"decoded fault replies, framing fatal closes",G0-E,SPECIFIED_NOT_RUN,NONE
+TC-021,FR-008,P0,integration,two concurrent clients shared state,second client sees whole first commit,G2,SPECIFIED_NOT_RUN,NONE
+TC-022,FR-008,P0,integration,FIFO while coalesced,same session replies ordered,G2,SPECIFIED_NOT_RUN,NONE
+TC-023,FR-009,P0,unit,in-process seed reset and snapshot,"no public socket control, deterministic initial state",G1,SPECIFIED_NOT_RUN,NONE
+TC-024,FR-009,P0,unit,seed out-of-range all or nothing,state and version unchanged,G1,SPECIFIED_NOT_RUN,NONE
+TC-025,FR-010,P0,unit,TOML config valid/default,stdlib parser schema validates all defaults,G2,SPECIFIED_NOT_RUN,NONE
+TC-026,FR-010,P0,unit,invalid host or port,fail fast; no listener creation,G2,SPECIFIED_NOT_RUN,NONE
+TC-027,FR-011,P0,integration,pymcprotocol Type3E D roundtrip,pinned client read/write matches,G0-C,SPECIFIED_NOT_RUN,NONE
+TC-028,FR-011,P0,integration,pymcprotocol Type3E M roundtrip,pinned client bit read/write matches,G0-C,SPECIFIED_NOT_RUN,NONE
+TC-029,FR-011,P0,wire,pinned client capture byte comparison,capture eq VEC001 VEC002 VEC003,G0-C,SPECIFIED_NOT_RUN,NONE
+TC-030,FR-012,P0,security,advertised oversize frame length,"close bounded, memory unchanged",G3,SPECIFIED_NOT_RUN,NONE
+TC-031,FR-012,P0,security,malformed request stream 1000 variants,"no exception escape, bounded time, writes zero",G3,SPECIFIED_NOT_RUN,NONE
+TC-032,FR-013,P0,unit,logs redact contents,"no raw values, request command/status only",G3,SPECIFIED_NOT_RUN,NONE
+TC-033,FR-013,P0,unit,counter success/error consistency,one outcome per parsed request,G3,SPECIFIED_NOT_RUN,NONE
+TC-034,FR-014,P0,unit,wrong payload length for D write,"no partial write, protocol error",G1,SPECIFIED_NOT_RUN,NONE
+TC-035,FR-014,P0,unit,invalid M bit nibble,non-0/1 rejects all writes,G1,SPECIFIED_NOT_RUN,NONE
+TC-036,FR-015,P0,wire,routing reflected in response,request route preserved in normal 3E response,G1,SPECIFIED_NOT_RUN,NONE
+TC-037,FR-015,P0,unit,unsupported route is safe,profile policy reject with no actual forwarding,G1,SPECIFIED_NOT_RUN,NONE
+TC-038,FR-016,P1,scenario,P1 drop after commit,memory incremented; client ambiguity and trace flag,G5,SPECIFIED_NOT_RUN,NONE
+TC-039,FR-017,P1,scenario,virtual tick reproducibility,same seed/time yields same version and vector,G5,SPECIFIED_NOT_RUN,NONE
+TC-040,FR-018,P2,wire,P2 new 4E serial echo,independent 4E contract after ADR approval,G5,SPECIFIED_NOT_RUN,NONE
+TC-041,NFR-001,P0,unit,repeat deterministic seed,same protocol bytes and bank versions,G1,SPECIFIED_NOT_RUN,NONE
+TC-042,NFR-002,P0,security,slowloris incomplete header,"deadline closes socket, bounded buffered bytes",G3,SPECIFIED_NOT_RUN,NONE
+TC-043,NFR-002,P0,security,connection overflow,17th refused at 16 cap; memory bounded,G3,SPECIFIED_NOT_RUN,NONE
+TC-044,NFR-003,P0,platform,Windows/Linux smoke,both CI green for same release,G3,SPECIFIED_NOT_RUN,NONE
+TC-045,NFR-004,P0,security,offline default test endpoints,all explicit ip targets under loopback,G3,SPECIFIED_NOT_RUN,NONE
+TC-046,NFR-005,P0,design_static,traceability reverse search,"all active req have ≥1 tests, no orphans",DG0,SPECIFIED_NOT_RUN,NONE
+TC-047,NFR-006,P0,performance,latency percentiles and RSS baseline,"record env and p50/p95/p99,RSS no invented SLA",G3,SPECIFIED_NOT_RUN,NONE
+TC-048,NFR-007,P0,unit,runtime imports no external YAML,Python 3.11+ TOML supported,G3,SPECIFIED_NOT_RUN,NONE
+TC-049,SEC-001,P0,security,bind and client reject nonloopback,e.g. 0.0.0.0 refused,G3,SPECIFIED_NOT_RUN,NONE
+TC-050,SEC-002,P0,security,remote run/stop denied,remote command no side effect,G3,SPECIFIED_NOT_RUN,NONE
+TC-051,SEC-003,P0,security,logs no payload and rate limit,sensitive values not emitted,G3,SPECIFIED_NOT_RUN,NONE
+TC-052,SEC-004,P0,security,fuzz malicious length and EOF,no OOM/spin/resynchronization,G3,SPECIFIED_NOT_RUN,NONE
+TC-053,OPS-001,P0,integration,graceful shutdown and readiness,socket closes; ready only after bind,G2,SPECIFIED_NOT_RUN,NONE
+TC-054,OPS-002,P0,unit,telemetry replay content,version/session/command/seed metadata without payload,G3,SPECIFIED_NOT_RUN,NONE
+TC-055,OPS-003,P0,design_static,evidence record integrity,client/version/commit/sha present,G4,SPECIFIED_NOT_RUN,NONE
+TC-056,OPS-004,P0,integration,restart volatile memory,"default D/M zero, version reset policy",G2,SPECIFIED_NOT_RUN,NONE
+TC-057,GOV-001,P0,design_static,scope matrix guard,4E/ASCII/REST not P0 without ADR,G4,SPECIFIED_NOT_RUN,NONE
+TC-058,GOV-002,P0,design_static,release supported matrix test gate,PASS only if executed test evidence,G4,SPECIFIED_NOT_RUN,NONE
+TC-059,GOV-003,P0,design_static,license+source registry gate,no third party reproduction without verified license,DG0,SPECIFIED_NOT_RUN,NONE
+TC-060,GOV-004,P0,design_static,incident closed-loop audit,trigger linked to req regression & metrics signoff,G4,SPECIFIED_NOT_RUN,NONE
+TC-061,FR-002,P0,wire,length field too short 5 bytes,close or policy-defined fatal; do not execute,G1,SPECIFIED_NOT_RUN,NONE
+TC-062,FR-003,P0,unit,D9999 read one and write two,"one succeeds, two rejects no mutation",G1,SPECIFIED_NOT_RUN,NONE
+TC-063,FR-004,P0,wire,M read/write low nibble last,odd tail low 0 verified,G1,SPECIFIED_NOT_RUN,NONE
+TC-064,FR-007,P0,wire,error response contains original cmd/sub,5 byte station and 4 cmd/sub after endcode,G0-E,SPECIFIED_NOT_RUN,NONE
+TC-065,FR-010,P0,unit,invalid negative frame caps,startup rejects max_frame < minimum header,G2,SPECIFIED_NOT_RUN,NONE
+TC-066,FR-012,P0,security,EOF mid payload/RST,"close, no mutation, event counted",G3,SPECIFIED_NOT_RUN,NONE
+TC-067,FR-014,P0,unit,value 65536 rejected,state remains unchanged,G1,SPECIFIED_NOT_RUN,NONE
+TC-068,NFR-002,P0,security,write-side blocked receiver,send timeout closes after deadline,G3,SPECIFIED_NOT_RUN,NONE
+TC-069,OPS-002,P0,integration,structured metric never stores full tag values,observability metadata only,G3,SPECIFIED_NOT_RUN,NONE

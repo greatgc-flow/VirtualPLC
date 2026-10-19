@@ -1,0 +1,47 @@
+{
+  "cases": 208,
+  "by_phase": {
+    "P0": 199,
+    "P1": 5,
+    "P2": 4
+  },
+  "by_primary_domain": {
+    "end_to_end": 21,
+    "wire": 63,
+    "domain": 49,
+    "security": 23,
+    "scenario": 5,
+    "platform": 3,
+    "governance": 19,
+    "performance": 2,
+    "transport": 23
+  },
+  "by_runner": {
+    "runtime_adapter": 130,
+    "deferred": 9,
+    "manual_gate": 5,
+    "static_validator": 19,
+    "live_executable": 45
+  },
+  "p0_requirements": 34,
+  "p0_requirements_linked": 34,
+  "legacy_tests": 69,
+  "legacy_linked": 69,
+  "risks": 15,
+  "risks_linked": 15,
+  "live_executable_spec_count": 45,
+  "errors": [],
+  "static_pass": true,
+  "actual_server_test_pass": false,
+  "actual_protocol_compatibility_verified": false,
+  "validator_mutation_probes": {
+    "duplicate_id": true,
+    "unknown_requirement": true,
+    "unknown_risk": true,
+    "wrong_phase": true,
+    "orphan_legacy": true,
+    "false_green": true,
+    "scope_promotion": true,
+    "live_behavior_drift": true
+  }
+}

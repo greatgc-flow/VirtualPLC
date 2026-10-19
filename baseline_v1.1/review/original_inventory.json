@@ -1,0 +1,101 @@
+{
+  "input_zip_filename": "MC_SLMP_Virtual_PLC_TDD_Ready_Design_20261019.zip",
+  "original_sha256": "ad015049f11ebf470cd90fae47cada75ae68cb1c53f17f9f5d23e882ddbe88fa",
+  "zip_crc": "PASS",
+  "zip_entries": 15,
+  "declared_manifest_count": 14,
+  "original_sha_entries_passed": 14,
+  "original_sha_mismatches": [],
+  "entries": [
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/00_README_START_HERE.md",
+      "size": 1925,
+      "compressed": 1307,
+      "CRC": "4F898BAB"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/01_RESEARCH_AND_DECISIONS.md",
+      "size": 3132,
+      "compressed": 1762,
+      "CRC": "09715118"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/02_REQUIREMENTS_AND_SCOPE.md",
+      "size": 2192,
+      "compressed": 1308,
+      "CRC": "47B026EA"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/03_ARCHITECTURE_AND_CONTRACTS.md",
+      "size": 2626,
+      "compressed": 1621,
+      "CRC": "C0CE5D4B"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/04_WIRE_PROTOCOL_SPEC.md",
+      "size": 2784,
+      "compressed": 1568,
+      "CRC": "73EBEBD5"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/05_MEMORY_AND_SCENARIOS.md",
+      "size": 1923,
+      "compressed": 1262,
+      "CRC": "C7B34A27"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/06_TDD_TEST_PLAN.md",
+      "size": 2234,
+      "compressed": 1452,
+      "CRC": "B9085307"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/07_SECURITY_OPERATIONS.md",
+      "size": 1262,
+      "compressed": 902,
+      "CRC": "C22D33E0"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/08_RISKS_AND_GATES.md",
+      "size": 1820,
+      "compressed": 1150,
+      "CRC": "79B4CB65"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/09_DEVELOPMENT_HANDOFF_PROMPT.md",
+      "size": 1225,
+      "compressed": 884,
+      "CRC": "20BA84C2"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/SHA256_MANIFEST.json",
+      "size": 2290,
+      "compressed": 1003,
+      "CRC": "56E00139"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/machine/requirements.csv",
+      "size": 333,
+      "compressed": 201,
+      "CRC": "B165240C"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/machine/source_registry.json",
+      "size": 942,
+      "compressed": 331,
+      "CRC": "992EE7B6"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/machine/test_matrix.csv",
+      "size": 1423,
+      "compressed": 589,
+      "CRC": "CB0667B5"
+    },
+    {
+      "path": "MC_SLMP_Virtual_PLC_Design/references/REFERENCE_INDEX.md",
+      "size": 1546,
+      "compressed": 985,
+      "CRC": "303AC323"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:virtual-plc:change-event:v1",
+  "title": "Virtual PLC closed-loop change or defect event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["issue_id", "trigger", "category", "severity", "evidence_sha256", "scope", "linked_requirements", "linked_tests", "root_cause", "change_decision", "gate", "owner_role", "validation", "observed_metrics", "closure_state", "closure_reason"],
+  "properties": {
+    "issue_id": {"type": "string", "pattern": "^ISS-[0-9]{4,}$"},
+    "trigger": {"enum": ["SOURCE_UPDATE", "CLIENT_MISMATCH", "TEST_FAILURE", "METRIC_DRIFT", "INCIDENT", "CHANGE_REQUEST"]},
+    "category": {"enum": ["WIRE", "STATE", "TRANSPORT", "SECURITY", "OPS", "GOVERNANCE"]},
+    "severity": {"enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]},
+    "evidence_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "scope": {"enum": ["P0", "P1", "P2", "EXCLUDED"]},
+    "linked_requirements": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "linked_tests": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "root_cause": {"type": "string"},
+    "change_decision": {"enum": ["OPEN", "REJECTED", "ACCEPTED", "DEFERRED", "FIXED"]},
+    "gate": {"type": "string"},
+    "owner_role": {"type": "string"},
+    "validation": {"type": "object", "required": ["run_id", "test_status", "artifact_sha256"], "additionalProperties": true,
+      "properties": {"run_id": {"type": "string"}, "test_status": {"enum": ["NOT_RUN", "RED", "GREEN", "FAILED", "BLOCKED"]}, "artifact_sha256": {"type": "string"}}},
+    "observed_metrics": {"type": "object"},
+    "closure_state": {"enum": ["OPEN", "HOLD", "CLOSED", "REOPENED"]},
+    "closure_reason": {"type": "string"},
+    "release_version": {"type": "string"},
+    "retest_trigger": {"type": "string"}
+  }
+}

@@ -1,0 +1,6 @@
+# Test-only dependencies. Server runtime remains stdlib-first.
+pytest>=8,<10
+# Optional for property-based expansion (not required by shipped smoke tests)
+# hypothesis>=6,<8
+# Optional client compatibility; pin exact audited version after G0-C
+# pymcprotocol==<verified_version>

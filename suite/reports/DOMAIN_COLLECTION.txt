@@ -1,0 +1,21 @@
+suite/tests/domain/test_memory_contract.py::test_new_memory_zeros
+suite/tests/domain/test_memory_contract.py::test_word_boundaries
+suite/tests/domain/test_memory_contract.py::test_bit_boundaries
+suite/tests/domain/test_memory_contract.py::test_invalid_write_never_partially_commits[9999-values0]
+suite/tests/domain/test_memory_contract.py::test_invalid_write_never_partially_commits[-1-values1]
+suite/tests/domain/test_memory_contract.py::test_invalid_write_never_partially_commits[10000-values2]
+suite/tests/domain/test_memory_contract.py::test_invalid_write_never_partially_commits[0-values3]
+suite/tests/domain/test_memory_contract.py::test_invalid_write_never_partially_commits[0-values4]
+suite/tests/domain/test_memory_contract.py::test_invalid_write_never_partially_commits[0-values5]
+suite/tests/domain/test_memory_contract.py::test_invalid_bit_write_never_partially_commits[9999-values0]
+suite/tests/domain/test_memory_contract.py::test_invalid_bit_write_never_partially_commits[-1-values1]
+suite/tests/domain/test_memory_contract.py::test_invalid_bit_write_never_partially_commits[10000-values2]
+suite/tests/domain/test_memory_contract.py::test_invalid_bit_write_never_partially_commits[0-values3]
+suite/tests/domain/test_memory_contract.py::test_invalid_bit_write_never_partially_commits[0-values4]
+suite/tests/domain/test_memory_contract.py::test_invalid_bit_write_never_partially_commits[0-values5]
+suite/tests/domain/test_memory_contract.py::test_reset_clear
+suite/tests/domain/test_memory_contract.py::test_snapshot_is_immutable_snapshot
+suite/tests/domain/test_memory_contract.py::test_overlapping_vectors_atomic
+suite/tests/domain/test_memory_contract.py::test_read_during_overlapping_write_no_torn_vector
+
+19 tests collected in 0.01s

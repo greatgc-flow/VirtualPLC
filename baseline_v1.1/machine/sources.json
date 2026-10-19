@@ -1,0 +1,66 @@
+[
+  {
+    "id": "S01",
+    "kind": "official spec",
+    "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh080956eng/sh080956engm.pdf",
+    "version": "SH-080956ENG-M",
+    "status": "OFFICIAL_VERIFIED",
+    "notes": "p.17-28, 35-52; manual revision binding"
+  },
+  {
+    "id": "S02",
+    "kind": "client reference",
+    "url": "https://github.com/senrust/pymcprotocol",
+    "version": "current README / version pin at TDD",
+    "status": "README_VERIFIED_CAPTURE_PENDING",
+    "notes": "Client, 4E untested by author"
+  },
+  {
+    "id": "S03",
+    "kind": "server implementation example",
+    "url": "https://genbapy.dev/articles/slmp-dummy-server-python",
+    "version": "web article accessed 2026-10-19",
+    "status": "ARTICLE_VERIFIED_LICENSE_UNKNOWN",
+    "notes": "Reference only, no republishing"
+  },
+  {
+    "id": "S04",
+    "kind": "MC client REST gateway",
+    "url": "https://github.com/Moge800/gomc_rest_python",
+    "version": "current README",
+    "status": "README_VERIFIED",
+    "notes": "Not an MC protocol PLC server"
+  },
+  {
+    "id": "S05",
+    "kind": "UDP client implementation",
+    "url": "https://github.com/OkitaSystemDesign/MC-Protocol",
+    "version": "current README",
+    "status": "README_VERIFIED",
+    "notes": "MC 3E UDP client"
+  },
+  {
+    "id": "S06",
+    "kind": "secondary MC client",
+    "url": "https://github.com/fa-yoshinobu/plc-comm-slmp-python",
+    "version": "current README",
+    "status": "README_VERIFIED",
+    "notes": "MIT advertised; independently verify before reusing"
+  },
+  {
+    "id": "S07",
+    "kind": "C MC client",
+    "url": "https://github.com/s-pms/melsec_mc_net",
+    "version": "current README",
+    "status": "README_VERIFIED",
+    "notes": "Client stress patterns, no server"
+  },
+  {
+    "id": "S08",
+    "kind": "pymcprotocol API",
+    "url": "https://pymcprotocol.netlify.app/",
+    "version": "0.3.0 docs",
+    "status": "DOC_VERIFIED",
+    "notes": "Type3E request generation introspection"
+  }
+]

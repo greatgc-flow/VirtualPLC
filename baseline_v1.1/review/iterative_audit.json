@@ -1,0 +1,67 @@
+{
+  "artifact_version": "1.1",
+  "audit_date": "2026-10-19",
+  "audit_scope": "TDD-prep design only, not simulator runtime",
+  "reviews": [
+    {
+      "round": 1,
+      "axes": [
+        "source fidelity",
+        "frame format",
+        "initial package SHA",
+        "scope/status"
+      ],
+      "findings": "15 documented deficiencies; original ZIP CRC and 14/14 payload SHA passed",
+      "outcome": "REWRITTEN"
+    },
+    {
+      "round": 2,
+      "axes": [
+        "vertical requirements→design→test→operations",
+        "horizontal module ownership",
+        "positive/negative/error states"
+      ],
+      "findings": "Core boundaries and full machine SSOT cross-links formalized",
+      "outcome": "REWRITTEN"
+    },
+    {
+      "round": 3,
+      "axes": [
+        "forward/reverse trace",
+        "P0/P1/P2 distinction",
+        "wire vectors",
+        "performance/security/gov coverage"
+      ],
+      "findings": "34 P0 requirements linked to 69 test specifications; frame structural checks pass",
+      "outcome": "PASS_STATIC"
+    },
+    {
+      "round": 4,
+      "axes": [
+        "feedback schema closure/reopening",
+        "adversarial validator testing",
+        "downstream implementation readiness"
+      ],
+      "findings": "Three injected defects in temporary copies each rejected. Real client and per-model error code remain open",
+      "outcome": "PASS_STATIC_WITH_OPEN_G0"
+    }
+  ],
+  "quality_claims": {
+    "source_reading": "official SLMP frame / bit diagram desk checked",
+    "traceability": "P0 100% test-spec linkage",
+    "wire_fixtures": "internal structural verification only",
+    "independent_protocol_compat": "NOT_VERIFIED",
+    "server_implementation": "NOT_STARTED",
+    "TDD": "NOT_STARTED"
+  },
+  "open_gates": [
+    "G0-E",
+    "G0-C",
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5"
+  ],
+  "scoped_conclusion": "Document integrity ready for TDD. External client/PLC capability not tested. No unconditional perfection claim."
+}

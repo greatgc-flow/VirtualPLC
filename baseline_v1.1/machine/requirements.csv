@@ -1,0 +1,38 @@
+id,category,phase,priority,statement,acceptance,component,gate,source_ids,risk_ids
+FR-001,FR,P0,MUST,TCP loopback listener multi-request session,listen 127.0.0.1:15000 and close correctly,transport,G2,S01,RK08
+FR-002,FR,P0,MUST,incremental bounded 3E binary framing,fragment/merged frames preserved; invalid header closes,framer3e,G1,S01,RK06
+FR-003,FR,P0,MUST,D word 0401/1401 read-write,D100..102 read/write complete little endian,dispatcher,G1,S01;S02,RK01
+FR-004,FR,P0,MUST,M bit 0401/1401 read-write,odd/even bit high/low nibble golden,codec3e,G1,S01;S02,RK04
+FR-005,FR,P0,MUST,profile-based device/radix/point validation,invalid codes/counts rejected with no side effect,profile,G0-E,S01,RK01;RK13
+FR-006,FR,P0,MUST,atomic memory operations incl reset/snapshot,read/write/reset/snapshot single logical version,memory,G1,S01,RK05
+FR-007,FR,P0,MUST,defined errors for decoded invalid requests,proper failed-response payload with verified model end-code,codec3e,G0-E,S01,RK02
+FR-008,FR,P0,MUST,per-session FIFO and shared state,"same session ordered, cross-client atomic state",transport,G2,S01,RK15
+FR-009,FR,P0,MUST,local in-process seed/reset/snapshot,no network control endpoint and repeatable initial data,test_control,G1,S01,RK05
+FR-010,FR,P0,MUST,versioned TOML config and lifecycle,invalid settings fail fast; clean shutdown,config,G2,S01,RK11
+FR-011,FR,P0,MUST,pinned pymcprotocol Type3E interoperability,cross-process Type3E read/write and captured request equal fixture,integration,G0-C,S02;S08,RK03
+FR-012,FR,P0,MUST,bounded malformed/oversize handling,oversize invalid frame closes and alloc bounded,framer3e,G3,S01,RK06
+FR-013,FR,P0,MUST,typed event logs and metrics,per-request outcome/latency without memory content,telemetry,G3,S01,RK12
+FR-014,FR,P0,MUST,write data exact length and atomic rejection,wrong count/length never partial commit,validator,G1,S01,RK05;RK02
+FR-015,FR,P0,MUST,3E route validation and response echo,routing fields preserved or known error policy,codec3e,G1,S01,RK02
+FR-016,FR,P1,SHOULD,optional fault injection with commit-phase semantics,pre/post commit outcomes deterministic in replay,faults,G5,S03,RK07
+FR-017,FR,P1,SHOULD,optional virtual-time scenario engine,manual tick reproducible and race-free,simulation,G5,S03,RK05
+FR-018,FR,P2,MAY,4E/ASCII/other devices via independent codecs,new independent profile and client tests,protocol_extra,G5,S01;S06,RK01
+NFR-001,NFR,P0,MUST,repeatable tests based on exact seed/config,two identical inputs identical memory/output bytes,memory,G1,S01,RK11
+NFR-002,NFR,P0,MUST,bounded sessions/queues/read timeout,no indefinite incomplete frame or unbounded pending,transport,G3,S01,RK06
+NFR-003,NFR,P0,MUST,Python>=3.11 Windows/Linux compatibility target,both platform CI successful before release,delivery,G3,S02,RK11
+NFR-004,NFR,P0,MUST,no actual PLC/external network in default tests,all default endpoints loopback and mock only,security,G3,S01,RK08
+NFR-005,NFR,P0,MUST,requirements traceability coverage,P0 requirements all linked to test and gate,governance,DG0,S01,RK14
+NFR-006,NFR,P0,MUST,performance baseline logged not invented SLA,hardware-specific p50/p95/p99/RSS captured,telemetry,G3,S01,RK06
+NFR-007,NFR,P0,MUST,no non-stdlib runtime dependency by default,tomllib and asyncio only for runtime config/server,config,G3,S02,RK11
+SEC-001,SEC,P0,MUST,deny non-loopback server bind and client endpoint,attempted public/production IP refused,security,G3,S01,RK08
+SEC-002,SEC,P0,MUST,restrict remote/unsafe commands and control API,"REMOTE commands not enabled, control local fixture only",security,G3,S01,RK08
+SEC-003,SEC,P0,MUST,suppress sensitive payload and rate-limit logs,packet contents redacted by default,telemetry,G3,S01,RK12
+SEC-004,SEC,P0,MUST,negative/fuzz robustness and resource caps,invalid packet cannot lead unbounded memory/hang,framer3e,G3,S01,RK06
+OPS-001,OPS,P0,MUST,graceful start/stop and health readiness,"bound socket then ready, no leaked connections",transport,G2,S01,RK06
+OPS-002,OPS,P0,MUST,record telemetry with clear replay context,session/cmd/outcome/monotonic time/seed/version,telemetry,G3,S01,RK14
+OPS-003,OPS,P0,MUST,pin runtime/client/profile hashes for evidence,run evidence contains client version and config sha,delivery,G4,S02,RK11
+OPS-004,OPS,P0,MUST,document crash state reset/no persistence,relaunch returns defined initial banks,memory,G2,S01,RK05
+GOV-001,GOV,P0,MUST,ADR scope control and change approval,P1/P2 changes never silently become P0,governance,G4,S01,RK10
+GOV-002,GOV,P0,MUST,stable supported/unsupported functionality table,release matrix exactly mirrors gate-passed tests,governance,G4,S01,RK14
+GOV-003,GOV,P0,MUST,third-party source/license intake trace,source origin and reuse authorization checked,governance,DG0,S02;S03,RK09
+GOV-004,GOV,P0,MUST,closed incident to regression monitoring loop,new defect -> requirement/test/gate/observed closure,governance,G4,S01,RK14

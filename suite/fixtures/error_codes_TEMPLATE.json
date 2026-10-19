@@ -1,0 +1,6 @@
+{
+  "status": "BLOCKED_UNTIL_G0_E",
+  "model": "generic-q-3e (not device-certified)",
+  "vendor_end_codes": {},
+  "instructions": "Do not fill guessed values. Require manufacturer model manual reference + pinned client error packet capture. Structural tests require nonzero end_code and exact failed cmd/sub; model compatibility requires numeric code verification."
+}

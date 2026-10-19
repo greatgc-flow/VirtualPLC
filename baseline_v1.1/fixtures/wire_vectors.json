@@ -1,0 +1,57 @@
+[
+  {
+    "id": "VEC001",
+    "name": "read D100 x3",
+    "source_grade": "DERIVED",
+    "source_ids": [
+      "S01"
+    ],
+    "request_hex": "50 00 00 FF FF 03 00 0C 00 10 00 01 04 00 00 64 00 00 A8 03 00",
+    "response_hex": "D0 00 00 FF FF 03 00 08 00 00 00 64 00 C8 00 2C 01",
+    "notes": "response seeded D100=[100,200,300], not actual client capture"
+  },
+  {
+    "id": "VEC002",
+    "name": "write D100 x3 official payload",
+    "source_grade": "OFFICIAL_PAYLOAD_DERIVED_FRAME",
+    "source_ids": [
+      "S01"
+    ],
+    "request_hex": "50 00 00 FF FF 03 00 12 00 10 00 01 14 00 00 64 00 00 A8 03 00 95 19 02 12 30 11",
+    "response_hex": "D0 00 00 FF FF 03 00 02 00 00 00",
+    "notes": "Official manual p.52 D100=0x1995 D101=0x1202 D102=0x1130, header constructed"
+  },
+  {
+    "id": "VEC003",
+    "name": "M10 bit write 1 0 1 0 1",
+    "source_grade": "OFFICIAL_PACKING_DERIVED_FRAME",
+    "source_ids": [
+      "S01"
+    ],
+    "request_hex": "50 00 00 FF FF 03 00 0F 00 10 00 01 14 01 00 0A 00 00 90 05 00 10 10 10",
+    "response_hex": "D0 00 00 FF FF 03 00 02 00 00 00",
+    "notes": "Official manual p.40 first bit high nibble odd last nibble padded 0"
+  },
+  {
+    "id": "VEC004",
+    "name": "write D0 value FFFF boundary",
+    "source_grade": "DERIVED",
+    "source_ids": [
+      "S01"
+    ],
+    "request_hex": "50 00 00 FF FF 03 00 0E 00 10 00 01 14 00 00 00 00 00 A8 01 00 FF FF",
+    "response_hex": "D0 00 00 FF FF 03 00 02 00 00 00",
+    "notes": "Distinct boundary vector: D0=65535, no actual client capture"
+  },
+  {
+    "id": "VEC005",
+    "name": "read M10 x5 from existing seed",
+    "source_grade": "DERIVED",
+    "source_ids": [
+      "S01"
+    ],
+    "request_hex": "50 00 00 FF FF 03 00 0C 00 10 00 01 04 01 00 0A 00 00 90 05 00",
+    "response_hex": "D0 00 00 FF FF 03 00 05 00 00 00 10 10 10",
+    "notes": "Assumes seeded M10..14=[1,0,1,0,1]"
+  }
+]

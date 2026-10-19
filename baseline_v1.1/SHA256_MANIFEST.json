@@ -1,0 +1,124 @@
+{
+  "manifest_version": 1,
+  "created": "2026-10-19",
+  "scope": "All files in this package except this manifest itself",
+  "file_count": 29,
+  "files": {
+    "docs/00_START_HERE.md": {
+      "sha256": "2d99b8c1099e70cef310a27f3deb1891cda5b2646eaa6c6b26cfb1f274704bb9",
+      "size": 3308
+    },
+    "docs/01_BASELINE_AUDIT.md": {
+      "sha256": "ef9718d2ef6cc69060e0e4683d43d2da46cdf9ba5f888d3ff2828d86229ec0e5",
+      "size": 3334
+    },
+    "docs/02_RESEARCH_ADR.md": {
+      "sha256": "6bb517021fb329482f91cf381ba2365a0d5cbe56373731511c08ebcd0e34f8e5",
+      "size": 3748
+    },
+    "docs/03_REQUIREMENTS_BOUNDARIES.md": {
+      "sha256": "12a3cf29ea92c2b264118c43ef373a2869aa681d9f5cff3e9004c4755ada32c2",
+      "size": 2809
+    },
+    "docs/04_ARCHITECTURE_INTERFACES.md": {
+      "sha256": "8e1eb2f6321521bfa89db9a6177dd51fdcd5f1020e11a7c12ecd199f95b4b495",
+      "size": 3551
+    },
+    "docs/05_PROTOCOL_WIRE_CONTRACT.md": {
+      "sha256": "ef76ce764821b04b93d13c1c2ce11864e205e696d93d26a1f899939052923089",
+      "size": 4118
+    },
+    "docs/06_MEMORY_SCENARIO_CONFIG.md": {
+      "sha256": "ca0d7a2fd8d94e7babafbe1b1974388857024f8778c0a6ecfe1d376b12707265",
+      "size": 3182
+    },
+    "docs/07_TDD_TEST_ORACLES.md": {
+      "sha256": "fdd1069f5c500dd966c897881cab19ca2c41ba266e386eb1fb7ef271e2571cee",
+      "size": 3612
+    },
+    "docs/08_SECURITY_OPERATIONS.md": {
+      "sha256": "609d4246c9b315b57d60b48a8fd03d556b1f115b01759f834dcbb0e6579755d1",
+      "size": 2569
+    },
+    "docs/09_TRACEABILITY_FEEDBACK.md": {
+      "sha256": "e84c35d2c3bc1c1555a9fece2f63997d02f987a0184629fafdf20baa490223d6",
+      "size": 4603
+    },
+    "docs/10_GATES_RISKS_OPEN_ITEMS.md": {
+      "sha256": "a63f598c6e7a883465d3aaa2eb93f68b975322f5c75160d6ef044ac3dec675db",
+      "size": 2881
+    },
+    "docs/11_CHANGELOG_ITERATIVE_AUDIT.md": {
+      "sha256": "d2705f41804ce77134301209469349ba7e8dc410606189e87477c2b9208ca4b2",
+      "size": 2511
+    },
+    "docs/12_NEXT_CHAT_TDD_PROMPT.md": {
+      "sha256": "7edb9174abab40800786fb3c5a27a8d1fd8f4bcd78866a2774695d57fb191e78",
+      "size": 1646
+    },
+    "fixtures/wire_vectors.json": {
+      "sha256": "1e783ef6db5898d4bffb6dc2dd55cdb5e464fe5ae5e1607fd73907fb8f2b40a1",
+      "size": 1890
+    },
+    "machine/change_event.schema.json": {
+      "sha256": "4e0077df6eac2e2fef85f785792e990914bf68c96304e9d1d7701f75754d0f09",
+      "size": 1887
+    },
+    "machine/components.json": {
+      "sha256": "76040a073b5e3166910760becabf296ea7f5de523e5a12f836f459a1cb5d9877",
+      "size": 781
+    },
+    "machine/gates.json": {
+      "sha256": "7c3b7e057f8ca6e1f853a09809d41e47eb926e4a95d4e8820d28d69f9e3b79ff",
+      "size": 1482
+    },
+    "machine/requirements.csv": {
+      "sha256": "53a3b6cfc25e8a4da51c37092c098833f914e643516b80232febf14781bc514d",
+      "size": 4921
+    },
+    "machine/risks.csv": {
+      "sha256": "09dc6f529f6b8ccac14310082062bebaa5ee3f71f8be0baa66a34b5390570df5",
+      "size": 2145
+    },
+    "machine/sources.json": {
+      "sha256": "f1ebf1a5ba19c4992e41f873d4be977314f3bead7a99f493242644fe34970c6c",
+      "size": 1993
+    },
+    "machine/test_matrix.csv": {
+      "sha256": "70afef4fe4fb70f6967e20a5117b77ec65dead52b89cd92ffca5dfac2cec7465",
+      "size": 8238
+    },
+    "refs/REFERENCE_INDEX.md": {
+      "sha256": "314ce8931fe2c6d2ddc20119c96f765a1520b0bdf3d0159a70d242c0ed8edb26",
+      "size": 1827
+    },
+    "review/CLOSED_LOOP_GOVERNANCE.md": {
+      "sha256": "d71b76de840467b0130de8a509dcc77f83eafbcdc1bb7507c5083b3206a7f6ff",
+      "size": 2374
+    },
+    "review/TRACEABILITY_MATRICES.md": {
+      "sha256": "79192908da3a109ca998609c8eac31aaea047069f8f1b211b20a390daa2034cc",
+      "size": 2315
+    },
+    "review/iterative_audit.json": {
+      "sha256": "36bfcd0ce8ba033eefef595f1ca693c9d203d1aa69a19eb4752a1173a4a8951d",
+      "size": 1986
+    },
+    "review/negative_validator_tests.json": {
+      "sha256": "6d02b9f8e8b9fe7d1f921d9aa381369d881fe36d80bdd1106e816822e2cd6e78",
+      "size": 769
+    },
+    "review/original_inventory.json": {
+      "sha256": "4af1d66ff107bcadb9f8e2571bbd22e2bb0eb967a3409183dc7bb7e8a860a9ec",
+      "size": 2627
+    },
+    "review/structural_validation.json": {
+      "sha256": "9ae72d788823b3a82b52c18efc674a92195671000e6effcc9b1b24cdca531ad7",
+      "size": 362
+    },
+    "scripts/validate_design.py": {
+      "sha256": "7be9df8ad4ecb3f4b128760bf34e3c8935d8f466afca746b69a980501c26263d",
+      "size": 7893
+    }
+  }
+}

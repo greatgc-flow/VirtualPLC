@@ -1,0 +1,56 @@
+[
+  {
+    "id": "DG0",
+    "name": "design artifact static integrity",
+    "status": "PASS_STATIC",
+    "exit_criteria": "Machine crosslinks and manifest verified"
+  },
+  {
+    "id": "G0-F",
+    "name": "official 3E basic-frame desk spec",
+    "status": "PASS_DESK",
+    "exit_criteria": "official format and static HEX invariants checked"
+  },
+  {
+    "id": "G0-E",
+    "name": "device-specific error codes/payload",
+    "status": "OPEN",
+    "exit_criteria": "product manual and pinned client error behavior verified"
+  },
+  {
+    "id": "G0-C",
+    "name": "pymcprotocol actual request wire",
+    "status": "OPEN",
+    "exit_criteria": "pinned client capture byte-diff"
+  },
+  {
+    "id": "G1",
+    "name": "domain+codec actual TDD",
+    "status": "NOT_RUN",
+    "exit_criteria": "all P0 pure/contract tests evidence"
+  },
+  {
+    "id": "G2",
+    "name": "separate process client integration",
+    "status": "NOT_RUN",
+    "exit_criteria": "pinned client integration evidence"
+  },
+  {
+    "id": "G3",
+    "name": "resilience/security/cross OS",
+    "status": "NOT_RUN",
+    "exit_criteria": "resource/time/fuzz and Win/Linux evidence"
+  },
+  {
+    "id": "G4",
+    "name": "release loop + docs closure",
+    "status": "NOT_RUN",
+    "exit_criteria": "risk acceptance signoff and source/support matrix release"
+  },
+  {
+    "id": "G5",
+    "name": "P1 optional extension approval",
+    "status": "NOT_RUN",
+    "exit_criteria": "separate scope ADR and end-to-end regression"
+  }
+]

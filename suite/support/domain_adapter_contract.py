@@ -1,0 +1,23 @@
+"""Required TDD implementation adapter port. This defines tests' expectations, NOT a server.
+Production code must implement the protocol in a separate package/module.
+"""
+from typing import Protocol,Sequence,TypedDict
+
+class Snapshot(TypedDict):
+    D: Sequence[int]
+    M: Sequence[int]
+    version: int
+
+class MemoryHarness(Protocol):
+    def read_words(self,head:int,count:int)->list[int]:...
+    def write_words(self,head:int,values:list[int])->None:...
+    def read_bits(self,head:int,count:int)->list[int]:...
+    def write_bits(self,head:int,values:list[int])->None:...
+    def reset(self)->None:...
+    def snapshot(self)->Snapshot:...
+
+class DomainAdapter(Protocol):
+    def create_memory(self,*,d_size:int=10000,m_size:int=10000)->MemoryHarness:...
+
+# Adapter loading convention: MC_SIM_ADAPTER_MODULE=myproject.test_adapter
+# import module; module.create_memory() -> MemoryHarness. No mock/stub included.

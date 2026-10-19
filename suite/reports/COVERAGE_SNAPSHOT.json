@@ -1,0 +1,40 @@
+{
+  "source": "catalog/test_cases.jsonl",
+  "coverage_not_runtime_success": true,
+  "count": 208,
+  "p0": 199,
+  "deferred": 9,
+  "by_primary_domain": {
+    "end_to_end": 21,
+    "wire": 63,
+    "domain": 49,
+    "security": 23,
+    "scenario": 5,
+    "platform": 3,
+    "governance": 19,
+    "performance": 2,
+    "transport": 23
+  },
+  "by_runner": {
+    "runtime_adapter": 130,
+    "deferred": 9,
+    "manual_gate": 5,
+    "static_validator": 19,
+    "live_executable": 45
+  },
+  "by_outcome": {
+    "success": 111,
+    "reject_no_mutation": 58,
+    "close_no_mutation": 30,
+    "future_only": 9
+  },
+  "explicit_gaps": [
+    "G0-E model-specific numeric end code",
+    "G0-C raw client-captured packet",
+    "server implementation absent",
+    "130 spec-only runtime adapter bindings",
+    "Windows/Linux execution",
+    "full security/fuzz/property/stress evidence"
+  ],
+  "runtime_release_gate": "HOLD"
+}

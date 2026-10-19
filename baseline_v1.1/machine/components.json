@@ -1,0 +1,19 @@
+{
+  "transport": "socket lifecycle, FIFO, deadline",
+  "framer3e": "bounded TCP frame extraction",
+  "codec3e": "3E parsing and serialization, nibble",
+  "dispatcher": "command orchestration",
+  "profile": "device/radix/cap registry",
+  "memory": "atomic state",
+  "test_control": "in-process fixture",
+  "config": "TOML input and validation",
+  "integration": "external pinned client compatibility",
+  "telemetry": "bounded structured outcomes",
+  "validator": "per-command validation",
+  "faults": "P1 optional deterministic failure policy",
+  "simulation": "P1 virtual time",
+  "protocol_extra": "P2 separate codec",
+  "security": "network allowlist and unsafe command checks",
+  "delivery": "CI/platform and release evidence",
+  "governance": "ADR/issue/traceability policy"
+}

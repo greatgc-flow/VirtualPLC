@@ -1,0 +1,15 @@
+{
+  "verdict": "PASS_STATIC",
+  "checked": "Offline design SSOT foreign keys and wire fixture structure; DOES NOT run server/TDD/client capture",
+  "metrics": {
+    "requirements": 37,
+    "test_specs": 69,
+    "risks": 15,
+    "sources": 8,
+    "gates": 9,
+    "fixtures": 5,
+    "P0_requirement_coverage": 34,
+    "P0_requirements": 34
+  },
+  "problems": []
+}

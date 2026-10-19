@@ -1,0 +1,25 @@
+{
+  "generated_at_utc": "2026-10-19T11:53:20.652328+00:00",
+  "python": "3.13.5",
+  "os": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "suite_catalog_sha256": "31415a1c0813aa28364883a24e006c5d8d4ff5ad8db171409ec4551a02f2fa7f",
+  "design_static": true,
+  "suite_p0_total": 199,
+  "suite_p0_pass": 0,
+  "suite_p0_fail": 0,
+  "suite_p0_skip": 0,
+  "suite_p0_not_run": 199,
+  "duplicate_junit_case_ids": [],
+  "catalog_gates": [
+    "G0-E",
+    "G0-C",
+    "G1",
+    "G2",
+    "G3",
+    "G4"
+  ],
+  "all_gates_closed": false,
+  "release_claim": "HOLD",
+  "reason": "No verified full P0 runtime evidence plus open G0-E/G0-C; report not proof of PLC equivalence.",
+  "junit_used": null
+}
