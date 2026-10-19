@@ -22,8 +22,8 @@ git status --short
 # Inspect generated files and commit by normal review; DO NOT merge without gates.
 ```
 
-## Manual CI
-Actions -> 'Manual validation' -> Run workflow on PR branch. Leave `run_pymc=false` for quick smoke; set to true to install hash-locked v0.3.0 and run D/M client tests. No dispatch has been initiated by ChatGPT. **G0-C stays OPEN until exact GitHub Actions evidence is reviewed**, including failures and client request bytes.
+## CI quarantine / manual local verification
+A branch-only Actions YAML unexpectedly generated three failed `push` workflow records (zero jobs executed) even though the YAML listed only `workflow_dispatch`. The active `.github/workflows/manual-validation.yml` was removed in commit `89f9b50` and preserved at `docs/workflow-templates/manual-validation.yml` for later syntax review and explicit enablement. The latest push produced no new run. Do **not** claim CI execution. For now use local `python -m pytest tests/test_virtual_plc.py -q` and opt-in `VIRTUALPLC_RUN_PYMC=1 python -m pytest tests/compat -q` with the hash-pinned wheel installed. G0-C stays OPEN pending genuine passing external client evidence.
 
 ## Release decision
 **HOLD.** G0-E vendor-specific error end-code still OPEN. 208-case design coverage != 208 executable cases. Remaining 154 P0 have not passed. Windows and Linux CI have yet to run.
