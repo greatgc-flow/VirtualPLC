@@ -1,0 +1,7 @@
+{
+  "status": "M5_LOCAL_PROTOTYPE_NOT_RELEASED",
+  "P0": {"frame": "3E", "wire": "binary", "transport": "TCP", "device_memory": ["D_word", "M_bit"], "bind": "127.0.0.1"},
+  "unsupported_or_future": ["4E", "ASCII", "UDP", "REST", "real_PLC_runtime", "remote_bind", "vendor_error_code_verified"],
+  "release_gate": "HOLD",
+  "source": "baseline_v1.1 and suite/catalog/test_cases.jsonl"
+}

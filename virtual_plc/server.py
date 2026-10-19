@@ -35,7 +35,7 @@ class Handler(socketserver.BaseRequestHandler):
                     if first[:2]!=REQUEST_HEADER:raise FrameError('invalid subheader')
                     if first[2:7]!=DEFAULT_ROUTE:raise FrameError('unconfigured station route')
                     body_len=int.from_bytes(first[7:9],'little')
-                    if body_len<12 or body_len>MAX_BODY:raise FrameError('invalid body size')
+                    if body_len<12 or body_len>self.server.max_body:raise FrameError('invalid body size')
                     body=read_exact(self.request,body_len,deadline)
                     response=process(first[2:7],body,self.server.memory)
                     self.request.sendall(response)
@@ -49,10 +49,13 @@ class Server(socketserver.ThreadingMixIn,socketserver.TCPServer):
     daemon_threads=True
     block_on_close=False
     request_queue_size=32
-    def __init__(self,address,*,memory=None):
+    def __init__(self,address,*,memory=None,max_body=MAX_BODY):
         host,_=address
         # Strictly prevent accidental exposure on test or real PLC network.
         if host!='127.0.0.1':raise ValueError('this M1 build only binds 127.0.0.1')
-        self.memory=memory or Memory()
+        if type(max_body) is not int or not 12 <= max_body <= MAX_BODY:
+            raise ValueError('invalid max_body setting')
+        self.max_body=max_body
+        self.memory=memory if memory is not None else Memory()
         self.limiter=threading.BoundedSemaphore(MAX_SESSIONS)
         super().__init__(address,Handler)

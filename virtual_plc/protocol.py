@@ -1,74 +1,79 @@
-"""Loopback-only 3E Binary Q-profile D/M batch command prototype.
+"""Isolated Q-profile 3E Binary batch D(word)/M(bit) wire codec.
 
-SIMULATED_ERROR is a placeholder, not an officially verified PLC end code.
-Do not claim real-device fidelity before G0-E/G0-C verification.
+PROTOTYPE: 0xC059 is a configurable-simulator INTERNAL placeholder for any
+complete-but-unsupported command. It is NOT a verified vendor error map.
 """
 from __future__ import annotations
 import struct
 from .memory import Memory
 
-REQUEST_HEADER = b"\x50\x00"
-REPLY_HEADER = b"\xd0\x00"
-SIMULATED_ERROR = 0xC059
-MAX_BODY = 4096
+REQUEST_HEADER=b'\x50\x00'
+REPLY_HEADER=b'\xd0\x00'
+# Distinctly unverified and restricted to loopback prototype
+SIMULATED_ERROR=0xC059
+MAX_BODY=4096
 
 class FrameError(Exception):
-    """Fatal framing violation: close connection without changing memory."""
+    """Fatal frame framing violation: close connection with no memory side effect."""
 
-def reply(route: bytes, code: int, data: bytes = b"") -> bytes:
-    body = struct.pack("<H", code) + data
-    return REPLY_HEADER + route + struct.pack("<H", len(body)) + body
 
-def nibble_unpack(raw: bytes, points: int) -> list[int]:
-    if len(raw) != (points + 1) // 2:
-        raise ValueError("wrong packed bit count")
-    bits = []
+def reply(route:bytes,code:int,data:bytes=b'')->bytes:
+    body=struct.pack('<H',code)+data
+    return REPLY_HEADER + route + struct.pack('<H',len(body)) + body
+
+
+def nibble_unpack(raw:bytes,points:int)->list[int]:
+    if len(raw)!=(points+1)//2:
+        raise ValueError('wrong number of packed bits')
+    bits=[]
     for byte in raw:
-        high, low = byte >> 4, byte & 15
-        if high not in (0, 1) or low not in (0, 1):
-            raise ValueError("invalid bit nibble")
-        bits.extend((high, low))
-    if points % 2 and raw[-1] & 15:
-        raise ValueError("odd trailing nibble must be zero")
+        h,l=byte>>4,byte&15
+        if h not in (0,1) or l not in (0,1):raise ValueError('invalid bit nibble')
+        bits.extend((h,l))
+    if points&1 and raw[-1]&15:raise ValueError('odd trailing nibble not zero')
     return bits[:points]
 
-def nibble_pack(bits: list[int]) -> bytes:
-    return bytes((bits[i] << 4) | (bits[i + 1] if i + 1 < len(bits) else 0)
-                 for i in range(0, len(bits), 2))
 
-def process(route: bytes, body: bytes, memory: Memory) -> bytes:
-    if len(body) < 12:
-        raise FrameError("incomplete command")
-    _, cmd, sub = struct.unpack_from("<HHH", body, 0)
-    head = int.from_bytes(body[6:9], "little")
-    device = body[9]
-    count = struct.unpack_from("<H", body, 10)[0]
-    payload = body[12:]
+def nibble_pack(bits:list[int])->bytes:
+    return bytes((bits[i]<<4) | (bits[i+1] if i+1<len(bits) else 0) for i in range(0,len(bits),2))
+
+
+def process(route:bytes,body:bytes,memory:Memory)->bytes:
+    # complete frame with invalid command fields returns an SLMP error structure.
+    # structurally incomplete requests are fatal and never mutate state.
+    if len(body)<12:
+        raise FrameError('request body must include 12-byte command header')
+    _,cmd,sub=struct.unpack_from('<HHH',body,0)
+    head=int.from_bytes(body[6:9],'little')
+    dev=body[9]
+    qty=struct.unpack_from('<H',body,10)[0]
+    payload=body[12:]
     try:
-        if cmd not in (0x0401, 0x1401):
-            raise ValueError("unsupported command")
-        if (sub, device) not in ((0, 0xA8), (1, 0x90)):
-            raise ValueError("unsupported subcommand/device")
-        if not 1 <= count <= 960:
-            raise ValueError("unsupported point count")
-        write = cmd == 0x1401
-        if not write and payload:
-            raise ValueError("unexpected read payload")
-        if sub == 0:
-            if write:
-                if len(payload) != count * 2:
-                    raise ValueError("incorrect word payload size")
-                memory.write_words(head, list(struct.unpack("<" + "H" * count, payload)))
-                data = b""
+        if cmd not in (0x0401,0x1401):raise ValueError('unsupported command')
+        if (sub,dev) not in ((0,0xA8),(1,0x90)):
+            raise ValueError('unsupported device/subcommand')
+        if not 1 <= qty <= 960:
+            raise ValueError('unsupported quantity')
+        is_write=cmd==0x1401
+        if not is_write and payload:
+            raise ValueError('read trailing payload')
+        if sub==0:
+            if is_write:
+                if len(payload)!=qty*2:raise ValueError('malformed word data')
+                values=list(struct.unpack('<'+'H'*qty,payload))
+                memory.write_words(head,values)
+                data=b''
             else:
-                data = struct.pack("<" + "H" * count, *memory.read_words(head, count))
+                values=memory.read_words(head,qty)
+                data=struct.pack('<'+'H'*qty,*values)
         else:
-            if write:
-                memory.write_bits(head, nibble_unpack(payload, count))
-                data = b""
+            if is_write:
+                values=nibble_unpack(payload,qty)
+                memory.write_bits(head,values)
+                data=b''
             else:
-                data = nibble_pack(memory.read_bits(head, count))
-        return reply(route, 0, data)
+                data=nibble_pack(memory.read_bits(head,qty))
+        return reply(route,0,data)
     except ValueError:
-        # Provisional simulator error payload; vendor-specific policy remains OPEN.
-        return reply(route, SIMULATED_ERROR, route + struct.pack("<HH", cmd, sub))
+        # failure response: responding-station 5 bytes followed by command/subcmd.
+        return reply(route,SIMULATED_ERROR,route + struct.pack('<HH',cmd,sub))
