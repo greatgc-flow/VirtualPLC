@@ -1,0 +1,2 @@
+# PyPI 2021 wheel SHA256, verified against PyPI published metadata (v0.3.0).
+pymcprotocol==0.3.0 --hash=sha256:614217d43fbf8d9e409c1928993cbb4339d17828c1002c1766ce900aaee12dd6
