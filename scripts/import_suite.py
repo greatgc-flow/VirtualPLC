@@ -11,6 +11,7 @@ import stat
 import zipfile
 
 CATALOG_SHA256 = '31415a1c0813aa28364883a24e006c5d8d4ff5ad8db171409ec4551a02f2fa7f'
+MANIFEST_SHA256 = '919b364233892eb25f7f4b6db5e45692ee35d92d4422dccebba64879e539df49'
 ALLOWED_SCRIPTS = frozenset({'scripts/__init__.py', 'scripts/coverage_report.py',
     'scripts/gate_report.py', 'scripts/validate_suite.py', 'scripts/verify_manifest.py'})
 
@@ -35,7 +36,10 @@ def examine_archive(source: Path):
             if inner in items:
                 raise ValueError('duplicate archive path: ' + inner)
             items[inner] = info
-        manifest = json.loads(z.read(items['FILE_SHA256_MANIFEST.json']))
+        raw_manifest = z.read(items['FILE_SHA256_MANIFEST.json'])
+        if hashlib.sha256(raw_manifest).hexdigest() != MANIFEST_SHA256:
+            raise ValueError('untrusted handoff manifest SHA-256')
+        manifest = json.loads(raw_manifest)
         expected = {entry['path']: entry for entry in manifest['files']}
         for rel, desc in expected.items():
             if rel not in items:
@@ -51,7 +55,7 @@ def examine_archive(source: Path):
             raise ValueError('case counts differ from 208 total / P0 199')
         selected = {}
         for rel, info in items.items():
-            if rel.startswith(('suite/', 'baseline_v1.1/')) or rel in ALLOWED_SCRIPTS:
+            if rel in expected and (rel.startswith(('suite/', 'baseline_v1.1/')) or rel in ALLOWED_SCRIPTS):
                 selected[rel] = z.read(info)
         return selected
 
