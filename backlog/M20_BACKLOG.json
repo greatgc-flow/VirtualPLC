@@ -1,0 +1,123 @@
+{
+  "date": "2026-10-20",
+  "external_dependencies": [
+    {
+      "acceptance": [
+        "Wheel SHA and version independently verified",
+        "Six CASE-ID raw request captures + JUnit + console verified",
+        "Source HEAD, runtime, origin and data confidentiality reviewed",
+        "No synthetic or Linux source-only run credited as Windows evidence"
+      ],
+      "blocked_by": "SHA-256 verified official pymcprotocol 0.3.0 wheel and actual clean Windows loopback run missing",
+      "case_ids": [
+        "CASE-0027",
+        "CASE-0028",
+        "CASE-0029",
+        "CASE-0109",
+        "CASE-0110",
+        "CASE-0111"
+      ],
+      "gate": "G0-C",
+      "id": "BL-EXT-CLIENT",
+      "next_action": "When original Windows artifacts arrive, run scripts.m16_provenance_gate then independent origin review",
+      "owner_role": "Windows validation operator; independent reviewer for attestation",
+      "priority": "P0",
+      "resume_when": "Operator privately supplies original M14_CLIENT_RUN.zip and preflight JSON from clean checkout of exact 40-digit PR HEAD",
+      "status": "BLOCKED_EXTERNAL_EVIDENCE"
+    },
+    {
+      "acceptance": [
+        "Error mapping reviewed against exact supported device/manual",
+        "Golden frames for each code recorded",
+        "No simulator placeholder 0xC059 represented as vendor-certified"
+      ],
+      "blocked_by": "Exact Mitsubishi CPU model, Ethernet module, firmware, manual revision and relevant page are unknown",
+      "case_ids": [
+        "CASE-0018",
+        "CASE-0019",
+        "CASE-0020",
+        "CASE-0064",
+        "CASE-0088",
+        "CASE-0090"
+      ],
+      "gate": "G0-E",
+      "id": "BL-EXT-VENDOR",
+      "next_action": "Map vendor end-codes in a model-profile table and test against controlled golden frames",
+      "owner_role": "PLC protocol engineer and manufacturer documentation reviewer",
+      "priority": "P0",
+      "resume_when": "Operator provides exact equipment identity and dated vendor reference pages",
+      "status": "BLOCKED_DEVICE_SPEC"
+    },
+    {
+      "acceptance": [
+        "Native Windows >=3.11 startup/shutdown and socket smoke PASS",
+        "Environment provenance and source SHA independently verified"
+      ],
+      "blocked_by": "Independent native Windows >=3.11 execution and signed environment evidence missing",
+      "case_ids": [
+        "CASE-0044",
+        "CASE-0128"
+      ],
+      "gate": "G3",
+      "id": "BL-EXT-WINDOWS",
+      "next_action": "Run existing RUN_M17_WINDOWS_ONE_SHOT.cmd after preflight in clean checkout",
+      "owner_role": "Isolated Windows test operator",
+      "priority": "P0",
+      "resume_when": "Native Windows runner and logs, OS details and artifact hashes provided privately",
+      "status": "BLOCKED_PLATFORM_RUN"
+    },
+    {
+      "acceptance": [
+        "Independent reviewer signs source-to-evidence trace",
+        "License/attribution decision approved",
+        "Failback/runbook verified",
+        "No production PLC traffic documented"
+      ],
+      "blocked_by": "No independent release/provenance attestation, documented licensing decision or failback sign-off",
+      "case_ids": [
+        "CASE-0055",
+        "CASE-0147"
+      ],
+      "gate": "G4",
+      "id": "BL-EXT-REVIEW",
+      "next_action": "Independent reviewer checks evidence and signs release decision; automated gate cannot self-approve",
+      "owner_role": "Independent release approver and license owner",
+      "priority": "P0",
+      "resume_when": "Complete evidence from G0-C, G0-E and G3 is available and owner assigned",
+      "status": "BLOCKED_INDEPENDENT_APPROVAL"
+    }
+  ],
+  "external_unverified_total": 16,
+  "internal_roadmap": [
+    {
+      "acceptance": "bounded, disabled-by-default, no network reconfiguration, per-frame delay/disconnect, no mutation on drop",
+      "id": "BL-INT-001",
+      "status": "IMPLEMENTED_AND_LOCAL_REGRESSION_PASS_M20",
+      "title": "Deterministic in-process fault injection"
+    },
+    {
+      "acceptance": "read-only/no production routes, no alternate CI activation, exact JUnit and stdout evidence",
+      "id": "BL-INT-002",
+      "status": "NEXT",
+      "title": "One-command reproducible local smoke + evidence"
+    },
+    {
+      "acceptance": "bounded local load, no fake latency SLAs, sampled RSS/session and tail latency",
+      "id": "BL-INT-003",
+      "status": "BACKLOG",
+      "title": "Concurrent client soak and resource leak trends"
+    },
+    {
+      "acceptance": "repeatable scenario definition, rollback, null/empty and fault escape paths",
+      "id": "BL-INT-004",
+      "status": "BACKLOG",
+      "title": "Scenario sequencing and operator runbook"
+    }
+  ],
+  "p0_historic_local_observed_unattested": 183,
+  "p0_total": 199,
+  "phase": "M20",
+  "priority_policy": "External BLOCKED/HOLD work may resume when real artifacts exist; it does not block independent internal tasks.",
+  "release": "HOLD",
+  "schema": "virtualplc.backlog.v1"
+}

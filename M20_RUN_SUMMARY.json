@@ -1,0 +1,80 @@
+{
+  "current_unique_p0_observed": 160,
+  "external_p0_pending": 16,
+  "historical_locally_observed_p0_unattested": 183,
+  "junit": [
+    {
+      "bytes": 24844,
+      "file": "M20_CORE_A.xml",
+      "pytest_passed": 122,
+      "sha256": "a63a77e86a732c6f0870c67454723677666939b1971c2843148964724703df38"
+    },
+    {
+      "bytes": 16920,
+      "file": "M20_CORE_B.xml",
+      "pytest_passed": 81,
+      "sha256": "3e9ef35ac70aa891d47f2bea5ae05d3f04caf31c48812e5a10205a43cced6ade"
+    },
+    {
+      "bytes": 50631,
+      "file": "M20_EVIDENCE.xml",
+      "pytest_passed": 291,
+      "sha256": "934946a8b505abcc21da20df1f4ad4a38a7d78a8dcec476f7fab9feeed0617ce"
+    },
+    {
+      "bytes": 1338,
+      "file": "M20_GOVERNANCE.xml",
+      "pytest_passed": 7,
+      "sha256": "6e35f9f0740d84ecd58e60b19d66311eec3238727ec665f3a9a41e70df286099"
+    },
+    {
+      "bytes": 4373,
+      "file": "M20_TCP_0.xml",
+      "pytest_passed": 16,
+      "sha256": "1663580b3b79706928b4d1fb8d38008f0612a05097057bcbbca3fafd52b09858"
+    },
+    {
+      "bytes": 4334,
+      "file": "M20_TCP_1.xml",
+      "pytest_passed": 16,
+      "sha256": "8cb65f5d70615b0348d893dd49b22a608a0e80ab5be4ee29046645263ac28701"
+    },
+    {
+      "bytes": 1272,
+      "file": "M20_TCP_2A.xml",
+      "pytest_passed": 4,
+      "sha256": "a47683e3d7a1a0400d63493db5bd0da72686be9a4e28d382032ac6af8203c3e1"
+    },
+    {
+      "bytes": 1272,
+      "file": "M20_TCP_2B.xml",
+      "pytest_passed": 4,
+      "sha256": "d76e0d8387971a568ec46a1ed371c878e41de191356d5b1cfa36e33b27d95cfe"
+    },
+    {
+      "bytes": 1039,
+      "file": "M20_TCP_2C.xml",
+      "pytest_passed": 3,
+      "sha256": "57512364d79711d99c7a43049f6ff683999a9b5eb2a0bcd2b0dcfd9949aebafd"
+    },
+    {
+      "bytes": 775,
+      "file": "M20_TCP_2D.xml",
+      "pytest_passed": 2,
+      "sha256": "fe22722888f09a8fbb03b715d964afbe1681dd203772eaabc4f6d2c97d21ca2f"
+    }
+  ],
+  "live_tcp_pass": 45,
+  "native_windows_test_executed": false,
+  "new_p0_independently_approved": 0,
+  "notes": "Original unsuccessful unsplit TCP_2 attempt excluded from tally; M20_CORE_B initial failed optional mock rerun corrected, excluded.",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "python": "3.13.5",
+  "real_pymcprotocol_wheel_executed": false,
+  "release": "HOLD",
+  "schema": "virtualplc.m20.junit-run-audit.v1",
+  "separate_unittest_subtests_pass": 5,
+  "unique_case_id_duplicates": 0,
+  "unique_pytest_pass": 546,
+  "unique_test_node_duplicates": 0
+}

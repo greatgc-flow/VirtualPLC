@@ -1,0 +1,16 @@
+{
+  "phase": "M20",
+  "release": "HOLD",
+  "external_backlog": "backlog/M20_BACKLOG.json",
+  "p0_total": 199,
+  "historical_p0_locally_observed_unattested": 183,
+  "current_m20_junit_unique_p0": 160,
+  "external_case_ids_unverified": 16,
+  "external_case_ids_newly_approved": 0,
+  "actual_windows_execution": false,
+  "official_verified_wheel_executed": false,
+  "vendor_profile_certified": false,
+  "independent_signoff": false,
+  "source_github_draft_pr": "https://github.com/greatgc-flow/VirtualPLC/pull/1",
+  "note": "M20 internal optional simulation faults and verified backlog do not close external P0 gates; see docs/M20_PROGRESS.md"
+}

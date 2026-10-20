@@ -8,6 +8,7 @@ import time
 from .memory import Memory
 from .protocol import REQUEST_HEADER,MAX_BODY,process,FrameError
 from .telemetry import Telemetry
+from .faults import FaultPlan
 
 MAX_SESSIONS=16
 IDLE_TIMEOUT=1.1
@@ -48,6 +49,17 @@ class Handler(socketserver.BaseRequestHandler):
                     body_len=int.from_bytes(first[7:9],'little')
                     if body_len<12 or body_len>self.server.max_body:raise FrameError('invalid body size')
                     body=read_exact(self.request,body_len,deadline)
+                    # Opt-in, local-process-only fault plan. Fail before PLC
+                    # mutation on disconnect. Delays affect this worker only.
+                    fault_plan = getattr(self.server, 'fault_plan', None)
+                    if fault_plan is not None:
+                        action, delay_ms = fault_plan.consume()
+                        if action == 'disconnect':
+                            telemetry.record('fault_disconnect', session_id=session_id)
+                            break
+                        if action == 'delay':
+                            telemetry.record('fault_delay', session_id=session_id)
+                            time.sleep(delay_ms / 1000.0)
                     response=process(first[2:7],body,self.server.memory)
                     # Fixed, numeric-only metadata. Count only fully decoded requests.
                     cmd=struct.unpack_from('<H',body,2)[0]
@@ -86,7 +98,7 @@ class Server(socketserver.ThreadingMixIn,socketserver.TCPServer):
     daemon_threads=True
     block_on_close=False
     request_queue_size=32
-    def __init__(self,address,*,memory=None,max_body=MAX_BODY,telemetry=None,allowed_routes=None):
+    def __init__(self,address,*,memory=None,max_body=MAX_BODY,telemetry=None,allowed_routes=None,fault_plan=None):
         host,_=address
         if host!='127.0.0.1':raise ValueError('this prototype only binds 127.0.0.1')
         if type(max_body) is not int or not 12 <= max_body <= MAX_BODY:
@@ -102,6 +114,9 @@ class Server(socketserver.ThreadingMixIn,socketserver.TCPServer):
             raise ValueError('first route must be default; duplicates forbidden')
         if any(x == b'\xff'*5 for x in allowed_routes):
             raise ValueError('all-FF wildcard route prohibited')
+        if fault_plan is not None and not isinstance(fault_plan, FaultPlan):
+            raise TypeError('fault_plan must be an opt-in in-process FaultPlan')
+        self.fault_plan = fault_plan
         self.allowed_routes=frozenset(allowed_routes)
         self.max_body=max_body
         self.memory=memory if memory is not None else Memory()

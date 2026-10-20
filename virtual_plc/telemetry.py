@@ -11,7 +11,8 @@ from threading import Lock
 from . import __version__
 
 EVENTS = frozenset({'request_ok','request_error','framing_error','eof_mid_frame',
-                    'idle_timeout','send_failure','connection_reset','session_refused'})
+                    'idle_timeout','send_failure','connection_reset','session_refused',
+                    'fault_delay','fault_disconnect'})
 
 class Telemetry:
     def __init__(self, event_capacity=64, *, seed_token=None):
