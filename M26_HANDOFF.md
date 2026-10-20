@@ -1,0 +1,8 @@
+# VirtualPLC M25 → M26 handoff (2026-10-21)
+
+1. Verify GitHub `greatgc-flow/VirtualPLC` Draft PR #1 current head, main, Actions before edits. **Keep Draft**, do not merge or activate automated CI without permission.
+2. Validate current ZIP CRC and top-level `FILE_SHA256_MANIFEST.json` for **all** members, excluding self. Read `docs/M25_PROGRESS.md`, `M25_GATES.json`, `scripts/m25_replicates.py`, `tests/test_m25_replicates.py`, and actual M25 JUnit audit before acting.
+3. M25 adds independently coded (but **not independently attested**) M23 evidence reconciliation and descriptive three-run aggregation. Fresh stdout and `console.log` match bytewise. Real local Linux 3 runs: p95 [811,651,571]us, run-level median 651, MAD 80, all succeeded. Results are **not a throughput guarantee or memory leak proof**.
+4. Full M25 local regression: 962 unique pytest PASS + 5 subtests; 45 TCP loopback PASS; P0 183/199; external 16 P0 **HOLD** in `backlog/M20_BACKLOG.json` (G0-C/G0-E/G3/G4). Never close them using synthetic evidence or GitHub source-only API inspection.
+5. M26 recommended: safe capped one-click **multi-run orchestrator**, preflight/source stability checks, stdout-to-file evidence, always write new unique paths and fail closed; consider source-changed-in-flight and interrupted-run tests. Keep instrumented workload loopback-only, default-disabled.
+6. New evidence ZIP must include source, tests, JUnit, exact local reports, previous M25 package unmodified, SHA-256 manifest, and next-chat prompt. Commit only portable source/docs (no raw machine evidence) to existing Draft PR branch and remotely verify Git Blob digests.
