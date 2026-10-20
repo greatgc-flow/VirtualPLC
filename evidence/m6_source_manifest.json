@@ -1,0 +1,62 @@
+{
+  "kind": "M6_local_file_sha256",
+  "release": "HOLD",
+  "git_head_at_start": "d77c5200ab0109d5d87517d6a6f814d0a9485ad2",
+  "files": [
+    {
+      "path": "virtual_plc/telemetry.py",
+      "bytes": 1889,
+      "sha256": "8c9fa277291d99e4945d1daa286a8a0a333a3f4bd834712e95a126448741517a"
+    },
+    {
+      "path": "virtual_plc/server.py",
+      "bytes": 4173,
+      "sha256": "7fbd791ed1019b3bd6edac18ccc50dd65706086bf89b4962357c9bccc03a3f55"
+    },
+    {
+      "path": "virtual_plc/__main__.py",
+      "bytes": 1839,
+      "sha256": "ea25e2afbb48d4fc24dfe4e86b5a01dd4a437940d57e7bc48eed33325eb184e5"
+    },
+    {
+      "path": "scripts/governance.py",
+      "bytes": 2589,
+      "sha256": "37010984059c943520c54271c4969f3a5648370a0b1db8b8e1ef9b0c900ab273"
+    },
+    {
+      "path": "scripts/run_m6.py",
+      "bytes": 3572,
+      "sha256": "08c0059dd02bdb6ec5a16536b9727e2db8e4bbbbc2ba8220cd901b7727ec2989"
+    },
+    {
+      "path": "tests/test_m6_runtime.py",
+      "bytes": 5844,
+      "sha256": "cfec2187b308017f970c76ad67df720a8d212ec6428f9047dbeebe44b04ae263"
+    },
+    {
+      "path": "tests/test_m6_governance.py",
+      "bytes": 4164,
+      "sha256": "664023e2c9177eb45aebc8e34d12bffb08119d0171640e79b4d0082e03b9fb23"
+    },
+    {
+      "path": "docs/M6_PROGRESS.md",
+      "bytes": 4003,
+      "sha256": "fb7999150c231efd0deeb730c8e7745e7c52a5d937930898191acdcda50e721c"
+    },
+    {
+      "path": "M6_REMAINING_P0.json",
+      "bytes": 5820,
+      "sha256": "4eaa3245120b4df8d9e71c1a8bc0d546ea7db3b34217c58ae754de6e9644f98b"
+    },
+    {
+      "path": "NEXT_CHAT_PROMPT_M7.md",
+      "bytes": 1286,
+      "sha256": "83884320f95565fe52d11db51be93f5d6b2bb34664201c653c73f91458ecc466"
+    },
+    {
+      "path": "evidence/m6_gate.json",
+      "bytes": 971,
+      "sha256": "97f111de59990893466e61375593e5d331d16adb72102ef95468ea92d174c80e"
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 """Start the experimental loopback-only virtual PLC (never a physical PLC)."""
 import argparse
+import signal
+import threading
 from .config import load_config, validate_options
 from .memory import Memory
 from .server import Server
@@ -21,6 +23,16 @@ def main(argv=None):
                 memory=Memory(d_size=cfg['d_size'], m_size=cfg['m_size']),
                 max_body=cfg['max_body']) as server:
         print(f"VirtualPLC M5 loopback-only: {server.server_address}", flush=True)
+        # Signal handler cannot call shutdown() on the serve_forever thread.
+        def terminate(signum, frame):
+            threading.Thread(target=server.shutdown, daemon=True).start()
+        for sig in ('SIGTERM', 'SIGINT'):
+            signum = getattr(signal, sig, None)
+            if signum is not None:
+                try:
+                    signal.signal(signum, terminate)
+                except (OSError, ValueError):
+                    pass
         try:
             server.serve_forever(poll_interval=0.05)
         except KeyboardInterrupt:
