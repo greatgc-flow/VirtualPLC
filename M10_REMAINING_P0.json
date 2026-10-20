@@ -1,0 +1,146 @@
+{
+  "date": "2026-10-20",
+  "source_previous_m8_p0": 178,
+  "new_case_ids": [
+    "CASE-0089",
+    "CASE-0092"
+  ],
+  "p0_total": 199,
+  "p0_observed_pass_unattested": 183,
+  "p0_attested": 0,
+  "not_run": 16,
+  "remaining_cases": [
+    {
+      "id": "CASE-0018",
+      "title": "unsupported command endcode",
+      "oracle": "model-verified endcode and full failed payload",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0019",
+      "title": "invalid device endcode",
+      "oracle": "correct 5+2+2 error detail; response length",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0020",
+      "title": "valid request error vs fatal frame",
+      "oracle": "decoded fault replies, framing fatal closes",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0027",
+      "title": "pymcprotocol Type3E D roundtrip",
+      "oracle": "pinned client read/write matches",
+      "gate": "G0-C",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0028",
+      "title": "pymcprotocol Type3E M roundtrip",
+      "oracle": "pinned client bit read/write matches",
+      "gate": "G0-C",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0029",
+      "title": "pinned client capture byte comparison",
+      "oracle": "capture eq VEC001 VEC002 VEC003",
+      "gate": "G0-C",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0044",
+      "title": "Windows/Linux smoke",
+      "oracle": "both CI green for same release",
+      "gate": "G3",
+      "runner": "manual_gate",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0055",
+      "title": "evidence record integrity",
+      "oracle": "client/version/commit/sha present",
+      "gate": "G4",
+      "runner": "static_validator",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0064",
+      "title": "error response contains original cmd/sub",
+      "oracle": "5 byte station and 4 cmd/sub after endcode",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0088",
+      "title": "address 10000",
+      "oracle": "protocol reject; no wraparound",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0090",
+      "title": "start 9999 count 2",
+      "oracle": "no partial write",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0109",
+      "title": "pinned pymc D roundtrip",
+      "oracle": "exact value and client version recorded",
+      "gate": "G0-C",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0110",
+      "title": "pinned pymc M bit roundtrip",
+      "oracle": "exact bit values",
+      "gate": "G0-C",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0111",
+      "title": "actual Type3E request byte capture",
+      "oracle": "byte diff versus pinned golden recorded",
+      "gate": "G0-C",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0128",
+      "title": "Windows Python>=3.11",
+      "oracle": "test report and env fingerprint",
+      "gate": "G3",
+      "runner": "manual_gate",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0147",
+      "title": "pytest + pinned pymc version",
+      "oracle": "artifact records client and python version",
+      "gate": "G4",
+      "runner": "static_validator",
+      "phase": "P0"
+    }
+  ],
+  "release": "HOLD",
+  "source_previous_m9_p0": 181,
+  "manufacturer_gate": "OPEN",
+  "real_client_gate": "NOT_RUN"
+}

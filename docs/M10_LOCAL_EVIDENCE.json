@@ -1,0 +1,53 @@
+{
+  "catalog_sha256": "31415a1c0813aa28364883a24e006c5d8d4ff5ad8db171409ec4551a02f2fa7f",
+  "input_tests_total": 318,
+  "inputs": [
+    {
+      "phase": "base",
+      "sha256": "0bdc58144262e111063ec3bfd2846c5b132eec09cae137cd4e72e437b600f9ed",
+      "tests": 244
+    },
+    {
+      "phase": "tcp_a",
+      "sha256": "f8bd720425b6faf66b2bd884d506d6758a7b83fa66c62305d88d33f82aff5d34",
+      "tests": 20
+    },
+    {
+      "phase": "tcp_b",
+      "sha256": "472f4446af0c3c9477c8611434a50f4fe8dbb91187d996b6b4435e8c43ac3cba",
+      "tests": 20
+    },
+    {
+      "phase": "tcp_c",
+      "sha256": "7366010c10a6cfe41b2de6fd9c0804499690bf117170be1be8ff68537601d2e3",
+      "tests": 5
+    },
+    {
+      "phase": "m9_additional",
+      "sha256": "fad46cff4a2355d12ec7c8e26740f95aa5893d5626df77d49ffe03a5ce3e2fbc",
+      "tests": 16
+    },
+    {
+      "phase": "m10",
+      "sha256": "24521a484a11a11b92c88a22d683da293741d72afb51a51a4b673b7a65a29159",
+      "tests": 13
+    }
+  ],
+  "manufacturer_end_codes": "NOT_VERIFIED",
+  "merged_junit_sha256": "a0d40112b05f1cdacb6fbf3737b7f48c493c8ea7e2dd0998d22784c82c279414",
+  "note": "Local observed pass; test count cannot be confused with independent release attestation.",
+  "p0_attested": 0,
+  "p0_not_run": 16,
+  "p0_observed_pass": 183,
+  "p0_total": 199,
+  "phase": "M10",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "pymcprotocol_installed": "NOT_INSTALLED",
+  "python": "3.13.5",
+  "real_pymcprotocol": "NOT_RUN",
+  "release": "HOLD",
+  "status": "PASS_LOCAL_UNATTESTED",
+  "windows_independent": "NOT_RUN",
+  "workflow_status": "NOT_ENABLED",
+  "repo_branch_at_start": "19285fa4e8ce905d041ff2b69917c4424a73e985"
+}
