@@ -1,0 +1,33 @@
+{
+  "schema": "virtualplc.m23.gates.v1",
+  "release": "HOLD",
+  "draft_pr_only": true,
+  "p0_total": 199,
+  "p0_locally_observed": 183,
+  "external_backlog_p0": 16,
+  "new_external_p0_passes": 0,
+  "m23_new_local_tests_pass": 42,
+  "unique_pytest_pass": 797,
+  "unittest_subtests_pass": 5,
+  "loopback_tcp_pass": 45,
+  "local_fault_reconnect": {
+    "status": "OBSERVED_NONCERTIFYING",
+    "dropped_write_mutated_memory": false,
+    "recovered_readback": true
+  },
+  "same_process_duration": {
+    "status": "MEASURED_NOT_CERTIFIED",
+    "clients": 4,
+    "requests_ok": 1328,
+    "requests_failed": 0,
+    "rss_samples": 83,
+    "observed_p95_us": 1557
+  },
+  "memory_leak_absence_certified": false,
+  "performance_sla_approved": false,
+  "real_vendor_plc_tested": false,
+  "official_wheel_tested": false,
+  "windows_tested": false,
+  "independent_signoff": false,
+  "external_backlog_source": "backlog/M20_BACKLOG.json"
+}
