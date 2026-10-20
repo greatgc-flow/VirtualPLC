@@ -1,0 +1,17 @@
+{
+  "source_m8_head": "ca5e08602e0b8389a65f63f5994867797850693d",
+  "local_platform": "linux",
+  "local_python": "3.13.5",
+  "unique_p0_pass_unattested": 181,
+  "unique_p0_not_run": 18,
+  "p0_attested": 0,
+  "total_junit_cases": 305,
+  "m8_legacy_manifest": "7 OF 125 SHA256 FAILED; 7 matched GitHub blobs",
+  "m8_zip_sha256": "8dcbe4753d5763c70e2c75877c6517910c39860520e7ee8c25ccd2886f267846",
+  "archive_audit_sha256": "94c38ebc353e3605188f8365d9401b4ce126bfb353e53dd264598145a2d044d5",
+  "junit_merged_sha256": "5165dd35741cf79cdf0e3f601bff7ef81e2b9a7a58befa106d86556704385289",
+  "measurement_evidence_sha256": "b15c03c01daa5a50794ee8af5060d9d04a59618e64301f81a32c2c01c1311d96",
+  "pymcprotocol_real_wheel": "NOT_INSTALLED_NOT_RUN",
+  "windows_ci": "NOT_RUN",
+  "release": "HOLD"
+}

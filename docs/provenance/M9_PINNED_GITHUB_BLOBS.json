@@ -1,0 +1,14 @@
+{
+  "origin": "GitHub API get tree, greatgc-flow/VirtualPLC, PR #1",
+  "head": "ca5e08602e0b8389a65f63f5994867797850693d",
+  "checked_at": "2026-10-20",
+  "paths": {
+    "README.md": "4061352b88774c3662a1850570a2b66ed291acf3",
+    "virtual_plc/__init__.py": "af3d39142ab1cd0775367c6773982e00d70f47f1",
+    "virtual_plc/__main__.py": "9efaed807cd4c3120aa95784c7f4a8a4832fc3cd",
+    "virtual_plc/config.py": "f45e24304ba34c8cd1d4bdb5b69f5ef959db3143",
+    "virtual_plc/memory.py": "a4561f07dd4d1ac21309d3f415a28fda6fabf023",
+    "virtual_plc/server.py": "54318f65b2a08597691b19ed351bf3df93cbd086",
+    "virtual_plc/telemetry.py": "03cc8427744eea6f479d4fca9197aa0a91b89830"
+  }
+}
