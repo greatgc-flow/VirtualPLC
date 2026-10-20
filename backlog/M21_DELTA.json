@@ -1,0 +1,55 @@
+{
+  "external_case_ids": [
+    "CASE-0027",
+    "CASE-0028",
+    "CASE-0029",
+    "CASE-0109",
+    "CASE-0110",
+    "CASE-0111",
+    "CASE-0018",
+    "CASE-0019",
+    "CASE-0020",
+    "CASE-0064",
+    "CASE-0088",
+    "CASE-0090",
+    "CASE-0044",
+    "CASE-0128",
+    "CASE-0055",
+    "CASE-0147"
+  ],
+  "external_unverified_cases": 16,
+  "items": [
+    {
+      "dependency": "none",
+      "id": "BL-INT-001",
+      "status": "IMPLEMENTED_LOCAL_M20"
+    },
+    {
+      "deliverables": [
+        "scripts/m21_local_evidence.py",
+        "RUN_M21_LOCAL.cmd",
+        "tests/test_m21_local_evidence.py"
+      ],
+      "evidence": "see docs/M21_PROGRESS.md",
+      "id": "BL-INT-002",
+      "release_certification": false,
+      "status": "IMPLEMENTED_LOCAL_M21"
+    },
+    {
+      "dependency": "none",
+      "goal": "Bounded loopback load/soak and resource trend, with exact logs",
+      "id": "BL-INT-003",
+      "status": "NEXT"
+    },
+    {
+      "dependency": "none",
+      "goal": "Scenario sequencing + operator runbook",
+      "id": "BL-INT-004",
+      "status": "BACKLOG"
+    }
+  ],
+  "phase": "M21",
+  "release": "HOLD",
+  "schema": "virtualplc.internal-roadmap-delta.v1",
+  "source_backlog": "backlog/M20_BACKLOG.json"
+}

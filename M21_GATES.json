@@ -1,0 +1,16 @@
+{
+  "existing_p0_total": 199,
+  "external_blocked": 16,
+  "external_newly_approved": 0,
+  "historical_local_observed_unattested": 183,
+  "independent_signoff": false,
+  "internal_bl_int_002": "IMPLEMENTED_LOCAL_REGRESSION_PASS",
+  "last_m20_current_unique_p0_observed": 160,
+  "m21_full_p0_recount_performed": false,
+  "next_internal": "BL-INT-003",
+  "official_wheel_executed": false,
+  "phase": "M21",
+  "release": "HOLD",
+  "schema": "virtualplc.m21.gates.v1",
+  "windows_native_attested": false
+}
