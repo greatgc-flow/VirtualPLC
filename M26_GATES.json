@@ -1,0 +1,29 @@
+{
+  "ci_auto_enabled": false,
+  "duplicate_case_id": 0,
+  "external_backlog": "backlog/M20_BACKLOG.json",
+  "external_p0_hold": 16,
+  "feature": "bounded_loopback_three_to_thirty_run_orchestration",
+  "independent_reviewer_approval": false,
+  "junit_files": 11,
+  "local_measurement_status": "OBSERVED_NOT_CERTIFIED",
+  "merge_main_allowed": false,
+  "milestone": "M26",
+  "new_test_pass": 53,
+  "observed_unique_p0": 183,
+  "p0_total": 199,
+  "production_plc_traffic_permitted": false,
+  "program_console_matches_file": true,
+  "regression_pytest_pass": 1015,
+  "release": "HOLD",
+  "repeated_local_observations": [
+    613,
+    521,
+    521
+  ],
+  "schema": "virtualplc.m26.gates.v1",
+  "subtests_pass": 5,
+  "tcp_pass": 45,
+  "vendor_certified": false,
+  "windows_native_attested": false
+}

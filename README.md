@@ -1,3 +1,7 @@
+## M26 CURRENT (2026-10-21)
+
+Latest milestones are documented in `docs/M26_PROGRESS.md`, `M26_GATES.json`, and `M27_HANDOFF.md`. Use `RUN_M26_LOCAL_REPEATS.cmd` on a clean local checkout to perform opt-in bounded repetitions (3..30 runs), each keeping exact console output, JUnit, report and hashes. **Local P0 observed 183/199; 16 external P0 HOLD. Release HOLD, no automated CI or merge.** Earlier milestone figures below are retained only as historical records.
+
 # VirtualPLC — MC/SLMP simulator (experimental)
 
 **M9 on Draft PR #1 — local-only, not a real Mitsubishi PLC.** Public repository; no production data or PLC IPs.
