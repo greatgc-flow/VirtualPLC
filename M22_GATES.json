@@ -1,0 +1,28 @@
+{
+  "schema": "virtualplc.m22.gates.v1",
+  "release": "HOLD",
+  "internal_regression": {
+    "tests_pass": 755,
+    "unique_p0_pass_observed": 183,
+    "tests_failed": 0
+  },
+  "external_backlog": {
+    "cases_remaining": 16,
+    "reference": "backlog/M20_BACKLOG.json",
+    "status": "BLOCKED"
+  },
+  "performance": {
+    "observed": true,
+    "requests": 7800,
+    "errors": 0,
+    "rss_scope": "isolated server child process",
+    "thresholds": "not defined",
+    "independent_acceptance": false,
+    "memory_leak_conclusion": "NOT_ESTABLISHED"
+  },
+  "ci_and_main": {
+    "draft_pr_only": true,
+    "actions_enable_requested": false,
+    "merge_requested": false
+  }
+}
