@@ -1,0 +1,195 @@
+{
+  "source": "M7_REMAINING_P0.json",
+  "source_p0_pass": 176,
+  "new_observed_p0_ids": [
+    "CASE-0121",
+    "CASE-0146"
+  ],
+  "p0_total": 199,
+  "p0_observed_pass_unattested": 178,
+  "p0_attested": 0,
+  "remaining_total": 21,
+  "by_gate": {
+    "G0-C": 6,
+    "G0-E": 8,
+    "G3": 5,
+    "G4": 2
+  },
+  "by_runner": {
+    "manual_gate": 5,
+    "runtime_adapter": 14,
+    "static_validator": 2
+  },
+  "cases": [
+    {
+      "id": "CASE-0018",
+      "title": "unsupported command endcode",
+      "oracle": "model-verified endcode and full failed payload",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0019",
+      "title": "invalid device endcode",
+      "oracle": "correct 5+2+2 error detail; response length",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0020",
+      "title": "valid request error vs fatal frame",
+      "oracle": "decoded fault replies, framing fatal closes",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0027",
+      "title": "pymcprotocol Type3E D roundtrip",
+      "oracle": "pinned client read/write matches",
+      "gate": "G0-C",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0028",
+      "title": "pymcprotocol Type3E M roundtrip",
+      "oracle": "pinned client bit read/write matches",
+      "gate": "G0-C",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0029",
+      "title": "pinned client capture byte comparison",
+      "oracle": "capture eq VEC001 VEC002 VEC003",
+      "gate": "G0-C",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0044",
+      "title": "Windows/Linux smoke",
+      "oracle": "both CI green for same release",
+      "gate": "G3",
+      "runner": "manual_gate",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0047",
+      "title": "latency percentiles and RSS baseline",
+      "oracle": "record env and p50/p95/p99,RSS no invented SLA",
+      "gate": "G3",
+      "runner": "manual_gate",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0055",
+      "title": "evidence record integrity",
+      "oracle": "client/version/commit/sha present",
+      "gate": "G4",
+      "runner": "static_validator",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0064",
+      "title": "error response contains original cmd/sub",
+      "oracle": "5 byte station and 4 cmd/sub after endcode",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0088",
+      "title": "address 10000",
+      "oracle": "protocol reject; no wraparound",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0089",
+      "title": "start 9999 count 1",
+      "oracle": "one valid point",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0090",
+      "title": "start 9999 count 2",
+      "oracle": "no partial write",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0092",
+      "title": "start 0",
+      "oracle": "read/write D0 or M0 succeeds",
+      "gate": "G0-E",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0109",
+      "title": "pinned pymc D roundtrip",
+      "oracle": "exact value and client version recorded",
+      "gate": "G0-C",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0110",
+      "title": "pinned pymc M bit roundtrip",
+      "oracle": "exact bit values",
+      "gate": "G0-C",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0111",
+      "title": "actual Type3E request byte capture",
+      "oracle": "byte diff versus pinned golden recorded",
+      "gate": "G0-C",
+      "runner": "runtime_adapter",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0128",
+      "title": "Windows Python>=3.11",
+      "oracle": "test report and env fingerprint",
+      "gate": "G3",
+      "runner": "manual_gate",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0129",
+      "title": "Linux Python>=3.11",
+      "oracle": "test report and env fingerprint",
+      "gate": "G3",
+      "runner": "manual_gate",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0132",
+      "title": "deterministic 100/1000 word load",
+      "oracle": "p50/p95/p99 per platform with no invented SLA",
+      "gate": "G3",
+      "runner": "manual_gate",
+      "phase": "P0"
+    },
+    {
+      "id": "CASE-0147",
+      "title": "pytest + pinned pymc version",
+      "oracle": "artifact records client and python version",
+      "gate": "G4",
+      "runner": "static_validator",
+      "phase": "P0"
+    }
+  ],
+  "release": "HOLD",
+  "reason": "pymcprotocol v0.3.0 wheel unavailable; G0-E vendor profile; no cross-platform CI and independent signoff"
+}

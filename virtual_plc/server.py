@@ -44,7 +44,7 @@ class Handler(socketserver.BaseRequestHandler):
                     deadline=time.monotonic()+IDLE_TIMEOUT
                     first=read_exact(self.request,9,deadline)
                     if first[:2]!=REQUEST_HEADER:raise FrameError('invalid subheader')
-                    if first[2:7]!=DEFAULT_ROUTE:raise FrameError('unconfigured station route')
+                    if first[2:7] not in self.server.allowed_routes:raise FrameError('unconfigured station route')
                     body_len=int.from_bytes(first[7:9],'little')
                     if body_len<12 or body_len>self.server.max_body:raise FrameError('invalid body size')
                     body=read_exact(self.request,body_len,deadline)
@@ -86,11 +86,23 @@ class Server(socketserver.ThreadingMixIn,socketserver.TCPServer):
     daemon_threads=True
     block_on_close=False
     request_queue_size=32
-    def __init__(self,address,*,memory=None,max_body=MAX_BODY,telemetry=None):
+    def __init__(self,address,*,memory=None,max_body=MAX_BODY,telemetry=None,allowed_routes=None):
         host,_=address
         if host!='127.0.0.1':raise ValueError('this prototype only binds 127.0.0.1')
         if type(max_body) is not int or not 12 <= max_body <= MAX_BODY:
             raise ValueError('invalid max_body setting')
+        # Only exact five-byte route identifiers. No wildcards or external forwarding.
+        if allowed_routes is None:
+            allowed_routes = (DEFAULT_ROUTE,)
+        if not isinstance(allowed_routes, (tuple, list)) or not 1 <= len(allowed_routes) <= 16:
+            raise ValueError('allowed_routes must contain 1..16 explicit routes')
+        if any(type(x) is not bytes or len(x) != 5 for x in allowed_routes):
+            raise ValueError('each route must be exactly 5 bytes')
+        if allowed_routes[0] != DEFAULT_ROUTE or len(set(allowed_routes)) != len(allowed_routes):
+            raise ValueError('first route must be default; duplicates forbidden')
+        if any(x == b'\xff'*5 for x in allowed_routes):
+            raise ValueError('all-FF wildcard route prohibited')
+        self.allowed_routes=frozenset(allowed_routes)
         self.max_body=max_body
         self.memory=memory if memory is not None else Memory()
         if telemetry is not None and not isinstance(telemetry,Telemetry):

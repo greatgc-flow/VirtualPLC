@@ -16,7 +16,7 @@ from types import SimpleNamespace
 import pytest
 from suite.support.wire import request
 from virtual_plc.memory import Memory
-from virtual_plc.server import Handler, Server, IDLE_TIMEOUT
+from virtual_plc.server import Handler, Server, IDLE_TIMEOUT, DEFAULT_ROUTE
 from virtual_plc.telemetry import Telemetry
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -102,7 +102,7 @@ def test_m7_p0(case_id, record_property):
         limiter = threading.BoundedSemaphore(1)
         handler = object.__new__(Handler)
         handler.server = SimpleNamespace(limiter=limiter, telemetry=telemetry,
-            max_body=4096, memory=Memory())
+            max_body=4096, memory=Memory(), allowed_routes=frozenset((DEFAULT_ROUTE,)))
         handler.request = fake
         start = time.monotonic()
         handler.handle()

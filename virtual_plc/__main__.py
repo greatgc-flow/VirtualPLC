@@ -21,7 +21,8 @@ def main(argv=None):
         parser.error(f'configuration rejected before listening: {exc}')
     with Server((cfg['host'], cfg['port']),
                 memory=Memory(d_size=cfg['d_size'], m_size=cfg['m_size']),
-                max_body=cfg['max_body']) as server:
+                max_body=cfg['max_body'],
+                allowed_routes=[bytes.fromhex(x) for x in cfg['routes']]) as server:
         print(f"VirtualPLC M5 loopback-only: {server.server_address}", flush=True)
         # Signal handler cannot call shutdown() on the serve_forever thread.
         def terminate(signum, frame):
