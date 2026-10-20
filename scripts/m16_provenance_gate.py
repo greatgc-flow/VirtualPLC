@@ -14,13 +14,49 @@ import stat
 import sys
 import tempfile
 import zipfile
-from scripts.m14_windows_evidence import inspect_client_run
+from scripts.m14_windows_evidence import inspect_client_run, ROOT
 
 MAX_FILES = 256
 MAX_TOTAL_BYTES = 30 * 1024 * 1024
 MAX_FILE_BYTES = 8 * 1024 * 1024
 MAX_COMPRESSION_RATIO = 1000
 MANIFEST = 'M14_EVIDENCE.json'
+
+# Reject cross-platform path ambiguity before extracting archives on any OS.
+_WINDOWS_RESERVED = frozenset({'CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'} |
+                              {'COM' + str(n) for n in range(1, 10)} |
+                              {'LPT' + str(n) for n in range(1, 10)})
+
+
+def portable_member_name(name, *, directory=False):
+    """Reject ZIP paths unsafe on Windows, even during a Linux review."""
+    if not isinstance(name, str) or not name or chr(92) in name:
+        raise ValueError('unsafe path or nonregular file in archive')
+    raw = name[:-1] if directory and name.endswith('/') else name
+    if not raw or raw.startswith('/') or raw.endswith('/'):
+        raise ValueError('unsafe path or nonregular file in archive')
+    if any(ord(c) < 32 or ord(c) == 127 for c in raw):
+        raise ValueError('unsafe path or nonregular file in archive')
+    for component in raw.split('/'):
+        if (not component or component in ('.', '..') or ':' in component or
+                component[-1] in ('.', ' ') or
+                component.split('.', 1)[0].upper() in _WINDOWS_RESERVED):
+            raise ValueError('unsafe path or nonregular file in archive')
+    if PurePosixPath(raw).as_posix() != raw:
+        raise ValueError('unsafe path or nonregular file in archive')
+    return raw
+
+
+def protected_intake_result(zip_path, result_path, *, source_root=ROOT):
+    """Never write potentially private Windows evidence into a public checkout."""
+    source = Path(source_root).resolve()
+    destination = Path(result_path).resolve()
+    archive = Path(zip_path).resolve()
+    if (destination == source or source in destination.parents or
+            destination == archive or Path(result_path).is_symlink()):
+        raise ValueError('intake result path is unsafe or inside public repository')
+    return destination
+
 
 
 def sha256_bytes(value):
@@ -53,16 +89,14 @@ def inspect_archive(path):
         total = 0
         for e in members:
             name = e.filename
-            parts = PurePosixPath(name)
+            portable_member_name(name, directory=e.is_dir())
             kind = (e.external_attr >> 16) & 0o170000
-            if (not name or '\\' in name or '\x00' in name or parts.is_absolute()
-                    or '..' in parts.parts or '.' in parts.parts or name.startswith('/')
-                    or kind not in (0, stat.S_IFREG)):
-                raise ValueError('unsafe path or nonregular file in archive')
             if e.is_dir():
                 if kind not in (0, stat.S_IFDIR):
                     raise ValueError('bad ZIP directory type')
                 continue
+            if kind not in (0, stat.S_IFREG):
+                raise ValueError('unsafe path or nonregular file in archive')
             if e.file_size > MAX_FILE_BYTES or e.file_size < 0:
                 raise ValueError('file size out of bounds')
             if e.file_size > 0 and e.file_size > max(1, e.compress_size) * MAX_COMPRESSION_RATIO:
@@ -131,6 +165,7 @@ def main(argv=None):
         print('M16_INTAKE=HOLD: refusing to overwrite result')
         return 2
     try:
+        protected_intake_result(args.zip, args.result)
         report = inspect_archive(args.zip)
     except (OSError, ValueError, KeyError, TypeError, zipfile.BadZipFile,
             json.JSONDecodeError) as exc:
