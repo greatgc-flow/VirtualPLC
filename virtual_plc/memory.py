@@ -11,6 +11,11 @@ class Memory:
         self._version = 0
         self._lock = RLock()
 
+    @property
+    def version(self):
+        with self._lock:
+            return self._version
+
     @staticmethod
     def _range(head, n, size):
         if type(head) is not int or type(n) is not int or head < 0 or n < 1 or head > size or n > size - head:

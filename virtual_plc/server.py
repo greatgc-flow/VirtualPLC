@@ -37,6 +37,7 @@ class Handler(socketserver.BaseRequestHandler):
         if not lock.acquire(blocking=False):
             telemetry.record('session_refused')
             return
+        session_id = telemetry.new_session()
         try:
             while True:
                 try:
@@ -52,12 +53,13 @@ class Handler(socketserver.BaseRequestHandler):
                     cmd=struct.unpack_from('<H',body,2)[0]
                     endcode=struct.unpack_from('<H',response,9)[0]
                     telemetry.record('request_ok' if endcode==0 else 'request_error',
-                                     command=cmd,status=endcode)
+                                     command=cmd, status=endcode, session_id=session_id,
+                                     memory_version=self.server.memory.version)
                     self.request.settimeout(IDLE_TIMEOUT)
                     try:
                         self.request.sendall(response)
                     except (TimeoutError, BrokenPipeError, ConnectionResetError, OSError):
-                        telemetry.record('send_failure')
+                        telemetry.record('send_failure', session_id=session_id)
                         break
                 except FrameError:
                     telemetry.record('framing_error')
@@ -74,7 +76,7 @@ class Handler(socketserver.BaseRequestHandler):
                     telemetry.record('connection_reset')
                     break
                 except OSError:
-                    telemetry.record('send_failure')
+                    telemetry.record('send_failure', session_id=session_id)
                     break
         finally:
             lock.release()
