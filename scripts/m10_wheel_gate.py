@@ -80,12 +80,15 @@ def run(wheel, evidence_dir):
             break
     else:
         report['status'] = 'PASS_LOCAL_UNATTESTED'
+    status_line = ('M10_CLIENT_RESULT='+report['status']+'\n').encode('utf-8')
+    log.extend(status_line)
+    sys.stdout.buffer.write(status_line)
+    sys.stdout.buffer.flush()
     (evidence_dir/'console.log').write_bytes(log)
     report['stdout_sha256'] = hashlib.sha256(log).hexdigest()
     report['tests_authoritative'] = False
     report['windows_independent_evidence'] = sys.platform == 'win32'
     (evidence_dir/'result.json').write_text(json.dumps(report, indent=2, sort_keys=True)+'\n')
-    print('M10_CLIENT_RESULT='+report['status'])
     return 0 if report['status'] == 'PASS_LOCAL_UNATTESTED' else 2
 
 
