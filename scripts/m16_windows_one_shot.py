@@ -92,10 +92,29 @@ def main(argv=None):
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--expected-head', required=True)
     args=parser.parse_args(argv)
+    existed_before = args.output.exists()
     try:
         report=run(wheel=args.wheel, output=args.output,expected_head=args.expected_head)
     except (OSError,ValueError,subprocess.SubprocessError,TimeoutError) as exc:
-        print('M16_WINDOWS=HOLD: '+str(exc))
+        line=('M16_WINDOWS=HOLD: '+str(exc)+'\n').encode('utf-8')
+        # If this invocation created the new output folder, preserve all bytes
+        # already shown on screen, followed by the exact terminal failure line.
+        if not existed_before and args.output.is_dir():
+            candidate=args.output.resolve()
+            if candidate!=ROOT.resolve() and ROOT.resolve() not in candidate.parents:
+                parts=[]
+                for name in ('wheel_download_stdout.bin','M14_CLIENT_RUN/runner_stdout.bin'):
+                    part=candidate/name
+                    if part.is_file():
+                        parts.append(part.read_bytes())
+                parts.append(line)
+                try:
+                    with (candidate/'M16_CONSOLE.bin').open('xb') as fh:
+                        fh.write(b''.join(parts))
+                except OSError:
+                    pass # Preserve original operation error; NEVER claim PASS.
+        sys.stdout.buffer.write(line)
+        sys.stdout.buffer.flush()
         return 2
     print('M16_WINDOWS='+report['result'])
     return 0 # Successful collection only; release remains HOLD.

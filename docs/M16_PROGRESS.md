@@ -17,10 +17,10 @@ M16 focuses on the remaining blockers, not feature inflation:
 Run separately to avoid TCP test timeout; full one-shot TCP runs do not count if interrupted.
 
 - Core: `MC_SIM_ADAPTER_MODULE=virtual_plc.test_adapter python -m pytest tests/test_virtual_plc.py tests/test_m4_p0_case_ids_v2.py tests/test_m5_p0_case_ids.py tests/test_m6_runtime.py tests/test_m7_runtime.py suite/tests/domain suite/tests/static -q --junitxml=M16_CORE.xml` -> **203 passed + 5 pytest subtests passed**.
-- Intake and fault matrix: `python -m pytest tests/test_m16_external_intake.py tests/test_m15_wire_evidence.py tests/test_m14_windows_evidence.py tests/test_m14_vendor_profile.py tests/test_m13_evidence_gate.py tests/test_m12_fault_matrix.py tests/test_m12_audit.py -q --junitxml=M16_EVIDENCE.xml` -> **191 passed**.
+- Intake and fault matrix: `python -m pytest tests/test_m16_external_intake.py tests/test_m15_wire_evidence.py tests/test_m14_windows_evidence.py tests/test_m14_vendor_profile.py tests/test_m13_evidence_gate.py tests/test_m12_fault_matrix.py tests/test_m12_audit.py -q --junitxml=M16_EVIDENCE.xml` -> **192 passed**.
 - TCP live suite: `suite/tests/live/test_wire_cases.py` in separate 16/16/13 test chunks using local-only `--server-cmd 'python -m virtual_plc --host {host} --port {port}'` -> **45 passed**.
 
-All logs and JUnit raw XML have been preserved in this ZIP. These are *separate verified execution groups*, not a single monolithic invocation; total 439 passing pytest test cases (203+191+45) and five pytest subtest successes, with no claim that this count is the unique P0 count. No actual Windows run is present.
+All logs and JUnit raw XML have been preserved in this ZIP. These are *separate verified execution groups*, not a single monolithic invocation; total 440 passing pytest test cases (203+192+45) and five pytest subtest successes, with no claim that this count is the unique P0 count. No actual Windows run is present.
 
 ## Source/spec cross-check
 

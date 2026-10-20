@@ -236,3 +236,18 @@ def test_synthetic_fixture_print_matches_evidence_file(tmp_path,capsysbinary):
     assert gate.main(['--zip',str(p),'--result',str(out)])==0
     stdout=capsysbinary.readouterr().out
     assert stdout==out.read_bytes()
+
+
+def test_oneshot_download_failure_console_reconstructed(tmp_path,monkeypatch,capsysbinary):
+    monkeypatch.setattr(shot.platform,'system',lambda:'Windows')
+    def broken_pip(cmd):
+        return SimpleNamespace(returncode=23,stdout=b'FAKE ERROR OUTPUT\n')
+    # main() uses the real subprocess runner; replace only the run dependency
+    # with an injected call, never touch public internet during tests.
+    original=shot.run
+    monkeypatch.setattr(shot,'run',lambda **kwargs:original(**kwargs,invoke=broken_pip))
+    out=tmp_path/'download-error'
+    rc=shot.main(['--wheel','AUTO','--output',str(out),'--expected-head','a'*40])
+    assert rc==2
+    assert capsysbinary.readouterr().out == (out/'M16_CONSOLE.bin').read_bytes()
+    assert b'M16_WINDOWS=HOLD:' in (out/'M16_CONSOLE.bin').read_bytes()

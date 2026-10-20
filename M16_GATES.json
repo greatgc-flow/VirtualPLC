@@ -14,7 +14,7 @@
   "m16_local_execution": {
     "core_pytest_passed": 203,
     "core_pytest_subtests_passed": 5,
-    "evidence_pytest_passed": 191,
+    "evidence_pytest_passed": 192,
     "tcp_live_pytest_passed": 45,
     "unique_P0_newly_attested": 0,
     "real_pymcprotocol_030_executions": 0,
