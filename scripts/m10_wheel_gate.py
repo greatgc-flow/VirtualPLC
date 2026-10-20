@@ -34,6 +34,8 @@ def run(wheel, evidence_dir):
     # Do not create evidence before input checks complete.
     info = verify_wheel(wheel)
     evidence_dir.mkdir(parents=True)
+    capture_dir = evidence_dir / 'raw_capture'
+    capture_dir.mkdir()
     package_dir = evidence_dir / '_pinned_package'
     package_dir.mkdir()
     src_root = Path(__file__).resolve().parents[1]
@@ -49,6 +51,7 @@ def run(wheel, evidence_dir):
     env = dict(os.environ)
     env['PYTHONPATH'] = str(package_dir) + os.pathsep + str(src_root)
     env['VIRTUALPLC_RUN_PYMC'] = '1'
+    env['VIRTUALPLC_WIRE_EVIDENCE_DIR'] = str(capture_dir.resolve())
     env['PYTHONDONTWRITEBYTECODE'] = '1'
     log = bytearray()
     for idx, cmd in enumerate(commands):
@@ -79,7 +82,14 @@ def run(wheel, evidence_dir):
             report['exit_code'] = rc
             break
     else:
-        report['status'] = 'PASS_LOCAL_UNATTESTED'
+        # Python test execution alone is insufficient: 6 independent raw requests required.
+        from scripts.m15_wire_evidence import verify_capture_dir
+        try:
+            report['raw_requests'] = verify_capture_dir(capture_dir)
+            report['status'] = 'PASS_LOCAL_UNATTESTED'
+        except (OSError, ValueError, TypeError) as exc:
+            report['status'] = 'FAIL_MISSING_OR_BAD_RAW_REQUESTS'
+            report['raw_request_error'] = str(exc)
     status_line = ('M10_CLIENT_RESULT='+report['status']+'\n').encode('utf-8')
     log.extend(status_line)
     sys.stdout.buffer.write(status_line)

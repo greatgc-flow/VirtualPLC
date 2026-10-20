@@ -1,0 +1,18 @@
+{
+  "phase":"M15",
+  "date":"2026-10-20",
+  "release":"HOLD",
+  "p0_total":199,
+  "historic_p0_local_observed_unattested":183,
+  "new_p0_independently_attested":0,
+  "external_open_count":16,
+  "gates": {
+    "G0-C":{"status":"NOT_RUN_NO_PINNED_WHEEL","case_ids":["CASE-0027","CASE-0028","CASE-0029","CASE-0109","CASE-0110","CASE-0111"]},
+    "G0-E":{"status":"OPEN_VENDOR_MODEL_FIRMWARE_REFERENCE","case_ids":["CASE-0018","CASE-0019","CASE-0020","CASE-0064","CASE-0088","CASE-0090"]},
+    "G3":{"status":"NOT_RUN_INDEPENDENT_WINDOWS","case_ids":["CASE-0044","CASE-0128"]},
+    "G4":{"status":"OPEN_INDEPENDENT_RELEASE_APPROVAL","case_ids":["CASE-0055","CASE-0147"]}
+  },
+  "local_new_tests":{"m15_plus_m14_evidence":67,"core_regression":101,"static":20,"domain":19},
+  "change":"Raw client write/read requests are now recorded and cross-verified against JUnit; no actual external-client executions performed.",
+  "never_auto_promote_from_synthetic_tests":true
+}

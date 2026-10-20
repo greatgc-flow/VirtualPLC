@@ -8,6 +8,8 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 import pytest
 from scripts import m14_windows_evidence as m14
 from scripts.m13_evidence_gate import CLIENT_IDS
+from scripts.m15_wire_evidence import write_capture, verify_capture_dir
+import struct
 
 PIN = '614217d43fbf8d9e409c1928993cbb4339d17828c1002c1766ce900aaee12dd6'
 
@@ -31,6 +33,17 @@ def fake_client_run(folder, status='PASS_LOCAL_UNATTESTED', broken=None):
         SubElement(props,'property',name='case_id',value=case_id)
         if broken == 'skipped' and case_id == ids[0]: SubElement(case,'skipped')
     (folder/'pymc_junit.xml').write_bytes(tostring(root))
+    cap=folder/'raw_capture';cap.mkdir()
+    for cid in sorted(CLIENT_IDS):
+        is_d=cid in ('CASE-0027','CASE-0029','CASE-0109')
+        dev,addr,sub,n=(0xA8,100,0,3) if is_d else (0x90,10,1,5)
+        wire_payload=(struct.pack('<3H',0x1995,0x1202,0x1130) if is_d else b'\x10\x10\x10')
+        def frame(cmd,payload):
+            body=(struct.pack('<HHH',16,cmd,sub)+addr.to_bytes(3,'little')
+                +bytes([dev])+struct.pack('<H',n)+payload)
+            return b'\x50\x00'+bytes.fromhex('00 ff ff 03 00')+struct.pack('<H',len(body))+body
+        write_capture(cap/(cid+'.json'),cid,[frame(0x1401,wire_payload),frame(0x0401,b'')])
+    report['raw_requests']=verify_capture_dir(cap)
     (folder/'result.json').write_text(json.dumps(report))
     return folder
 

@@ -12,6 +12,7 @@ import threading
 
 import pytest
 from virtual_plc.server import Server
+from scripts.m15_wire_evidence import write_capture
 
 ROOT = Path(__file__).resolve().parents[2]
 GOLDENS = {x['id']: bytes.fromhex(x['request_hex']) for x in json.loads(
@@ -63,6 +64,7 @@ def transaction(kind, *, golden=False):
             server.server_close()
             worker.join(timeout=3)
             assert not worker.is_alive()
+    return captured
 
 
 @pytest.mark.parametrize('case_id,kind,golden', [
@@ -72,5 +74,8 @@ def transaction(kind, *, golden=False):
 ])
 def test_real_pymc_030(record_property, case_id, kind, golden):
     # Attach CASE-ID only after a genuine wheel has been verified and executed.
-    transaction(kind, golden=golden)
+    captured = transaction(kind, golden=golden)
+    capture_dir = os.environ.get('VIRTUALPLC_WIRE_EVIDENCE_DIR')
+    if capture_dir:
+        write_capture(Path(capture_dir)/(case_id+'.json'), case_id, captured)
     record_property('case_id', case_id)

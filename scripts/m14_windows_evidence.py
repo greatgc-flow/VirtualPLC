@@ -17,6 +17,7 @@ import zipfile
 
 from scripts.m10_wheel_gate import verify_wheel
 from scripts.m13_evidence_gate import verify_client_junit
+from scripts.m15_wire_evidence import verify_capture_dir
 
 ROOT = Path(__file__).resolve().parents[1]
 SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
@@ -41,10 +42,16 @@ def inspect_client_run(folder):
     if sha256(log_path) != report.get('stdout_sha256'):
         raise ValueError('client console SHA-256 mismatch')
     parsed = verify_client_junit(junit_path)
+    raw = verify_capture_dir(folder/'raw_capture')
+    if sorted(raw['case_ids']) != sorted(parsed['case_ids']):
+        raise ValueError('JUnit/captured-request CASE-ID mismatch')
+    if report.get('raw_requests') != raw:
+        raise ValueError('runner raw-capture report does not match captured bytes')
     return {
         'client_state': 'SIX_LOCAL_RESULTS_INTACT_NOT_ATTESTED',
         'client_case_ids': parsed['case_ids'],
         'client_junit_sha256': parsed['junit_sha256'],
+        'request_captures': raw,
         'console_sha256': sha256(log_path),
         'result_json_sha256': sha256(report_path),
         'claimed_windows_runner': report.get('windows_runner_observed') is True,
