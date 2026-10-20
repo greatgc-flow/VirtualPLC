@@ -1,0 +1,24 @@
+{
+  "phase": "M16",
+  "release": "HOLD",
+  "p0_total": 199,
+  "historic_p0_local_observed_unattested": 183,
+  "new_p0_independently_attested": 0,
+  "remaining_external": 16,
+  "gates": {
+    "G0-C": {"status": "NOT_RUN_NO_VERIFIED_WHEEL", "case_ids": ["CASE-0027", "CASE-0028", "CASE-0029", "CASE-0109", "CASE-0110", "CASE-0111"]},
+    "G0-E": {"status": "UNVERIFIED_EXACT_VENDOR_MODEL_FIRMWARE", "case_ids": ["CASE-0018", "CASE-0019", "CASE-0020", "CASE-0064", "CASE-0088", "CASE-0090"]},
+    "G3": {"status": "NOT_RUN_INDEPENDENT_WINDOWS", "case_ids": ["CASE-0044", "CASE-0128"]},
+    "G4": {"status": "NOT_APPROVED_INDEPENDENT_REVIEW", "case_ids": ["CASE-0055", "CASE-0147"]}
+  },
+  "m16_local_execution": {
+    "core_pytest_passed": 203,
+    "core_pytest_subtests_passed": 5,
+    "evidence_pytest_passed": 191,
+    "tcp_live_pytest_passed": 45,
+    "unique_P0_newly_attested": 0,
+    "real_pymcprotocol_030_executions": 0,
+    "real_windows_executions": 0
+  },
+  "note": "All M16 client ZIP acceptance tests are wholly synthetic and remain UNATTESTED, even if the integrity gate accepts their contents."
+}
