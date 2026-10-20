@@ -1,0 +1,16 @@
+{
+  "phase": "M14",
+  "date": "2026-10-20",
+  "p0_total": 199,
+  "baseline_local_observed_unattested": 183,
+  "m14_new_p0_attested": 0,
+  "open_external": 16,
+  "gates": {
+    "G0-E": {"state": "AWAIT_MODEL_FIRMWARE_OFFICIAL_ERROR_TABLE", "case_ids": ["CASE-0018", "CASE-0019", "CASE-0020", "CASE-0064", "CASE-0088", "CASE-0090"]},
+    "G0-C": {"state": "NO_OFFICIAL_WHEEL_AND_NO_REAL_CLIENT_JUNIT", "case_ids": ["CASE-0027", "CASE-0028", "CASE-0029", "CASE-0109", "CASE-0110", "CASE-0111"]},
+    "G3": {"state": "WINDOWS_RUNNER_PREPARED_NOT_EXECUTED", "case_ids": ["CASE-0044", "CASE-0128"]},
+    "G4": {"state": "INDEPENDENT_RELEASE_REVIEW_OPEN", "case_ids": ["CASE-0055", "CASE-0147"]}
+  },
+  "release": "HOLD",
+  "notes": "M14 tests are gate/harness validations, not 16 external CASE-ID closures. Never publish customer/production PLC evidence in this public repo."
+}
