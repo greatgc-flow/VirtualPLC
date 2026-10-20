@@ -1,0 +1,17 @@
+{
+  "phase": "M12",
+  "scope": "loopback regression and evidence integrity, NOT product release",
+  "p0_total": 199,
+  "p0_carried_forward_local_unattested": 183,
+  "new_case_id_passes": 0,
+  "remaining": 16,
+  "independent_p0_attested": 0,
+  "gates": {
+    "G0-E": {"state": "OPEN", "cases": ["CASE-0018","CASE-0019","CASE-0020","CASE-0064","CASE-0088","CASE-0090"]},
+    "G0-C": {"state": "NOT_RUN", "cases": ["CASE-0027","CASE-0028","CASE-0029","CASE-0109","CASE-0110","CASE-0111"]},
+    "G3": {"state": "NOT_RUN", "cases": ["CASE-0044","CASE-0128"]},
+    "G4": {"state": "UNATTESTED", "cases": ["CASE-0055","CASE-0147"]}
+  },
+  "m12_tests": {"fault_matrix": 51,"audit_guard": 10,"combined_focused_regression": 153},
+  "release": "HOLD"
+}
