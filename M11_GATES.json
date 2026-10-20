@@ -1,0 +1,17 @@
+{
+  "phase": "M11",
+  "baseline": "M10",
+  "status": "HOLD",
+  "p0_total": 199,
+  "p0_observed_pass_unattested_carried_forward": 183,
+  "p0_newly_claimed_pass": 0,
+  "p0_remaining": 16,
+  "gates": {
+    "G0-E": {"status": "OPEN", "case_ids": ["CASE-0018", "CASE-0019", "CASE-0020", "CASE-0064", "CASE-0088", "CASE-0090"]},
+    "G0-C": {"status": "NOT_RUN", "case_ids": ["CASE-0027", "CASE-0028", "CASE-0029", "CASE-0109", "CASE-0110", "CASE-0111"]},
+    "G3": {"status": "NOT_RUN", "case_ids": ["CASE-0044", "CASE-0128"]},
+    "G4": {"status": "UNATTESTED", "case_ids": ["CASE-0055", "CASE-0147"]}
+  },
+  "local_m11_tests": {"focused_pytest": 84, "regression_subset_pytest": 50, "additional_subtests": 5, "suite_cross_group_overlap_possible": true},
+  "release": "HOLD"
+}
