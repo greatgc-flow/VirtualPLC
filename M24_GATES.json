@@ -1,0 +1,22 @@
+{
+  "schema": "virtualplc.m24.gates.v1",
+  "release": "HOLD",
+  "draft_pr_only": true,
+  "external_backlog_p0": 16,
+  "total_p0": 199,
+  "locally_observed_p0": 183,
+  "canonical_duplicate_case_ids": 0,
+  "pytest_pass": 922,
+  "unittest_subtests_pass": 5,
+  "loopback_tcp_pass": 45,
+  "m24_local_synthetic_scenarios_observed": 6,
+  "comparison_status": "COMPARABLE_DESCRIPTIVE",
+  "comparison_thresholds_explicit": false,
+  "hardware_vendor_certified": false,
+  "official_wheel_certified": false,
+  "windows_certified": false,
+  "performance_sla_certified": false,
+  "memory_leak_absence_certified": false,
+  "independent_release_approval": false,
+  "external_backlog_path": "backlog/M20_BACKLOG.json"
+}
