@@ -1,0 +1,103 @@
+{
+  "gates": {
+    "G0-C": {
+      "case_ids": [
+        "CASE-0027",
+        "CASE-0028",
+        "CASE-0029",
+        "CASE-0109",
+        "CASE-0110",
+        "CASE-0111"
+      ],
+      "status": "NOT_RUN_NO_VERIFIED_WHEEL"
+    },
+    "G0-E": {
+      "case_ids": [
+        "CASE-0018",
+        "CASE-0019",
+        "CASE-0020",
+        "CASE-0064",
+        "CASE-0088",
+        "CASE-0090"
+      ],
+      "status": "UNVERIFIED_EXACT_VENDOR_MODEL_FIRMWARE"
+    },
+    "G3": {
+      "case_ids": [
+        "CASE-0044",
+        "CASE-0128"
+      ],
+      "status": "NOT_RUN_INDEPENDENT_WINDOWS"
+    },
+    "G4": {
+      "case_ids": [
+        "CASE-0055",
+        "CASE-0147"
+      ],
+      "status": "NOT_APPROVED_INDEPENDENT_REVIEW"
+    }
+  },
+  "historic_p0_local_observed_unattested": 183,
+  "m16_local_execution": {
+    "core_pytest_passed": 203,
+    "core_pytest_subtests_passed": 5,
+    "evidence_pytest_passed": 192,
+    "real_pymcprotocol_030_executions": 0,
+    "real_windows_executions": 0,
+    "tcp_live_pytest_passed": 45,
+    "unique_P0_newly_attested": 0
+  },
+  "m17_local_execution": {
+    "actual_windows_executions": 0,
+    "core_group_A_passed": 122,
+    "core_group_B_passed": 81,
+    "core_group_B_subtests_passed": 5,
+    "evidence_test_passed": 218,
+    "new_p0_independently_attested": 0,
+    "preflight_test_passed": 26,
+    "real_pymcprotocol_030_executions": 0,
+    "tcp_group_passed": [
+      16,
+      16,
+      13
+    ]
+  },
+  "m18_local_execution": {
+    "actual_windows_executions": 0,
+    "core_group_A_passed": 122,
+    "core_group_B_passed": 81,
+    "core_group_B_subtests_passed": 5,
+    "evidence_group_passed_including_m18": 244,
+    "m18_new_cases_passed_included_in_evidence": 26,
+    "new_p0_approved": 0,
+    "official_pinned_wheel_executed": false,
+    "tcp_group_passed": [
+      16,
+      16,
+      13
+    ],
+    "unique_pytest_passed": 492
+  },
+  "m19_local_execution": {
+    "actual_windows_executions": 0,
+    "core_a": 122,
+    "core_b": 81,
+    "core_b_subtests": 5,
+    "evidence_including_m19": 267,
+    "new_P0_attestations": 0,
+    "new_security_cases_included_in_evidence": 23,
+    "real_verified_pymcprotocol_executions": 0,
+    "tcp": [
+      16,
+      16,
+      13
+    ],
+    "total_unique_pytest": 515
+  },
+  "new_p0_independently_attested": 0,
+  "note": "M19 portable archive namespace alias hardening only; 16 external gates remain HOLD.",
+  "p0_total": 199,
+  "phase": "M19",
+  "release": "HOLD",
+  "remaining_external": 16
+}

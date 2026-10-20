@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import stat
+import unicodedata
 import sys
 import tempfile
 import zipfile
@@ -25,7 +26,9 @@ MANIFEST = 'M14_EVIDENCE.json'
 # Reject cross-platform path ambiguity before extracting archives on any OS.
 _WINDOWS_RESERVED = frozenset({'CON', 'PRN', 'AUX', 'NUL', 'CONIN$', 'CONOUT$'} |
                               {'COM' + str(n) for n in range(1, 10)} |
-                              {'LPT' + str(n) for n in range(1, 10)})
+                              {'LPT' + str(n) for n in range(1, 10)} |
+                              {'COM' + c for c in ('¹', '²', '³')} |
+                              {'LPT' + c for c in ('¹', '²', '³')})
 
 
 def portable_member_name(name, *, directory=False):
@@ -35,7 +38,12 @@ def portable_member_name(name, *, directory=False):
     raw = name[:-1] if directory and name.endswith('/') else name
     if not raw or raw.startswith('/') or raw.endswith('/'):
         raise ValueError('unsafe path or nonregular file in archive')
-    if any(ord(c) < 32 or ord(c) == 127 for c in raw):
+    # Win32-compatible evidence paths must have a single portable spelling.
+    # Refuse NFD/decomposed names, bidi format controls, lone surrogates and
+    # private-use characters before extracting even one member.
+    if (unicodedata.normalize('NFC', raw) != raw or
+            any(ord(c) < 32 or ord(c) == 127 or
+                unicodedata.category(c) in ('Cf', 'Cs', 'Co') for c in raw)):
         raise ValueError('unsafe path or nonregular file in archive')
     for component in raw.split('/'):
         if (not component or component in ('.', '..') or ':' in component or
@@ -80,6 +88,20 @@ def inspect_archive(path):
         all_names = [e.filename for e in members]
         if len(all_names) != len(set(all_names)):
             raise ValueError('duplicate entries in ZIP')
+        # Windows resolves many distinct ZIP names to the same filesystem
+        # object. Reject *before* any byte is written to the scratch directory.
+        # Casefold is intentionally stricter than some NTFS locales.
+        portable = [(portable_member_name(e.filename, directory=e.is_dir()),
+                     e.is_dir()) for e in members]
+        normalized = [name.casefold() for name, _ in portable]
+        if len(normalized) != len(set(normalized)):
+            raise ValueError('portable path alias collision in ZIP')
+        files_lower = {name.casefold() for name, is_dir in portable if not is_dir}
+        for name, _ in portable:
+            parts = name.casefold().split('/')
+            if any('/'.join(parts[:n]) in files_lower
+                   for n in range(1, len(parts))):
+                raise ValueError('file/directory prefix collision in ZIP')
         entries = [e for e in members if not e.is_dir()]
         names = [e.filename for e in entries]
         if not 1 < len(names) <= MAX_FILES or len(names) != len(set(names)):
