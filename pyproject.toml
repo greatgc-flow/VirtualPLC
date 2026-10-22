@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "virtual_plc"
+version = "0.0.0"
+description = "Virtual Mitsubishi MC protocol PLC for local testing"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools]
+packages = ["virtual_plc"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
