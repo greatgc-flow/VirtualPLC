@@ -56,7 +56,7 @@ def test_all_command_device_cells(endpoint, frame, wire, command, device):
             if command.name == "echo":
                 assert client.echo_test("Ab09") == (4, "Ab09")
             else:
-                assert client.read_cputype() == ("VirtualPLC-Q", "FFFF" if wire == "ascii" else "ffff")
+                assert client.read_cputype() == ("VirtualPLC-Q\x00\x00\x00\x00", "FFFF" if wire == "ascii" else "ffff")
             return
         name = CLIENT_NAMES.get(device.name, device.name)
 

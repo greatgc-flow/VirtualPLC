@@ -54,7 +54,7 @@ def test_t14_echo_boundaries(client, text):
 
 def test_t15_cputype(client):
     # Explicit synthetic identity, not a claim about a physical Q CPU.
-    assert client.read_cputype() == ("VirtualPLC-Q", "ffff")
+    assert client.read_cputype() == ("VirtualPLC-Q\x00\x00\x00\x00", "ffff")
 
 
 @pytest.mark.unverified

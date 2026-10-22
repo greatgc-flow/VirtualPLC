@@ -15,7 +15,7 @@ Not for industrial use. Binds 127.0.0.1 by default.
 - Truncated binary response decodes status 0 == success (type3e.py:419) — client misbehaviour, label in tests.
 - `remote_reset` sets a 1 s socket timeout; on any receive/status failure it sleeps 1 s and reconnects (connect restores the configured `soc_timeout`); on success the existing socket keeps the 1 s timeout (type3e.py:853-862, 123).
 - Random cmds: <=255 words and <=255 dwords per request; word values signed 16-bit, dword signed 32-bit, checked client-side.
-- Echo: 1-960 alphanumeric chars. CPU type: 16-char space-padded name + code. LSTC unreachable from the client.
+- Echo: 1-960 alphanumeric chars. CPU type: 16 raw name bytes + code; the client removes spaces but retains NULs in both encodings. LSTC unreachable from the client.
 - Falsy options (`network=0`, `pc=0`, `timer_sec=0`) ignored by `setaccessopt`.
 - Random binary layouts checked against the installed pinned 0.3.0 client at M2;
   parser names STS/STC/STN select constants SS/SC/SN respectively.
@@ -112,7 +112,7 @@ T1 batch word write->read roundtrip D0..D(n); T2 bit roundtrip incl. odd count; 
 
 0x0000 OK; 0xC051 points out of range; 0xC056 address out of range; 0xC059 unsupported command; 0xC05C request data error; 0xC061 data length mismatch. Opposite wire-class subcommands return C059; invalid device/access/alignment returns C05C. Some regression scenarios assert only nonzero until vendor verification.
 
-Response bodies: cputype = 16-char space-padded name + 2-byte code; echo = 2-byte length + echoed data.
+Response bodies: cputype = 16-byte name filled with `text_pad` (default 0x00) + 2-byte code; echo = 2-byte length + echoed data.
 
 0xC200 LOCKED and 0xC201 WRONG_PASSWORD (`source: memory`,
 `status: unverified`), and 0xC202 INVALID_STATE (`source: design`,
@@ -124,14 +124,14 @@ never touches SM/SD, apart from the explicit SD203 state mirror on transitions.
 
 ## 8. Open items
 
-Authoritative per-series limits/ranges; vendor verification of the selected native dword stride; SM/SD per-range RO; vendor verification of M5 lock/reset/state-code policies; real-PLC unaligned bit-head word reads; PLC verification of empty random lists and bit-device dword views; vendor verification of ASCII dword word order (configurable: default `swapped`, optional `client`; low-word-first PLC behavior remains suspected/unverified). ASCII overwidth requests are rejected; manual numbering remains deferred. Client 0.3.0 is pinned and checked by the oracle test.
+Vendor verification of CPU-name text fill (configurable, default NUL); authoritative per-series limits/ranges; vendor verification of the selected native dword stride; SM/SD per-range RO; vendor verification of M5 lock/reset/state-code policies; real-PLC unaligned bit-head word reads; PLC verification of empty random lists and bit-device dword views; vendor verification of ASCII dword word order (configurable: default `swapped`, optional `client`; low-word-first PLC behavior remains suspected/unverified). ASCII overwidth requests are rejected; manual numbering remains deferred. Client 0.3.0 is pinned and checked by the oracle test.
 
 
 ## 9. Server lifecycle and CLI
 
 `Server(host="127.0.0.1", port=0, profile="Q", memory=None,
 response_hook=None, max_points=4096, idle_timeout=None, initial_state="RUN",
-latch_ranges=None, password=None, fault_plan=None, ascii_dword_order="swapped")` starts with `.start()`;
+latch_ranges=None, password=None, fault_plan=None, ascii_dword_order="swapped", text_pad=0x00)` starts with `.start()`;
 `.address` contains the actual bound port. `.stop()` closes sockets and joins
 workers. Idle sockets have no timeout unless explicitly configured. Malformed
 framing, EOF and configured idle timeouts close only that connection. Unexpected
@@ -140,7 +140,25 @@ committed commands are not rolled back. See [public API](BEHAVIOR.md#public-api)
 
 `python -m virtual_plc` and installed `virtual-plc` accept `--host`, `--port`,
 `--profile`, `--password`, `--initial-state`, `--max-points`, `--idle-timeout`,
-`--fault-plan`, and `--ascii-dword-order {swapped,client}`. Defaults are localhost:5000, Q, RUN, no password, 4096 batch
-points, no idle timeout, no faults, swapped ASCII dword halves. A one-line startup banner goes to stderr;
+`--fault-plan`, `--ascii-dword-order {swapped,client}`, and `--text-pad BYTE`. Defaults are localhost:5000, Q, RUN, no password, 4096 batch
+points, no idle timeout, no faults, swapped ASCII dword halves, NUL text fill. A one-line startup banner goes to stderr;
 a host other than 127.0.0.1 includes a localhost-only safety warning. Passwords
 simulate lock behavior and provide no network authentication.
+
+
+## 10. Fixed-width text
+
+`text_pad` is an integer 0..255 or a single byte-valued character, normalized
+to an integer at construction; default 0x00. CLI `--text-pad` accepts numeric
+hex/decimal input. CPU model names are the only emitted padded text and use
+the same fill byte in binary and ASCII on both frames. The pinned client
+retains NULs and removes spaces: default Q returns
+`"VirtualPLC-Q\x00\x00\x00\x00"`; 0x20 restores `"VirtualPLC-Q"`.
+Non-UTF-8 fills can cause client decoding errors. This is an explicit simulator
+policy; physical PLC fill is unverified.
+
+Request ASCII device identifiers accept canonical `*` fill or the configured
+byte in their unused suffix; ambiguous alternate names are rejected. Echo and
+passwords have explicit lengths and no unused text area, so padding-valued
+content is significant and is not stripped. Numeric and bit padding are
+unchanged. See [text behavior](BEHAVIOR.md#fixed-width-text-padding).

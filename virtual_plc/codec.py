@@ -120,11 +120,11 @@ def encode_response(request, end_code=0, data=b"", *, ascii_dword_order="swapped
     return prefix + route + layout.number(len(body), 2) + body
 
 
-def read_device(reader, profile):
+def read_device(reader, profile, *, text_pad=0):
     """Read a descriptor using only the selected profile, never guess its class."""
     wire = profile.wire
     if reader.wire == "ascii":
-        device = profile.device_by_ascii(reader.take(wire.ascii_code_size).decode("ascii"))
+        device = profile.device_by_ascii(reader.take(wire.ascii_code_size).decode("latin-1"), text_pad=text_pad)
         digits = reader.take(wire.ascii_address_size)
         if any(char not in b"0123456789" for char in digits):
             raise ValueError("invalid compat decimal address")
@@ -137,7 +137,7 @@ def read_device(reader, profile):
     return device, head
 
 
-def normalize_request(request, profile, *, ascii_dword_order="swapped"):
+def normalize_request(request, profile, *, ascii_dword_order="swapped", text_pad=0):
     """Convert an ASCII command payload to the existing binary handler format.
 
     A payload error is returned by dispatch as an end code, not a framing close.
@@ -149,7 +149,7 @@ def normalize_request(request, profile, *, ascii_dword_order="swapped"):
     wire = profile.wire
 
     def descriptor():
-        device, head = read_device(reader, profile)
+        device, head = read_device(reader, profile, text_pad=text_pad)
         return head.to_bytes(wire.address_size, "little") + device.code.to_bytes(wire.code_size, "little")
 
     command, subcommand = request.command, request.subcommand

@@ -29,10 +29,11 @@ After activating the environment, the installed entry point is equivalent:
 virtual-plc --profile iQ-R --initial-state STOP --max-points 128 --idle-timeout 30
 virtual-plc --profile Q --password A1b2 --fault-plan faults.json
 virtual-plc --ascii-dword-order client
+virtual-plc --text-pad 0x20
 ```
 
 The default profile is Q, CPU state RUN, batch limit 4096 points, idle timeout
-None (no timeout), ASCII dword order `swapped`, with no password or faults. `--port 0` asks the OS for an
+None (no timeout), ASCII dword order `swapped`, text fill `0x00` (NUL), with no password or faults. `--port 0` asks the OS for an
 available port. The startup address/profile/state banner is written to stderr.
 See `virtual-plc --help` for options and [fault plans](docs/FAULTS.md) for the
 JSON schema. On POSIX, use `.venv/bin/python` instead of the Windows path.
@@ -79,6 +80,12 @@ executing a PLC program. Fault plans apply to all transports and profiles.
 
 ## Known divergences from a real PLC
 
+- CPU names use NUL fill by default in all four transports. pymcprotocol
+  removes spaces but keeps NULs, so Q's client-visible name is
+  `"VirtualPLC-Q\x00\x00\x00\x00"`. Use `--text-pad 0x20` or
+  `Server(text_pad=0x20)` for `"VirtualPLC-Q"`. Any single-byte fill is allowed;
+  non-UTF-8 fill such as `0xFF` causes the pinned client to raise UnicodeDecodeError.
+  Physical PLC fill is unverified; see [text padding](docs/BEHAVIOR.md#fixed-width-text-padding).
 - ASCII addresses use the pinned client's decimal text, including hex-base devices.
 - ASCII dword order is configurable with `--ascii-dword-order swapped|client`
   or `Server(ascii_dword_order=...)`. The default `swapped` sends the low-word

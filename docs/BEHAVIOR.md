@@ -9,13 +9,13 @@ See [design](DESIGN.md), [fault injection](FAULTS.md), and [usage/safety](../REA
 - `server.Server(host='127.0.0.1', port=0, profile='Q', memory=None,
   response_hook=None, max_points=4096, idle_timeout=None,
   initial_state='RUN', latch_ranges=None, password=None, fault_plan=None,
-  ascii_dword_order='swapped')`.
+  ascii_dword_order='swapped', text_pad=0x00)`.
 - `.start()` binds/listens and starts workers before returning; `.address` is `(host, actual_port)`.
 - `.stop()` synchronously closes clients/listener and joins workers; idempotent, including incomplete frames.
 - Accepted sockets use TCP_NODELAY; EOF, bad framing or `idle_timeout` closes only that client.
 - `response_hook(response_bytes) -> bytes` transforms each complete encoded response before the fault plan.
 - `faults.FaultPlan(steps)` / `.from_file(path)` supplies ordered, counted response faults; None is inert.
-- Q/L/QnA/iQ-L/iQ-R have synthetic CPU identities; names are padded to 16 ASCII characters.
+- Q/L/QnA/iQ-L/iQ-R have synthetic CPU identities; names occupy 16 bytes, filled with `text_pad` (default NUL).
 - Echo response: length uint16 + text. ASCII encodes numeric fields as uppercase hex.
 - `memory.Memory(profile='Q', limits=None)` accepts inclusive `{device: (min, max)}` point ranges.
 - Profile devices expose `code`, `base`, `kind`, `minimum`, `maximum`; ranges remain synthetic.
@@ -50,7 +50,9 @@ See [design](DESIGN.md), [fault injection](FAULTS.md), and [usage/safety](../REA
 - An unexpected handler/hook exception is logged to stderr and closes only that connection; committed work is not rolled back.
 - `idle_timeout=None` leaves idle sockets open indefinitely; a positive seconds value closes idle/incomplete clients.
 - `ascii_dword_order` accepts only `swapped` (default) or `client`; invalid configuration raises ValueError.
-- CLI options: `--host`, `--port`, `--profile`, `--password`, `--initial-state`, `--max-points`, `--idle-timeout`, `--fault-plan`, `--ascii-dword-order {swapped,client}`.
+- `text_pad` accepts an integer 0..255 or one character with code point 0..255; `.text_pad` stores the normalized integer.
+  Booleans, byte strings, multi-character strings and out-of-range values raise ValueError.
+- CLI options: `--host`, `--port`, `--profile`, `--password`, `--initial-state`, `--max-points`, `--idle-timeout`, `--fault-plan`, `--ascii-dword-order {swapped,client}`, `--text-pad BYTE`.
   The startup banner goes to stderr; non-127.0.0.1 hosts include a localhost-only safety warning.
 
 ## Random access and common devices
@@ -165,6 +167,45 @@ Q-class random bit write values use two hex characters (`00`/`01`), unlike batch
 bits; iQ-R uses four. Echo text and the CPU name remain literal ASCII, preserving text case;
 only numeric output is uppercased. The synthetic Q CPU code is `FFFF` in ASCII;
 the client returns it as a string without normalizing case (binary yields `ffff`).
+
+### Fixed-width text padding
+
+`Server(text_pad=0x00)` fills the unused trailing bytes of the 16-byte CPU
+model name with NUL. Use `Server(text_pad=0x20)` or `Server(text_pad=" ")`
+for space fill, or any other byte-valued integer/character. The CLI accepts
+hexadecimal or decimal integers, for example `--text-pad 0x00`,
+`--text-pad 0x20`, or `--text-pad 32`. Invalid values are rejected before bind.
+
+The CPU name returned by `cputype` (0101) is the **only emitted fixed-width
+padded text field**. It uses the same raw 16 name bytes in 3E/4E and binary/
+ASCII, across all profiles. The pinned client's `read_cputype` decodes exactly
+16 bytes in both encodings, then calls `.replace("\x20", "")`; it removes all
+spaces but does not remove NULs. The server does not hide or normalize this:
+
+| Pad | Q client-visible name (Python string notation) |
+|---|---|
+| `0x00` (default) | `"VirtualPLC-Q\x00\x00\x00\x00"` |
+| `0x20` | `"VirtualPLC-Q"` |
+
+Other non-space fill characters also remain in the returned name. Arbitrary
+byte fill is allowed on the wire; a byte such as `0xFF` is not valid UTF-8 in
+this field and the pinned client raises UnicodeDecodeError. Select `0x20` for
+the previous client-visible CPU name. Vendor CPU-name fill remains unverified.
+
+Incoming ASCII device identifiers are fixed-width text with canonical `*`
+suffix fill in the pinned client's constants. The parser accepts that format
+and the configured `text_pad` in unused suffix positions, with unchanged field
+widths and decimal address parsing. Canonical identifiers take precedence;
+ambiguous alternate prefixes are rejected rather than guessed. Fill bytes are
+matched literally, including non-ASCII values, without changing device names.
+Binary device codes are numeric and have no text fill.
+
+Echo text and request passwords are length-delimited, with no unused trailing
+text area. Echo replies contain exactly the declared text; lock/unlock replies
+have empty data. Their request content is not trimmed: trailing pad-valued
+password characters remain significant, and echo validation remains
+alphanumeric. Numeric zero fill, reserved zeros, and bit-nibble padding are
+protocol fields and are not controlled by `text_pad`.
 
 ### Configurable ASCII dword word order
 
@@ -386,7 +427,7 @@ profile always determines the capabilities and returned CPU identity.
 | iQ-R | VirtualPLC-iQ-R | FFFB |
 
 These are simulator identities, not actual Mitsubishi CPU models. Names are
-space-padded to 16 characters. Profile ranges are synthetic address-width
+filled to 16 bytes with `text_pad` (NUL by default). Profile ranges are synthetic address-width
 ceilings, not vendor-verified capacities; custom Memory limits still override
 per-family ranges. Default latch retention covers the selected profile's entire L range.
 CPU state, reset, lock scope, SD203 mirror and clearing policies remain shared;

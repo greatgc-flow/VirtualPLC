@@ -17,7 +17,12 @@ class Server:
     def __init__(self, host="127.0.0.1", port=0, profile="Q", memory=None,
                  response_hook=None, max_points=4096, idle_timeout=None,
                  initial_state="RUN", latch_ranges=None, password=None, fault_plan=None,
-                 ascii_dword_order="swapped"):
+                 ascii_dword_order="swapped", text_pad=0x00):
+        if isinstance(text_pad, str) and len(text_pad) == 1:
+            text_pad = ord(text_pad)
+        if isinstance(text_pad, bool) or not isinstance(text_pad, int) or not 0 <= text_pad <= 255:
+            raise ValueError("text_pad must be an integer 0..255 or a single byte-valued character")
+        self.text_pad = text_pad
         if ascii_dword_order not in ("swapped", "client"):
             raise ValueError("ascii_dword_order must be swapped or client")
         self.ascii_dword_order = ascii_dword_order

@@ -311,4 +311,4 @@ def test_identity_hook_runs_once_per_response(server_factory):
 def test_cputype_wire_body_is_padded_name_then_code(raw_socket):
     status, data = exchange(raw_socket, request(0x0101))
     assert status == 0
-    assert data == b"VirtualPLC-Q    \xff\xff"
+    assert data == b"VirtualPLC-Q\x00\x00\x00\x00\xff\xff"

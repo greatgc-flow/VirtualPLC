@@ -95,7 +95,7 @@ def test_lock_is_server_wide_survives_disconnect_and_gates_only_control(server_f
         client.randomwrite_bitunits(["M0"], [1])
         assert client.batchread_bitunits("M0", 1) == [1]
         assert client.echo_test("OK") == (2, "OK")
-        assert client.read_cputype()[0] == "VirtualPLC-Q"
+        assert client.read_cputype()[0] == "VirtualPLC-Q\x00\x00\x00\x00"
         client.remote_unlock(password="A1b2")
         client.remote_unlock(password="A1b2")
         client.remote_run(clear_mode=0)

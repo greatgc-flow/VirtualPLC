@@ -61,9 +61,19 @@ class Profile:
     def device_by_code(self, code):
         return self.codes.get(code)
 
-    def device_by_ascii(self, code):
-        return next((device for device in self.devices.values()
-                     if (device.ascii_name or device.name).ljust(self.wire.ascii_code_size, "*") == code.upper()), None)
+    def device_by_ascii(self, code, *, text_pad=0):
+        # Preserve canonical '*' descriptors before considering configurable fill.
+        canonical = next((device for device in self.devices.values()
+                          if (device.ascii_name or device.name).ljust(self.wire.ascii_code_size, "*") == code.upper()), None)
+        if canonical is not None:
+            return canonical
+        matches = []
+        for device in self.devices.values():
+            name = device.ascii_name or device.name
+            if (code[:len(name)].upper() == name
+                    and code[len(name):] == chr(text_pad) * (self.wire.ascii_code_size - len(name))):
+                matches.append(device)
+        return matches[0] if len(matches) == 1 else None  # never guess an ambiguous prefix
 
 
 # Codes match pymcprotocol mcprotocolconst.DeviceConstants.

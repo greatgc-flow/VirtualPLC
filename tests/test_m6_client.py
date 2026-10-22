@@ -61,7 +61,7 @@ def test_profile_command_device_matrix(endpoints, profile, frame, wire, command,
                 assert client.echo_test("Ab09") == (4, "Ab09")
             else:
                 name, code = IDENTITIES[profile.name]
-                assert client.read_cputype() == (name, format(code, "04X" if wire == "ascii" else "04x"))
+                assert client.read_cputype() == (name.ljust(16, "\x00"), format(code, "04X" if wire == "ascii" else "04x"))
             return
         name = CLIENT_NAMES.get(device.name, device.name)
         def address(head):
