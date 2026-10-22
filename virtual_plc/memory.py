@@ -1,6 +1,6 @@
 """Sparse device storage and atomic request operations (M1)."""
 
-from .profiles import MAX_POINT, PROFILES
+from .profiles import PROFILES
 
 
 class OutOfRange(ValueError):
@@ -12,7 +12,7 @@ class Memory:
 
     def __init__(self, profile="Q", limits=None):
         self.profile = PROFILES[profile]
-        self._limits = {name: (0, MAX_POINT) for name in self.profile.devices}
+        self._limits = {name: (spec.minimum, spec.maximum) for name, spec in self.profile.devices.items()}
         self._limits.update(limits or {})
         self._cells = {name: {} for name in self.profile.devices}
 

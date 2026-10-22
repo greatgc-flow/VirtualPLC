@@ -2,7 +2,7 @@
 
 from itertools import product
 
-from tables import COMMANDS, DEVICES, PROFILES, Command, Profile, applicable
+from tables import CLIENT_NAMES, COMMANDS, DEVICES, PROFILES, Command, Profile, applicable
 
 
 def test_device_invariants():
@@ -20,8 +20,9 @@ def test_codes_and_bases_match_pinned_client():
 
     for device in DEVICES:
         assert device.code == getattr(DeviceConstants, device.name + "_DEVICE")
-        assert (device.code, device.base) == DeviceConstants.get_binary_devicecode("Q", device.name)
-        assert device.kind == DeviceConstants.get_devicetype("Q", device.name)
+        client_name = CLIENT_NAMES.get(device.name, device.name)
+        assert (device.code, device.base) == DeviceConstants.get_binary_devicecode("Q", client_name)
+        assert device.kind == DeviceConstants.get_devicetype("Q", client_name)
 
 
 def test_profiles_and_subcommands():

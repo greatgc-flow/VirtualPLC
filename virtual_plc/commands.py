@@ -1,4 +1,4 @@
-"""MC command dispatch and validation (M1)."""
+"""Q binary MC command dispatch and validation."""
 
 from enum import IntEnum
 import struct
@@ -58,6 +58,59 @@ def batch(request, memory, max_points):
         raise CommandError(EndCode.REQUEST_DATA_ERROR)
 
 
+def random_access(request, memory, max_points):
+    """Random word/dword read/write or bit write; validate all entries first.
+
+    Counts are uint8, so a purported 256-entry list cannot match its payload.
+    Writes contain interleaved device/value entries, words before dwords.
+    The server holds its request lock through validation and application.
+    """
+    data = request.data
+    bit = request.subcommand == 1
+    write = request.command == 0x1402
+    count_size = 1 if bit else 2
+    if len(data) < count_size:
+        raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
+    groups = ((data[0], 1),) if bit else ((data[0], 2), (data[1], 4))
+    expected = count_size + sum(count * (4 + (width if write else 0)) for count, width in groups)
+    if len(data) != expected:
+        raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
+    entries = []
+    offset = count_size
+    try:
+        for count, width in groups:
+            for _ in range(count):
+                head = int.from_bytes(data[offset:offset + 3], "little")
+                device = memory.profile.device_by_code(data[offset + 3])
+                offset += 4
+                if device is None:
+                    raise ValueError("unknown device code")
+                memory._check(device.name, head, 1 if bit else width // 2, "bit" if bit else "word")
+                values = None
+                if write:
+                    payload = data[offset:offset + width]
+                    offset += width
+                    if bit:
+                        if payload[0] not in (0, 1):
+                            raise ValueError("bit must be 0 or 1")
+                        values = [payload[0]]
+                    else:
+                        values = unpack_words(payload)
+                entries.append((device.name, head, width, values))
+        # Nothing above mutates storage. Overlaps are applied in wire order.
+        result = bytearray()
+        for device, head, width, values in entries:
+            if write:
+                (memory.write_bits if bit else memory.write_words)(device, head, values)
+            else:
+                result += pack_words(memory.read_words(device, head, width // 2))
+        return bytes(result)
+    except OutOfRange:
+        raise CommandError(EndCode.ADDRESS_OUT_OF_RANGE)
+    except ValueError:
+        raise CommandError(EndCode.REQUEST_DATA_ERROR)
+
+
 def echo(request, memory, max_points):
     length, text = int.from_bytes(request.data[:2], "little"), request.data[2:]
     if len(request.data) < 2 or length != len(text):
@@ -76,6 +129,7 @@ def cputype(request, memory, max_points):
 HANDLERS = {
     (0x0401, 0): batch, (0x0401, 1): batch, (0x1401, 0): batch, (0x1401, 1): batch,
     (0x0619, 0): echo, (0x0101, 0): cputype,
+    (0x0403, 0): random_access, (0x1402, 0): random_access, (0x1402, 1): random_access,
 }
 
 

@@ -15,6 +15,8 @@ Not for industrial use. Binds 127.0.0.1 by default.
 - Random cmds: <=255 words and <=255 dwords per request; word values signed 16-bit, dword signed 32-bit, checked client-side.
 - Echo: 1-960 alphanumeric chars. CPU type: 16-char space-padded name + code. LSTC unreachable from the client.
 - Falsy options (`network=0`, `pc=0`, `timer_sec=0`) ignored by `setaccessopt`.
+- Random binary layouts checked against the installed pinned 0.3.0 client at M2;
+  parser names STS/STC/STN select constants SS/SC/SN respectively.
 
 ## 2. Decisions (consensus cx+cc, with amendments)
 | ID | Decision |
@@ -36,24 +38,28 @@ Not for industrial use. Binds 127.0.0.1 by default.
 - Overlapping/duplicate random-write entries applied in request order.
 - Validation (range, count, legality) completes before any write (atomic).
 
-## 4. Codec (Q wire class, M1)
+## 4. Codec (Q wire class, M1–M2)
 - 3E binary request: `50 00 | net | pc | io(2 LE) | stn | len(2 LE)=2+cmd+sub+data | timer(2) | cmd(2) | sub(2) | data`.
 - Response: `D0 00 | net pc io stn | len(2) | end(2) | data` (end code first inside len).
 - Batch read/write (cmd 0401/1401), sub 0000 (word) / 0001 (bit): `addr(3 LE) devcode(1) points(2)`; words LE; bits 2/byte high nibble first, odd count padded low nibble 0.
 - Server: length-framed parser (total = 9 + len), fragmentation, merged requests, clean EOF; malformed frame -> close.
+- Random read (0403/0000): uint8 word count + uint8 dword count, followed by word addresses then dword addresses (each addr(3 LE) + devcode(1)). Response: word values (2 LE each), then dword values (4 LE each), with no counts.
+- Random write (1402/0000): the same two counts, followed by interleaved word address/value entries (4+2 bytes), then dword address/value entries (4+4 bytes).
+- Random bit write (1402/0001): uint8 count, then address(4) + value(1) entries; values must be 0 or 1, not packed nibbles.
+- Zero random counts are accepted as empty lists/no-ops (design policy, unverified against a PLC). Count 256 has no wire representation; raw tests send wrapped/widened counts with 256 entries and require rejection. See [M2 implementation notes](M2.md).
 
 ## 5. Milestones
-| M | Scope | Exit criteria |
-|---|---|---|
-| M0 | Scaffold, migration, pinned oracle, test generator skeleton, `pytest` green | `pytest` runs; old assets archived |
-| M1 | Transport + error table + 3E binary Q: batch word/bit R/W for D,M,X,Y,B,W,R,ZR,SM,SD; echo (0619) and cputype (0101); response-transform hook seam; basic disconnect/timeout tests | Real client round-trips every M1 cell; manual-derived vectors pass |
-| M2 | Random read/write (+bit random write, mixed word/dword) | boundary counts 0/1/255 via client; 256 via raw-socket helper (client rejects it, test that separately) |
-| M2b | Timers/counters, SB, SW, DX, DY, L, F, V | per-device base/range table complete |
-| M3 | 3E ASCII (incl. ascii overflow policy, uppercase out/lowercase in) | cross product generated |
-| M4 | 4E (serial echo, reserved zeros) | |
-| M5 | Control: run/stop/pause/latchclear/reset, lock/unlock; CPU state machine | semantics decided before coding |
-| M6 | iQ-R profile (4+2 addressing, LT*/LST*/LC*/LZ/RD, pw 6-32, 2-byte random bit) | |
-| M7 | Fault injection (delay/drop/truncate/bad end code/reset reconnect) on the M1 hook | truncation tests labelled client-misbehaviour |
+| M | Scope | Exit criteria | Status |
+|---|---|---|---|
+| M0 | Scaffold, migration, pinned oracle, test generator skeleton, `pytest` green | `pytest` runs; old assets archived | Complete |
+| M1 | Transport + error table + 3E binary Q: batch word/bit R/W for D,M,X,Y,B,W,R,ZR,SM,SD; echo (0619) and cputype (0101); response-transform hook seam; basic disconnect/timeout tests | Real client round-trips every M1 cell; manual-derived vectors pass | Complete |
+| M2 | Random read/write (+bit random write, mixed word/dword) | boundary counts 0/1/255 via client; malformed 256-entry attempts via raw socket (client rejects 256 separately) | Complete |
+| M2b | Timers/counters, SB, SW, DX, DY, L, F, V | per-device base/range table complete | Complete with synthetic ranges; vendor limits unverified |
+| M3 | 3E ASCII (incl. ascii overflow policy, uppercase out/lowercase in) | cross product generated | Planned |
+| M4 | 4E (serial echo, reserved zeros) | | Planned |
+| M5 | Control: run/stop/pause/latchclear/reset, lock/unlock; CPU state machine | semantics decided before coding | Planned |
+| M6 | iQ-R profile (4+2 addressing, LT*/LST*/LC*/LZ/RD, pw 6-32, 2-byte random bit) | | Planned |
+| M7 | Fault injection (delay/drop/truncate/bad end code/reset reconnect) on the M1 hook | truncation tests labelled client-misbehaviour | Planned |
 Extension point = command registry dict (no extension milestone).
 
 ## 6. M1 test-case seeds (TDD input)
@@ -65,4 +71,4 @@ T1 batch word write->read roundtrip D0..D(n); T2 bit roundtrip incl. odd count; 
 Response bodies (add at M1 start): cputype = 16-char space-padded name + 2-byte code; echo = 2-byte length + echoed data.
 
 ## 8. Open items
-Authoritative per-series limits/ranges; ASCII overflow policy; native dword stride; SM/SD per-range RO; lock scope; reset behaviour; exact client pin; real-PLC unaligned bit-head word reads.
+Authoritative per-series limits/ranges; ASCII overflow policy; native dword stride; SM/SD per-range RO; lock scope; reset behaviour; real-PLC unaligned bit-head word reads; PLC verification of empty random lists and bit-device dword views. Client 0.3.0 is pinned and checked by the oracle test.
