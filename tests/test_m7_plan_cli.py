@@ -101,7 +101,8 @@ def test_json_file_and_cli_load_same_schema(plan_file, monkeypatch, capsys):
             seen.append("start")
         def stop(self):
             seen.append("stop")
-    def interrupt():
+    def interrupt(timeout):
+        assert timeout == 0.5
         raise KeyboardInterrupt
     monkeypatch.setattr(cli, "Server", FakeServer)
     monkeypatch.setattr(cli.threading, "Event", lambda: SimpleNamespace(wait=interrupt))

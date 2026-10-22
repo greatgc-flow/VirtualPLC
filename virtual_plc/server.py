@@ -1,6 +1,8 @@
 """TCP server and request lifecycle for local simulation."""
 
 import socket
+import logging
+import math
 import sys
 import threading
 
@@ -10,6 +12,8 @@ from .commands import CPU_STATES, dispatch
 from .memory import Memory
 from .profiles import PROFILES
 
+LOG = logging.getLogger(__name__)
+
 ACCEPT_POLL = 0.1  # seconds between stop checks of the accept loop
 
 
@@ -17,7 +21,15 @@ class Server:
     def __init__(self, host="127.0.0.1", port=0, profile="Q", memory=None,
                  response_hook=None, max_points=4096, idle_timeout=None,
                  initial_state="RUN", latch_ranges=None, password=None, fault_plan=None,
-                 ascii_dword_order="swapped", text_pad=0x00):
+                 ascii_dword_order="swapped", text_pad=0x00, verbose=False):
+        if type(port) is not int or not 0 <= port <= 65535:
+            raise ValueError("port must be an integer 0..65535")
+        if type(max_points) is not int or max_points < 1:
+            raise ValueError("max_points must be an integer >= 1")
+        if idle_timeout is not None and (type(idle_timeout) not in (int, float)
+                or not math.isfinite(idle_timeout) or idle_timeout <= 0):
+            raise ValueError("idle_timeout must be None or a finite number > 0")
+        self.verbose = verbose
         if isinstance(text_pad, str) and len(text_pad) == 1:
             text_pad = ord(text_pad)
         if isinstance(text_pad, bool) or not isinstance(text_pad, int) or not 0 <= text_pad <= 255:
@@ -71,8 +83,20 @@ class Server:
         self.memory.write_words("SD", 203, [CPU_STATES[state]])
         self.state = state
 
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stop()
+
+    def _log(self, message, *args):
+        if self.verbose:
+            LOG.info(message, *args)
+
     def start(self):
-        self._listener = socket.create_server(self.address)
+        family = socket.AF_INET6 if ":" in self.address[0] else socket.AF_INET
+        self._listener = socket.create_server(self.address, family=family)
         self._listener.settimeout(ACCEPT_POLL)
         self.address = self._listener.getsockname()[:2]
         self._acceptor = threading.Thread(target=self._accept_loop, daemon=True)
@@ -115,10 +139,12 @@ class Server:
     def _serve(self, connection, connection_id):
         with connection:
             try:
-                self._serve_frames(connection, connection_id)
+                reason = self._serve_frames(connection, connection_id)
             except Exception as error:
+                reason = f"unexpected {type(error).__name__}: {error}"
                 print(f"connection worker: {type(error).__name__}: {error}", file=sys.stderr, flush=True)
             finally:
+                self._log("close: %s", reason)
                 with self._clients_lock:
                     del self._clients[connection]
 
@@ -128,10 +154,12 @@ class Server:
         while not self._stopping.is_set():
             try:
                 chunk = connection.recv(65536)
+            except socket.timeout:
+                return "idle timeout"
             except OSError:
-                return  # timeout or reset
+                return "receive error/reset"
             if not chunk:
-                return
+                return "EOF"
             buffer += chunk
             while True:
                 try:
@@ -140,7 +168,7 @@ class Server:
                         break
                     request = decode_request(bytes(buffer[:size]))
                 except ValueError:
-                    return  # malformed framing closes only this connection
+                    return "malformed framing"
                 del buffer[:size]
                 with self._request_lock:
                     end_code, data = dispatch(request, self.memory, self._max_points, self)
@@ -148,6 +176,8 @@ class Server:
                     if self._fault_plan is not None:
                         nth += 1
                         action = self._fault_plan.select(request.command, nth=nth, connection=connection_id)
+                self._log("%s %s command=%04X sub=%04X end=%04X", request.frame, request.wire,
+                          request.command, request.subcommand, end_code)
                 response = encode_response(request, end_code, data, ascii_dword_order=self.ascii_dword_order)
                 if self._hook is not None:
                     response = self._hook(response)
@@ -155,6 +185,7 @@ class Server:
                     if action is None:
                         connection.sendall(response)
                     elif not faults.send_fault(connection, response, request, action, self._stopping):
-                        return
+                        return "fault close/shutdown"
                 except OSError:
-                    return  # peer closed during delivery
+                    return "send error/reset"
+        return "server shutdown"

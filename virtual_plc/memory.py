@@ -1,5 +1,7 @@
 """Sparse device storage and atomic request operations (M1)."""
 
+from copy import deepcopy
+
 from .profiles import PROFILES
 
 
@@ -13,7 +15,12 @@ class Memory:
     def __init__(self, profile="Q", limits=None):
         self.profile = PROFILES[profile]
         self._limits = {name: (spec.minimum, spec.maximum) for name, spec in self.profile.devices.items()}
-        self._limits.update(limits or {})
+        for name, span in (limits or {}).items():
+            spec = self.profile.devices.get(name)
+            if (spec is None or not isinstance(span, (tuple, list)) or len(span) != 2 or any(type(value) is not int for value in span)
+                    or not spec.minimum <= span[0] <= span[1] <= spec.maximum):
+                raise ValueError("invalid memory limit")
+            self._limits[name] = tuple(span)
         self._cells = {name: {} for name in self.profile.devices}
 
     def read_words(self, device, head, count):
@@ -91,3 +98,48 @@ class Memory:
                 latched = any(low <= head <= high for low, high in latch_ranges.get(device, ()))
                 if mode == "all" or (mode == "latch" and latched) or (mode == "non_latch" and not latched):
                     del cells[head]
+
+
+    def dump(self):
+        """Return stored points as JSON-compatible contiguous runs (native units).
+
+        Call before start or after stop; direct Memory access is not synchronized.
+        """
+        result = {}
+        for name, cells in self._cells.items():
+            runs = {}
+            previous = None
+            for head, value in sorted(cells.items()):
+                if previous is None or head != previous + 1:
+                    values = []
+                    runs[str(head)] = values
+                values.append(value)
+                previous = head
+            if runs:
+                result[name] = runs
+        return result
+
+    def load(self, data):
+        """Validate a complete snapshot before overlaying it; use before start.
+
+        Values are unsigned bits/words/native dwords, not client signed values.
+        """
+        if not isinstance(data, dict):
+            raise ValueError("memory snapshot must be an object")
+        staged = Memory(self.profile.name, self._limits)
+        staged._cells = deepcopy(self._cells)
+        for name, runs in data.items():
+            spec = self.profile.devices.get(name)
+            if spec is None or not isinstance(runs, dict):
+                raise ValueError("invalid snapshot device or runs")
+            for address, values in runs.items():
+                if not isinstance(address, str) or not isinstance(values, list) or not values:
+                    raise ValueError("snapshot runs need decimal address keys and nonempty lists")
+                head = int(address, 10)
+                maximum = {"bit": 1, "word": 65535, "dword": 0xFFFFFFFF}[spec.kind]
+                if any(type(value) is not int or not 0 <= value <= maximum for value in values):
+                    raise ValueError("snapshot value out of range")
+                if spec.kind == "dword":
+                    values = [half for value in values for half in (value & 0xFFFF, value >> 16)]
+                (staged.write_bits if spec.kind == "bit" else staged.write_words)(name, head, values)
+        self._cells = staged._cells

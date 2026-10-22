@@ -43,9 +43,7 @@ def connected_profile(server, frame, wire):
 CELLS = [
     (profile, frame, wire, command, device)
     for profile, (frame, wire), command in product(PROFILES, TRANSPORTS, COMMANDS)
-    for device in (devices_for(profile) if profile.name == "iQ-R" and command.unit else
-                   (next(d for d in devices_for(profile) if d.name == ("M" if command.unit == "bit" else "D")),)
-                   if command.unit else (None,))
+    for device in (devices_for(profile) if command.unit else (None,))
     if applicable(command, profile, frame, wire, milestone=6, device=device)[0]
 ]
 

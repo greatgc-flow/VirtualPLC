@@ -1,0 +1,68 @@
+name: Oracle watch
+on:
+  schedule:
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: oracle-watch
+  cancel-in-progress: false
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    outputs:
+      failed: ${{ steps.tests.outcome == 'failure' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e . pytest
+      - run: python -m pip install --upgrade pymcprotocol
+      - name: Set only this run's oracle expectation to the installed latest version
+        run: |
+          python - <<'PY'
+          from importlib.metadata import version
+          from pathlib import Path
+          import re
+          path = Path('requirements-dev.txt')
+          path.write_text(re.sub(r'pymcprotocol==[^\s]+', 'pymcprotocol==' + version('pymcprotocol'), path.read_text()))
+          PY
+      - id: tests
+        continue-on-error: true
+        run: python -m pytest -q
+  report:
+    needs: watch
+    if: always() && needs.watch.result != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          WATCH_RESULT: ${{ needs.watch.result }}
+          TESTS_FAILED: ${{ needs.watch.outputs.failed }}
+        with:
+          script: |
+            const owner = context.repo.owner, repo = context.repo.repo;
+            const title = '[oracle-drift] Latest pymcprotocol compatibility';
+            const label = 'oracle-drift';
+            const failed = process.env.TESTS_FAILED === 'true' || process.env.WATCH_RESULT !== 'success';
+            const issues = await github.paginate(github.rest.issues.listForRepo, {owner, repo, state: 'open', labels: label});
+            const existing = issues.find(issue => issue.title === title && !issue.pull_request);
+            if (failed) {
+              try { await github.rest.issues.getLabel({owner, repo, name: label}); }
+              catch (error) {
+                if (error.status !== 404) throw error;
+                await github.rest.issues.createLabel({owner, repo, name: label, color: 'd73a4a'});
+              }
+              const body = `Latest-oracle tests or setup failed. Review ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}. No dependency pin was committed.`;
+              if (existing) await github.rest.issues.update({owner, repo, issue_number: existing.number, body});
+              else await github.rest.issues.create({owner, repo, title, body, labels: [label]});
+            } else if (existing) {
+              await github.rest.issues.update({owner, repo, issue_number: existing.number, state: 'closed'});
+            }

@@ -33,7 +33,8 @@ containing only `steps`:
 The CLI loads and validates the file before constructing or binding the server.
 Bad files, unknown fields/actions or invalid arguments produce an argparse
 error. Omitting the option is the default inert mode. An empty steps array is
-valid but has no selected actions. The CLI defaults to Q/RUN; use `--initial-state STOP` for reset scenarios.
+valid but has no selected actions. The CLI defaults to Q/RUN; use `--initial-state STOP`
+for reset scenarios.
 
 Each step has `action`, optional `match` (default `{}`), and optional positive
 integer `times` (default 1). Unknown fields are rejected. An action is an object
@@ -94,7 +95,8 @@ Drop keeps a connection open subject to the ordinary socket idle timeout.
 Silent hold differs: its worker waits until server shutdown, even if the client
 abandons that socket, so use dedicated connections. Other clients remain
 usable. Delay, hold and partial-send pauses all cancel promptly on Server.stop(),
-which then closes clients and joins workers. The default idle timeout is None, so ordinary idle sockets remain open until
+which then closes clients and joins workers. The default idle timeout is None, so
+ordinary idle sockets remain open until
 EOF or server shutdown. Set `--idle-timeout` to bound idle clients.
 
 ## Pinned client observations and reset scenarios
@@ -133,4 +135,5 @@ Faults, ordering, usage accounting and hold lifetime are explicit synthetic
 policies, not new vendor-verified PLC behavior. TCP coalescing, scheduling and
 the peer's precise EOF/reset exception are OS-dependent; RST tests verify the
 actual platform linger setting (Windows ushort pair, POSIX int pair). No precise
-packet timing or physical PLC behavior is asserted. Ranges, native stride, SD203 and error semantics remain unverified; see [behavior](BEHAVIOR.md).
+packet timing or physical PLC behavior is asserted. Ranges, native stride, SD203 and
+error semantics remain unverified; see [behavior](BEHAVIOR.md).

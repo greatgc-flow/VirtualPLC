@@ -6,61 +6,97 @@ See [design](DESIGN.md), [fault injection](FAULTS.md), and [usage/safety](../REA
 
 ## Public API
 
-- `server.Server(host='127.0.0.1', port=0, profile='Q', memory=None,
-  response_hook=None, max_points=4096, idle_timeout=None,
-  initial_state='RUN', latch_ranges=None, password=None, fault_plan=None,
-  ascii_dword_order='swapped', text_pad=0x00)`.
-- `.start()` binds/listens and starts workers before returning; `.address` is `(host, actual_port)`.
-- `.stop()` synchronously closes clients/listener and joins workers; idempotent, including incomplete frames.
-- Accepted sockets use TCP_NODELAY; EOF, bad framing or `idle_timeout` closes only that client.
-- `response_hook(response_bytes) -> bytes` transforms each complete encoded response before the fault plan.
-- `faults.FaultPlan(steps)` / `.from_file(path)` supplies ordered, counted response faults; None is inert.
-- Q/L/QnA/iQ-L/iQ-R have synthetic CPU identities; names occupy 16 bytes, filled with `text_pad` (default NUL).
-- Echo response: length uint16 + text. ASCII encodes numeric fields as uppercase hex.
-- `memory.Memory(profile='Q', limits=None)` accepts inclusive `{device: (min, max)}` point ranges.
-- Profile devices expose `code`, `base`, `kind`, `minimum`, `maximum`; ranges remain synthetic.
-- `.read_words(device, head, count)` / `.read_bits(...)` return unsigned lists; corresponding writes return None.
-- Memory is sparse, initially zero and isolated by instance/family; no timer/counter execution.
-- Native dword heads address 32-bit points; word counts stream low/high halves, preserving an untouched half.
-- Bit-device word views pack 16 bits LSB first at aligned heads; bit access to word devices is invalid.
-- `codec.decode_request(frame_bytes)` returns `.frame`, `.wire`, `.serial`, `.route`, `.timer`, `.command`, `.subcommand`, raw `.data`.
-- `codec.encode_response(request, end_code=0, data=b'') -> bytes` echoes route/serial.
-- `codec.pack_words(values)` / `unpack_words(data)` use unsigned LE uint16.
-- `codec.pack_bits(values)` / `unpack_bits(data, count)` use high nibble first, odd low nibble zero.
-- Frames auto-detect 3E/4E, binary/ASCII per request; reserved fields must be zero; bad framing raises ValueError.
-- `commands.ERROR_CODES[code]` has `name`, `source`, `status`; all current rows remain unverified.
-- Each request validates before mutation under one lock; `max_points` limits batch points, not response bytes.
-- Random counts are uint8; zero is empty/no-op. Responses put words before dwords; dwords store low word first.
-- Duplicate/overlapping random writes apply in wire order. SS/SC/SN use STS/STC/STN client names.
-- `Profile.wire` selects widths/subcommands; ASCII compat addresses use 6 (Q-class) / 8 (iQ-R) decimal digits.
-- `.state` is RUN/STOP/PAUSE (default RUN); SD203 mirrors STOP=0, RUN=1, PAUSE=2 (unverified).
-- `.reset_count` starts at zero; successful reset requires STOP, replies on the same connection and keeps it open.
-- Reset sets STOP and clears no memory; state mirroring still writes SD203. SD203 must be addressable.
-- Profile latch ranges default to all L points; `latch_ranges={device: [(lo, hi), ...]}` replaces it; `{}` disables retention.
-- Latchclear requires STOP and clears only latch ranges. Run clear modes: 0 none, 1 non-latch, 2 all non-special.
-- SM/SD are writable and never cleared. `.latch_ranges` contains a copied, validated table of inclusive point spans.
-- `.locked` starts False and survives disconnect; password None disables lock/unlock with C059.
-- Passwords are ASCII: Q-class exactly 4 characters, iQ-R 6–32; invalid configuration raises ValueError.
-- `commands.LOCK_GATED` contains run/stop/pause/latchclear/reset; all data/echo/cputype commands stay available.
+See the [canonical CLI reference](../README.md#cli-reference),
+[embedding examples](../README.md#memory-seeding-snapshots-and-embedding), or `--help`.
 
-- `Memory.check(device, head, count, unit)` validates without mutation and returns the device spec.
-- `Memory.clear(latch_ranges, mode)` clears stored points (`latch`, `non_latch`, `all`), preserving SM/SD.
-- `Server.password` exposes the configured simulated lock password; `set_state(state)` updates state and SD203.
-- Direct memory/state access is intended for test setup; callers must serialize it with live requests.
-- An unexpected handler/hook exception is logged to stderr and closes only that connection; committed work is not rolled back.
-- `idle_timeout=None` leaves idle sockets open indefinitely; a positive seconds value closes idle/incomplete clients.
-- `ascii_dword_order` accepts only `swapped` (default) or `client`; invalid configuration raises ValueError.
-- `text_pad` accepts an integer 0..255 or one character with code point 0..255; `.text_pad` stores the normalized integer.
-  Booleans, byte strings, multi-character strings and out-of-range values raise ValueError.
-- CLI options: `--host`, `--port`, `--profile`, `--password`, `--initial-state`, `--max-points`, `--idle-timeout`, `--fault-plan`, `--ascii-dword-order {swapped,client}`, `--text-pad BYTE`.
-  The startup banner goes to stderr; non-127.0.0.1 hosts include a localhost-only safety warning.
+- `.start()` binds/listens and starts workers before returning; `.address` is `(host,
+  actual_port)`.
+- `.stop()` synchronously closes clients/listener and joins workers; idempotent,
+  including incomplete frames.
+- Accepted sockets use TCP_NODELAY; EOF, bad framing or `idle_timeout` closes only that
+  client.
+- `response_hook(response_bytes) -> bytes` transforms each complete encoded response
+  before the fault plan.
+- `faults.FaultPlan(steps)` / `.from_file(path)` supplies ordered, counted response
+  faults; None is inert.
+- Q/L/QnA/iQ-L/iQ-R have synthetic CPU identities; names occupy 16 bytes, filled with
+  `text_pad` (default NUL).
+- Echo response: length uint16 + text. ASCII encodes numeric fields as uppercase hex.
+- `memory.Memory(profile='Q', limits=None)` accepts inclusive `{device: (min, max)}`
+  point ranges.
+- Profile devices expose `code`, `base`, `kind`, `minimum`, `maximum`; ranges remain
+  synthetic.
+- `.read_words(device, head, count)` / `.read_bits(...)` return unsigned lists;
+  corresponding writes return None.
+- Memory is sparse, initially zero and isolated by instance/family; no timer/counter
+  execution.
+- Native dword heads address 32-bit points; word counts stream low/high halves,
+  preserving an untouched half.
+- Bit-device word views pack 16 bits LSB first at aligned heads; bit access to word
+  devices is invalid.
+- `codec.decode_request(frame_bytes)` returns `.frame`, `.wire`, `.serial`, `.route`,
+  `.timer`, `.command`, `.subcommand`, raw `.data`.
+- `codec.encode_response(request, end_code=0, data=b'', *, ascii_dword_order="swapped")
+  -> bytes` echoes route/serial.
+- `codec.pack_words(values)` / `unpack_words(data)` use unsigned LE uint16.
+- `codec.pack_bits(values)` / `unpack_bits(data, count)` use high nibble first, odd low
+  nibble zero.
+- Frames auto-detect 3E/4E, binary/ASCII per request; reserved fields must be zero; bad
+  framing raises ValueError.
+- `commands.ERROR_CODES[code]` has `name`, `source`, `status`; all current rows remain
+  unverified.
+- Each request validates before mutation under one lock; `max_points` limits batch
+  points, not response bytes.
+- Random counts are uint8; zero is empty/no-op. Responses put words before dwords;
+  dwords store low word first.
+- Duplicate/overlapping random writes apply in wire order. SS/SC/SN use STS/STC/STN
+  client names.
+- `Profile.wire` selects widths/subcommands; ASCII compat addresses use 6 (Q-class) / 8
+  (iQ-R) decimal digits.
+- `.state` is RUN/STOP/PAUSE (default RUN); SD203 mirrors STOP=0, RUN=1, PAUSE=2
+  (unverified).
+- `.reset_count` starts at zero; successful reset requires STOP, replies on the same
+  connection and keeps it open.
+- Reset sets STOP and clears no memory; state mirroring still writes SD203. SD203 must
+  be addressable.
+- Profile latch ranges default to all L points; `latch_ranges={device: [(lo, hi), ...]}`
+  replaces it; `{}` disables retention.
+- Latchclear requires STOP and clears only latch ranges. Run clear modes: 0 none, 1
+  non-latch, 2 all non-special.
+- SM/SD are writable and never cleared. `.latch_ranges` contains a copied, validated
+  table of inclusive point spans.
+- `.locked` starts False and survives disconnect; password None disables lock/unlock
+  with C059.
+- Passwords are ASCII: Q-class exactly 4 characters, iQ-R 6–32; invalid configuration
+  raises ValueError.
+- `commands.LOCK_GATED` contains run/stop/pause/latchclear/reset; all data/echo/cputype
+  commands stay available.
+
+- `Memory.check(device, head, count, unit)` validates without mutation and returns the
+  device spec.
+- `Memory.clear(latch_ranges, mode)` clears stored points (`latch`, `non_latch`, `all`),
+  preserving SM/SD.
+- `Server.password` exposes the configured simulated lock password; `set_state(state)`
+  updates state and SD203.
+- Direct memory/state access is intended for test setup; callers must serialize it with
+  live requests.
+- An unexpected handler/hook exception is logged to stderr and closes only that
+  connection; committed work is not rolled back.
+- `idle_timeout=None` leaves idle sockets open indefinitely; a positive seconds value
+  closes idle/incomplete clients.
+- `ascii_dword_order` accepts only `swapped` (default) or `client`; invalid
+  configuration raises ValueError.
+- `text_pad` accepts an integer 0..255 or one character with code point 0..255;
+  `.text_pad` stores the normalized integer.
+  Booleans, byte strings, multi-character strings and out-of-range values raise
+ValueError.
 
 ## Random access and common devices
 
 ### Wire layout and mutation
 
-Layouts were read directly from `.venv/Lib/site-packages/pymcprotocol/type3e.py`:
-`randomread`, `randomwrite`, and `randomwrite_bitunits` (lines 593–727).
+Layouts follow the installed oracle methods `randomread`, `randomwrite`
+and `randomwrite_bitunits` in `pymcprotocol.type3e`.
 Each Q binary device descriptor is a three-byte little-endian head and a
 one-byte device code. Random word/dword counts are separate uint8 fields.
 
@@ -164,7 +200,8 @@ ASCII batch bits use one `0`/`1` character per point. Words use four hex digits.
 The pinned client sends/decodes random dwords as one eight-digit hex integer
 (high word first). The server defaults to swapped halves as described below.
 Q-class random bit write values use two hex characters (`00`/`01`), unlike batch
-bits; iQ-R uses four. Echo text and the CPU name remain literal ASCII, preserving text case;
+bits; iQ-R uses four. Echo text and the CPU name remain literal ASCII, preserving text
+case;
 only numeric output is uppercased. The synthetic Q CPU code is `FFFF` in ASCII;
 the client returns it as a string without normalizing case (binary yields `ffff`).
 
@@ -296,7 +333,8 @@ policy. Earlier ASCII data-command error mappings are preserved.
 
 `Server(initial_state='RUN')` accepts RUN, STOP or PAUSE. Each instance exposes
 `state`, `reset_count` (initially zero), and `locked` (initially False).
-Force modes are accepted without additional semantics and cannot bypass state or lock rules.
+Force modes are accepted without additional semantics and cannot bypass state or lock
+rules.
 
 | Operation | RUN | STOP | PAUSE |
 |---|---|---|---|
@@ -378,8 +416,8 @@ differences or vendor capacities are invented for those names.
 
 Source: the installed pinned pymcprotocol 0.3.0 `type3e.py` and
 `mcprotocolconst.py`. All client branches listed in DESIGN were inspected:
-descriptor construction (331/340), batch subcommands (435/472/520/556), random
-subcommands and bit values (607/663/704/715), password bounds (911/946).
+descriptor construction, batch/random subcommands, bit-value widths and
+password bounds.
 The client normalizes plctype to its constants, including identity comparisons
 used in some of these branches. Type4E inherits the same command encoding.
 
@@ -427,7 +465,8 @@ profile always determines the capabilities and returned CPU identity.
 | iQ-R | VirtualPLC-iQ-R | FFFB |
 
 These are simulator identities, not actual Mitsubishi CPU models. Names are
-filled to 16 bytes with `text_pad` (NUL by default). Profile ranges are synthetic address-width
+filled to 16 bytes with `text_pad` (NUL by default). Profile ranges are synthetic
+address-width
 ceilings, not vendor-verified capacities; custom Memory limits still override
 per-family ranges. Default latch retention covers the selected profile's entire L range.
 CPU state, reset, lock scope, SD203 mirror and clearing policies remain shared;
@@ -455,7 +494,8 @@ Common devices retain the codes/bases/kinds listed in the common device table ab
 Two client inconsistencies are explicit:
 
 - `get_devicetype('iQ-R', 'LTN')` returns bit. The command encoders do not use
-  that function to select value widths or validate access. By simulator policy, the simulator deliberately models LTN as native dword, rejects bit
+  that function to select value widths or validate access. By simulator policy, the
+simulator deliberately models LTN as native dword, rejects bit
   access, and records that interpretation as unverified.
 - LSTC has code 58, but neither binary nor ASCII lookup nor get_devicetype
   handles its name. It is modeled as an independent bit family and tested via
@@ -500,3 +540,37 @@ first) is the default and `client` (high word first) preserves client mapping.
 The suspected real-PLC low-word-first ordering remains unverified. Nonzero
 reserved fields close the connection. Per-request transport switching is a
 simulator feature. See DESIGN's open items for remaining vendor checks.
+
+
+## Lifecycle, snapshots, timers and routes
+
+The package exports Server, Memory, FaultPlan and __version__. A context starts
+on entry and stops/joins on exit. Use one lifecycle per instance. Ctrl+C uses
+bounded waits on Windows; SIGTERM/SIGBREAK follow graceful cleanup. Forced
+Windows TerminateProcess bypasses handlers. Bind errors exit 1 without a
+traceback; invalid configuration exits 2. Verbose logging reports one-line
+command/frame/wire/end-code summaries and close reasons, excluding payloads.
+It is off by default; unexpected worker errors still report to stderr.
+
+Memory.load(data) validates complete JSON before overlaying native points.
+Memory.dump() groups contiguous stored points using the same schema; explicit
+zeros are retained. Values are unsigned bits/words/native dwords. See
+[seeding examples](../README.md#memory-seeding-snapshots-and-embedding).
+Load/mutate before start and dump after stop. Direct memory operations have no
+lock: live clients must use wire requests for synchronization. Limits use
+inclusive native points. Repeated CLI limits use the last span per family;
+latch spans accumulate and replace profile defaults.
+
+The monitoring timer is parsed but ignored. The client accepts seconds
+1..16383, encodes four 250 ms units per second and sets soc_timeout to seconds+1.
+Its setaccessopt(timer_sec=0) is ignored; soc_timeout is an attribute, not an
+access-option keyword. Routes echo but all network/PC/module-I/O/station values
+alias one memory/state target. Zero-valued client options are ignored even
+after nonzero settings.
+
+Client device names are case-sensitive; hex suffixes can be lowercase. Raw
+ASCII device names are case-insensitive. Unicode echo can pass client
+str.isalnum() but is rejected as invalid ASCII/alphanumeric data without
+closing the connection. SD203 mirrors accepted state changes in one direction:
+writing SD203 never changes state. Errors leave connections usable for stop,
+reset and further requests. Invalid client 4E serials fail before sending.

@@ -119,7 +119,8 @@ def test_cli_dword_order(monkeypatch, order):
     def create(host, port, **options):
         seen.update(options)
         return SimpleNamespace(address=(host, port), start=lambda: None, stop=lambda: None)
-    def interrupt():
+    def interrupt(timeout):
+        assert timeout == 0.5
         raise KeyboardInterrupt
     monkeypatch.setattr(cli, "Server", create)
     monkeypatch.setattr(cli.threading, "Event", lambda: SimpleNamespace(wait=interrupt))
