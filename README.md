@@ -1,3 +1,9 @@
+## M28 CURRENT — Offline cross-M26-bundle comparison (2026-10-22)
+
+Optional `RUN_M28_COMPARE.cmd` checks 2–12 original M26 run bundles, first through the M27/M25 integrity chain, then source/OS/Python/workload equality and per-bundle p50/p95/p99/RSS medians. Thresholds are user-opt-in only; no PLC traffic or automatic release decision. See `docs/M28_PROGRESS.md`, `M28_GATES.json`, and `M29_HANDOFF.md`.
+
+**28 isolated synthetic M28 tests observed PASS with stubbed dependencies. Full project regression/real Windows evidence not yet run. Release HOLD; 16 external P0 blocked; Draft PR remains unmerged.**
+
 ## M27 CURRENT — offline descriptive evidence triage (2026-10-22)
 
 `RUN_M27_LOCAL_COMPARE.cmd` verifies M26 multi-run output hashes, JUnit, source/workload comparability, and optional user-owned latency/RSS thresholds without modifying source evidence. See `docs/M27_PROGRESS.md` and `M27_GATES.json`. **Release HOLD; original M26 results are historical until independently replayed.** PR #1 remains Draft; no CI activation or merge.
