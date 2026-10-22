@@ -17,7 +17,7 @@ class Memory:
         self._cells = {name: {} for name in self.profile.devices}
 
     def read_words(self, device, head, count):
-        spec = self._check(device, head, count, "word")
+        spec = self.check(device, head, count, "word")
         if spec.kind == "word":
             return self._load(device, head, count)
         if spec.kind == "dword":
@@ -27,14 +27,14 @@ class Memory:
         return [sum(bit << i for i, bit in enumerate(bits[j:j + 16])) for j in range(0, len(bits), 16)]
 
     def read_bits(self, device, head, count):
-        self._check(device, head, count, "bit")
+        self.check(device, head, count, "bit")
         return self._load(device, head, count)
 
     def write_words(self, device, head, values):
         values = list(values)
         if not all(0 <= value <= 0xFFFF for value in values):
             raise ValueError("word out of range")
-        spec = self._check(device, head, len(values), "word")
+        spec = self.check(device, head, len(values), "word")
         if spec.kind == "dword":
             # Heads address native 32-bit points; word counts stream low/high halves.
             cells = self._cells[device]
@@ -50,10 +50,10 @@ class Memory:
         values = list(values)
         if not all(value in (0, 1) for value in values):
             raise ValueError("bit must be 0 or 1")
-        self._check(device, head, len(values), "bit")
+        self.check(device, head, len(values), "bit")
         self._store(device, head, values)
 
-    def _check(self, device, head, count, unit):
+    def check(self, device, head, count, unit):
         """Validate one access; `count` is in `unit`s. Returns the device spec."""
         spec = self.profile.devices.get(device)
         if spec is None or count <= 0:
@@ -79,7 +79,7 @@ class Memory:
     def _store(self, device, head, values):
         self._cells[device].update(enumerate(values, head))
 
-    def _clear(self, latch_ranges, mode):
+    def clear(self, latch_ranges, mode):
         """Clear stored points only; the server holds its request lock.
 
         mode is latch, non_latch, or all. Special devices are always preserved.

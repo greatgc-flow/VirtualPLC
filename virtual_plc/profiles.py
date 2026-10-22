@@ -1,10 +1,9 @@
 """Named profiles and the two client wire classes; ranges/identities are synthetic."""
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 # Synthetic ceiling (3-byte head address); authoritative per-series ranges are open (DESIGN §8).
 MAX_POINT = 0xFFFFFF
-LATCH = {"L": ((0, MAX_POINT),)}  # Synthetic default retention ranges, inclusive.
 
 
 @dataclass(frozen=True)
@@ -50,12 +49,17 @@ class Profile:
     latch_ranges: dict
     wire_class: str = "Q-class"
 
+    codes: dict = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self):
+        object.__setattr__(self, "codes", {device.code: device for device in self.devices.values()})
+
     @property
     def wire(self):
         return WIRE_CLASSES[self.wire_class]
 
     def device_by_code(self, code):
-        return next((device for device in self.devices.values() if device.code == code), None)
+        return self.codes.get(code)
 
     def device_by_ascii(self, code):
         return next((device for device in self.devices.values()

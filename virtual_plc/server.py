@@ -1,6 +1,7 @@
-"""TCP server and request lifecycle (M1)."""
+"""TCP server and request lifecycle for local simulation."""
 
 import socket
+import sys
 import threading
 
 from . import faults
@@ -14,7 +15,7 @@ ACCEPT_POLL = 0.1  # seconds between stop checks of the accept loop
 
 class Server:
     def __init__(self, host="127.0.0.1", port=0, profile="Q", memory=None,
-                 response_hook=None, max_points=4096, idle_timeout=2.0,
+                 response_hook=None, max_points=4096, idle_timeout=None,
                  initial_state="RUN", latch_ranges=None, password=None, fault_plan=None):
         if fault_plan is not None and not isinstance(fault_plan, faults.FaultPlan):
             raise ValueError("fault_plan must be a FaultPlan or None")
@@ -40,11 +41,10 @@ class Server:
                    or not device.minimum <= span[0] <= span[1] <= device.maximum for span in spans):
                 raise ValueError("invalid latch range")
             self.latch_ranges[name] = spans
-        self._password = password
+        self.password = password
         self.locked = False
-        self.last_force = False
         self.reset_count = 0
-        self._set_state(initial_state)
+        self.set_state(initial_state)
         self.address = (host, port)
         self._hook = response_hook
         self._fault_plan = fault_plan
@@ -58,7 +58,7 @@ class Server:
         self._listener = None
         self._acceptor = None
 
-    def _set_state(self, state):
+    def set_state(self, state):
         self.memory.write_words("SD", 203, [CPU_STATES[state]])
         self.state = state
 
@@ -83,6 +83,7 @@ class Server:
                 connection.shutdown(socket.SHUT_RDWR)
             except OSError:
                 pass  # already closed by its worker
+            connection.close()
             worker.join()
 
     def _accept_loop(self):
@@ -106,8 +107,8 @@ class Server:
         with connection:
             try:
                 self._serve_frames(connection, connection_id)
-            except (OSError, ValueError):
-                pass  # timeout, reset, or malformed framing: drop this client only
+            except Exception as error:
+                print(f"connection worker: {type(error).__name__}: {error}", file=sys.stderr, flush=True)
             finally:
                 with self._clients_lock:
                     del self._clients[connection]
@@ -115,13 +116,22 @@ class Server:
     def _serve_frames(self, connection, connection_id):
         buffer = bytearray()
         nth = 0
-        while True:
-            chunk = connection.recv(65536)
+        while not self._stopping.is_set():
+            try:
+                chunk = connection.recv(65536)
+            except OSError:
+                return  # timeout or reset
             if not chunk:
                 return
             buffer += chunk
-            while (size := frame_size(buffer)) is not None and len(buffer) >= size:
-                request = decode_request(bytes(buffer[:size]))
+            while True:
+                try:
+                    size = frame_size(buffer)
+                    if size is None or len(buffer) < size:
+                        break
+                    request = decode_request(bytes(buffer[:size]))
+                except ValueError:
+                    return  # malformed framing closes only this connection
                 del buffer[:size]
                 with self._request_lock:
                     end_code, data = dispatch(request, self.memory, self._max_points, self)
@@ -132,7 +142,10 @@ class Server:
                 response = encode_response(request, end_code, data)
                 if self._hook is not None:
                     response = self._hook(response)
-                if action is None:
-                    connection.sendall(response)
-                elif not faults.send_fault(connection, response, request, action, self._stopping):
-                    return
+                try:
+                    if action is None:
+                        connection.sendall(response)
+                    elif not faults.send_fault(connection, response, request, action, self._stopping):
+                        return
+                except OSError:
+                    return  # peer closed during delivery

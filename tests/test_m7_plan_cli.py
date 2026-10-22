@@ -2,21 +2,14 @@
 
 from concurrent.futures import ThreadPoolExecutor
 import json
-from pathlib import Path
 from types import SimpleNamespace
-from uuid import uuid4
 
 import pytest
 
 
 @pytest.fixture
-def plan_file():
-    # Use ordinary workspace files: this sandbox denies pytest's private temp directories.
-    folder = Path(__file__).resolve().parents[1] / ".venv/fault-test-inputs"
-    folder.mkdir(parents=True, exist_ok=True)
-    path = folder / (uuid4().hex + ".json")
-    yield path
-    path.unlink(missing_ok=True)
+def plan_file(tmp_path):
+    return tmp_path / "faults.json"
 
 
 def plan(steps):
@@ -101,7 +94,7 @@ def test_json_file_and_cli_load_same_schema(plan_file, monkeypatch, capsys):
     assert FaultPlan.from_file(path).select(0x0619, nth=1, connection=1) == {"type": "drop"}
     seen = []
     class FakeServer:
-        def __init__(self, host, port, *, fault_plan=None):
+        def __init__(self, host, port, *, fault_plan=None, **options):
             self.address = (host, port)
             seen.append(fault_plan)
         def start(self):
@@ -115,7 +108,7 @@ def test_json_file_and_cli_load_same_schema(plan_file, monkeypatch, capsys):
     cli.main(["--host", "127.0.0.1", "--port", "0", "--fault-plan", str(path)])
     assert seen[0].select(0x0619, nth=1, connection=1) == {"type": "drop"}
     assert seen[1:] == ["start", "stop"]
-    assert "listening on 127.0.0.1:0" in capsys.readouterr().out
+    assert "listening on 127.0.0.1:0" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("text", ['{"steps":', '{}', '{"steps": [], "extra": true}'])

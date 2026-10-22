@@ -1,12 +1,9 @@
-# M7: declarative response faults
+# Declarative response faults
 
 `Server(fault_plan=None)` keeps the ordinary response path: no matching,
 fault waits, alternate sender, or connection/request counting. Opt in with
 `virtual_plc.faults.FaultPlan(steps)` or `FaultPlan.from_file(path)`.
-The implementation uses the existing response hook and worker threads, with
-one lock for plan usage counters. No fault framework, dependencies or workflows
-were added. Prior milestone notes remain the source of normal PLC behavior;
-there is no separate M1.md in this repository.
+See [behavior](BEHAVIOR.md) for the normal server API.
 
 ## One schema for Python and CLI
 
@@ -36,8 +33,7 @@ containing only `steps`:
 The CLI loads and validates the file before constructing or binding the server.
 Bad files, unknown fields/actions or invalid arguments produce an argparse
 error. Omitting the option is the default inert mode. An empty steps array is
-valid but has no selected actions. The CLI otherwise retains its existing
-Q/RUN defaults; reset scenarios below use Python to start in STOP.
+valid but has no selected actions. The CLI defaults to Q/RUN; use `--initial-state STOP` for reset scenarios.
 
 Each step has `action`, optional `match` (default `{}`), and optional positive
 integer `times` (default 1). Unknown fields are rejected. An action is an object
@@ -98,9 +94,8 @@ Drop keeps a connection open subject to the ordinary socket idle timeout.
 Silent hold differs: its worker waits until server shutdown, even if the client
 abandons that socket, so use dedicated connections. Other clients remain
 usable. Delay, hold and partial-send pauses all cancel promptly on Server.stop(),
-which then closes clients and joins workers. The tests configure ordinary waits
-at 30 ms and pauses at 5 ms; long configured waits are used only to verify stop
-interruption, rather than actually waiting their full duration.
+which then closes clients and joins workers. The default idle timeout is None, so ordinary idle sockets remain open until
+EOF or server shutdown. Set `--idle-timeout` to bound idle clients.
 
 ## Pinned client observations and reset scenarios
 
@@ -126,27 +121,16 @@ hold takes about 2 s and RST about 1 s before reconnect. The new socket restores
 the configured client timeout, echo works afterward, and reset_count is exactly
 1: reconnect does not repeat the committed reset.
 
-These four cases carry `pytest.mark.slow`. The normal reset path remains the
-M5 same-connection success path when no fault is selected. Binary graceful EOF
+These four cases carry `pytest.mark.slow`. Reset uses the
+same-connection success path when no fault is selected. Binary graceful EOF
 may itself be interpreted as false success by this client; RST and silence are
 used deliberately to exercise actual reconnect rather than claiming that any
 close will do so.
 
-## TDD and limits
-
-Baseline: 2697 green tests. Initial test execution also exposed inaccessible
-pytest temporary directories in this sandbox. The new CLI tests now use ordinary
-workspace JSON files under `.venv/fault-test-inputs` and remove them afterward;
-older fixtures and test files were not changed. After that environment fix,
-RED was **88 failures** for the missing FaultPlan/CLI APIs. A further partial-send
-unit test was confirmed RED before implementation. All **89 M7 tests** then
-passed, followed by the full suite: **2786 passed**, with the existing pytest
-cache-write warning. Python 3.10 syntax and git diff whitespace checks pass.
+## Limits
 
 Faults, ordering, usage accounting and hold lifetime are explicit synthetic
 policies, not new vendor-verified PLC behavior. TCP coalescing, scheduling and
 the peer's precise EOF/reset exception are OS-dependent; RST tests verify the
 actual platform linger setting (Windows ushort pair, POSIX int pair). No precise
-packet timing or physical PLC behavior is asserted. Existing unverified ranges,
-stride, SD203 and error semantics remain unchanged. No evidence scripts,
-governance gates, workflows or commits were added.
+packet timing or physical PLC behavior is asserted. Ranges, native stride, SD203 and error semantics remain unverified; see [behavior](BEHAVIOR.md).

@@ -80,7 +80,7 @@ def test_initial_state_and_default(server_factory, state):
     server = server_factory(initial_state=state)
     assert server.state == state
     assert server.memory.read_words("SD", 203, 1) == [STATE_CODES[state]]
-    assert server.reset_count == 0 and not server.locked and not server.last_force
+    assert server.reset_count == 0 and not server.locked
 
 
 def test_default_is_run(server_factory):
@@ -103,17 +103,17 @@ def test_invalid_configuration_rejected_at_construction(options):
 
 
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
-def test_force_is_recorded_only(server_factory, frame, wire):
+def test_force_modes_follow_normal_state_rules(server_factory, frame, wire):
     server = server_factory()
     with connected(server, frame, wire) as client:
         client.remote_run(clear_mode=0, force_exec=True)
-        assert server.state == "RUN" and server.last_force is True
+        assert server.state == "RUN"
         client.remote_pause(force_exec=True)
-        assert server.state == "PAUSE" and server.last_force is True
+        assert server.state == "PAUSE"
         client.remote_pause(force_exec=False)
-        assert server.last_force is False
+        assert server.state == "PAUSE"
         client.remote_stop()
-        assert server.last_force is False
+        assert server.state == "STOP"
 
 
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
@@ -153,7 +153,7 @@ def test_invalid_fields_do_not_change_state_or_memory(server_factory, frame, wir
     server.memory.write_words("D", 0, [7])
     with socket.create_connection(server.address, timeout=1) as connection:
         assert transact(connection, frame, wire, command, numbers(wire, *fields)) == (0xC05C, b"")
-    assert server.state == "STOP" and not server.last_force and server.reset_count == 0
+    assert server.state == "STOP" and server.reset_count == 0
     assert server.memory.read_words("D", 0, 1) == [7]
 
 

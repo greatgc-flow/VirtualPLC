@@ -90,7 +90,7 @@ def random_access(request, memory, max_points, control=None):
                 reader = Reader(data, "binary", offset)
                 device, head = read_device(reader, memory.profile)
                 offset = reader.offset
-                memory._check(device.name, head, 1 if bit else width // 2, "bit" if bit else "word")
+                memory.check(device.name, head, 1 if bit else width // 2, "bit" if bit else "word")
                 values = None
                 if write:
                     payload = data[offset:offset + width]
@@ -135,7 +135,7 @@ def control_request(request, memory, max_points, control=None):
     """Agreed M5 policies, using the same field reader for every transport."""
     command = request.command
     auth = command in (0x1630, 0x1631)
-    if control is None or (auth and control._password is None):
+    if control is None or (auth and control.password is None):
         raise CommandError(EndCode.UNSUPPORTED_COMMAND)
     if control.locked and command in LOCK_GATED:
         raise CommandError(EndCode.LOCKED)
@@ -149,7 +149,7 @@ def control_request(request, memory, max_points, control=None):
         wire = memory.profile.wire
         if not wire.password_min <= len(password) <= wire.password_max or not password.isascii():
             raise CommandError(EndCode.REQUEST_DATA_ERROR)
-        if password.decode("ascii") != control._password:
+        if password.decode("ascii") != control.password:
             raise CommandError(EndCode.WRONG_PASSWORD)
         control.locked = command == 0x1631
         return b""
@@ -158,15 +158,13 @@ def control_request(request, memory, max_points, control=None):
     if (command == 0x1003 and control.state == "STOP") or (command in (0x1005, 0x1006) and control.state != "STOP"):
         raise CommandError(EndCode.INVALID_STATE)
     if command == 0x1001 and clear:
-        memory._clear(control.latch_ranges, "non_latch" if clear == 1 else "all")
+        memory.clear(control.latch_ranges, "non_latch" if clear == 1 else "all")
     if command == 0x1005:
-        memory._clear(control.latch_ranges, "latch")
+        memory.clear(control.latch_ranges, "latch")
     else:
-        if command in (0x1001, 0x1003):
-            control.last_force = mode == 3
         if command == 0x1006:
             control.reset_count += 1
-        control._set_state({0x1001: "RUN", 0x1003: "PAUSE"}.get(command, "STOP"))
+        control.set_state({0x1001: "RUN", 0x1003: "PAUSE"}.get(command, "STOP"))
     return b""
 
 
@@ -174,27 +172,27 @@ def control_request(request, memory, max_points, control=None):
 HANDLERS = {
     (0x0619, 0): echo, (0x0101, 0): cputype,
 }
-for wire in WIRE_CLASSES.values():
+# Data subcommands are selected by wire class, so mismatches cannot dispatch.
+DATA_HANDLERS = {}
+for wire_class, wire in WIRE_CLASSES.items():
+    handlers = {}
     for command in (0x0401, 0x1401):
-        HANDLERS[command, wire.word_subcommand] = batch
-        HANDLERS[command, wire.bit_subcommand] = batch
-    HANDLERS[0x0403, wire.word_subcommand] = random_access
-    HANDLERS[0x1402, wire.word_subcommand] = random_access
-    HANDLERS[0x1402, wire.bit_subcommand] = random_access
+        handlers[command, wire.word_subcommand] = batch
+        handlers[command, wire.bit_subcommand] = batch
+    handlers[0x0403, wire.word_subcommand] = random_access
+    handlers[0x1402, wire.word_subcommand] = random_access
+    handlers[0x1402, wire.bit_subcommand] = random_access
+    DATA_HANDLERS[wire_class] = handlers
 HANDLERS.update({(command, 0): control_request for command in LOCK_GATED | {0x1630, 0x1631}})
 
 
 def dispatch(request, memory, max_points, control=None):
     """Return (end_code, data); a rejected request leaves memory unchanged."""
-    handler = HANDLERS.get((request.command, request.subcommand))
+    key = (request.command, request.subcommand)
+    handler = HANDLERS.get(key) or DATA_HANDLERS[memory.profile.wire_class].get(key)
     try:
         if handler is None:
             raise CommandError(EndCode.UNSUPPORTED_COMMAND)
-        if handler in (batch, random_access):
-            wire = memory.profile.wire
-            allowed = (wire.word_subcommand,) if request.command == 0x0403 else (wire.word_subcommand, wire.bit_subcommand)
-            if request.subcommand not in allowed:
-                raise CommandError(EndCode.UNSUPPORTED_COMMAND)
         # Control uses the shared Reader directly; data handlers consume canonical binary.
         parsed = request if handler is control_request else normalize_request(request, memory.profile)
         return EndCode.OK, handler(parsed, memory, max_points, control)

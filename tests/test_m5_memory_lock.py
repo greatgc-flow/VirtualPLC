@@ -69,10 +69,9 @@ def test_empty_override_and_default_latchclear(server_factory, frame, wire):
 
 
 def test_profile_latch_default():
-    from virtual_plc.profiles import LATCH, MAX_POINT, PROFILES
+    from virtual_plc.profiles import MAX_POINT, PROFILES
 
-    assert LATCH == {"L": ((0, MAX_POINT),)}
-    assert PROFILES["Q"].latch_ranges == LATCH
+    assert PROFILES["Q"].latch_ranges == {"L": ((0, MAX_POINT),)}
 
 
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
