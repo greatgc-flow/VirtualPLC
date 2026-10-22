@@ -1,0 +1,19 @@
+{
+  "schema": "virtualplc.backlog.delta.m27.v1",
+  "reference": "backlog/M20_BACKLOG.json",
+  "external_hold_unchanged": 16,
+  "items": [
+    {
+      "id": "BL-INT-005",
+      "title": "M27 read-only single M26 bundle triage",
+      "status": "CODE_AND_TDD_COMMITTED_AWAITING_RUNTIME_REPLAY",
+      "acceptance": "Unmodified M26 SHA inventory plus each verified M23 JUnit/readback/source confirmed; mock negative tests and real local replay pass; private evidence kept offline"
+    },
+    {
+      "id": "BL-INT-006",
+      "title": "M28 cross-bundle historical comparability",
+      "status": "BACKLOG",
+      "acceptance": "Independent original provenance; detect Windows/environment, workload/source and fingerprint drift; fail closed on incompatible inputs"
+    }
+  ]
+}
