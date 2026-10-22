@@ -1,0 +1,27 @@
+{
+  "schema": "virtualplc.backlog.delta.m28.v1",
+  "source": "backlog/M20_BACKLOG.json",
+  "external_hold_unchanged": 16,
+  "items": [
+    {
+      "id": "BL-INT-005",
+      "title": "M27 read-only per-M26 evidence triage",
+      "status": "CODE_COMMITTED_FULL_REPLAY_PENDING",
+      "acceptance": "Clean full checkout, M27 unit tests plus original private M26 bundle and SHA/JUnit reviewed"
+    },
+    {
+      "id": "BL-INT-006",
+      "title": "M28 read-only cross-bundle comparison",
+      "status": "CODE_COMMITTED_28_ISOLATED_SYNTHETIC_TESTS_PASS_FULL_REPLAY_PENDING",
+      "acceptance": "2..12 source-comparable M26 bundles, dedup reports, opt-in thresholds, manifest/JUnit/console agreement and native private Windows replay"
+    },
+    {
+      "id": "BL-INT-007",
+      "title": "M29 Windows evidence and independent provenance review",
+      "status": "NEXT",
+      "owner_role": "Windows isolated-loopback operator and independent reviewer",
+      "blocked_by": "Original clean exact-HEAD private Windows M26/M27/M28 evidence not yet supplied",
+      "acceptance": "CRC/full SHA of originals; full pytest partition replay; source/workload/OS verification; no real PLC and no public operator log upload"
+    }
+  ]
+}
