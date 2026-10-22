@@ -1,3 +1,7 @@
+## M29 — optional isolated local regression (2026-10-22)
+
+`RUN_M29_LOCAL_GATE.cmd` executes bounded local-only pytest groups (excluding actual-client wheel tests), audits JUnit/CASE-ID/manifest and preserves byte-exact console evidence. It never approves a release. See `docs/M29_PROGRESS.md`, `M29_GATES.json` and `M30_HANDOFF.md`. **The separate synthetic prototype observed 21/21 PASS; exact committed M29 code and full original checkout regression remain NOT_RUN.** No public upload of machine evidence; Draft PR #1, main and CI conditions preserved; 16 external P0 still HOLD.
+
 ## M28 CURRENT — Offline cross-M26-bundle comparison (2026-10-22)
 
 Optional `RUN_M28_COMPARE.cmd` checks 2–12 original M26 run bundles, first through the M27/M25 integrity chain, then source/OS/Python/workload equality and per-bundle p50/p95/p99/RSS medians. Thresholds are user-opt-in only; no PLC traffic or automatic release decision. See `docs/M28_PROGRESS.md`, `M28_GATES.json`, and `M29_HANDOFF.md`.
