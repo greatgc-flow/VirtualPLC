@@ -130,6 +130,14 @@ def analyze(folder, limits=None):
         or not record['source_sha256']
         or [x.get('run') for x in entries]!=list(range(1,attempted+1))):
         raise ValueError('inconsistent M26 report')
+    provenance=record['source_sha256']
+    if (set(provenance)!=set(m26.PROVENANCE_FILES)
+        or any(type(v) is not str or len(v)!=64
+               or any(c not in '0123456789abcdef' for c in v)
+               for v in provenance.values())):
+        raise ValueError('invalid M26 source fingerprint')
+    if any(x.get('status') not in ('VERIFIED','HOLD') for x in entries):
+        raise ValueError('unknown M26 run status')
     opts = record.get('options')
     if not isinstance(opts,dict) or m26.validate_options(**opts)!=opts or opts['runs']!=requested:
         raise ValueError('M26 options mismatch')
@@ -138,6 +146,10 @@ def analyze(folder, limits=None):
                         and x.get('return_code')==0 for x in entries))
     if state=='OBSERVED_NOT_CERTIFIED' and not complete:
         raise ValueError('false M26 completion')
+    if state=='OBSERVED_NOT_CERTIFIED' and (
+        not isinstance(record.get('descriptive_summary'),dict)
+        or record['descriptive_summary'].get('status')!='REPEATED_OBSERVATIONS_ONLY'):
+        raise ValueError('missing M26 successful descriptive summary')
     if state.startswith('HOLD_') and record.get('descriptive_summary') is not None:
         raise ValueError('M26 HOLD with accepted summary')
     if sum(line.startswith(b'STATUS=') for line in console.splitlines())!=1 or not console.endswith(
