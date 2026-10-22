@@ -1,3 +1,7 @@
+## M27 CURRENT — offline descriptive evidence triage (2026-10-22)
+
+`RUN_M27_LOCAL_COMPARE.cmd` verifies M26 multi-run output hashes, JUnit, source/workload comparability, and optional user-owned latency/RSS thresholds without modifying source evidence. See `docs/M27_PROGRESS.md` and `M27_GATES.json`. **Release HOLD; original M26 results are historical until independently replayed.** PR #1 remains Draft; no CI activation or merge.
+
 ## M26 CURRENT (2026-10-21)
 
 Latest milestones are documented in `docs/M26_PROGRESS.md`, `M26_GATES.json`, and `M27_HANDOFF.md`. Use `RUN_M26_LOCAL_REPEATS.cmd` on a clean local checkout to perform opt-in bounded repetitions (3..30 runs), each keeping exact console output, JUnit, report and hashes. **Local P0 observed 183/199; 16 external P0 HOLD. Release HOLD, no automated CI or merge.** Earlier milestone figures below are retained only as historical records.
