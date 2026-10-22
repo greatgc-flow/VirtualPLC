@@ -262,8 +262,8 @@ def run(root,out,groups=6,timeout=240,runner=None,emit=None):
             audit={'status':'HOLD_SOURCE_DRIFT'}
         elif len(lines)==len(partitions) and all(x['status']=='LOCAL_PASS' for x in lines):
             audit=audit_p0(checkout,owners)
-            status=('HOLD_P0_COVERAGE' if audit['status']=='HOLD_MISSING_OR_UNPASSED_CASES'
-                    else 'LOCAL_REGRESSION_OBSERVED_NOT_CERTIFIED')
+            status=('LOCAL_REGRESSION_OBSERVED_NOT_CERTIFIED'
+                    if audit['status']=='MATCHED_EXTERNAL_BACKLOG' else 'HOLD_P0_COVERAGE')
         else:
             audit=audit_p0(checkout,owners)
     except (Exception,KeyboardInterrupt) as exc:
