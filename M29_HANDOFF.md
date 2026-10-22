@@ -1,0 +1,9 @@
+# M29 continuation — VirtualPLC
+1. Verify latest remote main, feat/m1-3e-binary-tdd, Draft PR #1, open Issues and Actions. Preserve public source-only repo, release HOLD, unmerged Draft and no automatic workflow activation.
+2. Read docs/handoff/2026-10-22_M26_COMPLETE_CHAT_HANDOFF.md, docs/M26_PROGRESS.md, docs/M27_PROGRESS.md, docs/M28_PROGRESS.md, M28_GATES.json, scripts/m27_compare.py, scripts/m28_cross_bundle.py, tests/test_m27_compare.py, tests/test_m28_cross_bundle.py, backlog/M20_BACKLOG.json and backlog/M28_DELTA.json.
+3. M28 source and 28 **isolated stubbed synthetic** tests exist. This is NOT an actual full checkout regression or privately attested Windows evidence. Full source revalidation remains pending.
+4. Run grouped clean-checkout pytest (M24–M28 first; then complete suite with exact original JUnit/SHA); never count incomplete/timeout tests as PASS. Check CASE-ID uniqueness against catalog of 199 P0 and external backlog of 16.
+5. On an isolated Windows 3.11+ system disconnected from real PLC networks, run **two distinct** M26 invocations into fresh folders, then M27 and M28. Preserve original files privately, verify CRC when zipped, SHA-256, input/output inventory, byte-identical console, synthetic fault recovery, source/environment/workload match, RSS and latency interpretation. No automatic retries of ambiguous PLC writes.
+6. Do not claim that matching OS/Python proves machine identity; no physical PLC, signed provenance, native Windows, official wheel, manufacturer manual or independent approval has been newly certified.
+7. Open 16 external P0 stay blocked (G0-C 6, G0-E 6, G3 2, G4 2). No main merge, PR ready change, CI activation, released license assertion or public operator data without explicit consent.
+8. After actual verification, enhance only real gaps and handoff M30; no arbitrary thresholds, opt-in configurations, Very Simple and independent modules remain governing design.
