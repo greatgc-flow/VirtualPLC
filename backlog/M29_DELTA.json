@@ -1,0 +1,30 @@
+{
+  "schema": "virtualplc.backlog.delta.m29.v1",
+  "canonical_external": "backlog/M20_BACKLOG.json",
+  "external_p0_hold_unchanged": 16,
+  "items": [
+    {
+      "id": "BL-INT-005",
+      "status": "CODE_COMMITTED_REPLAY_PENDING",
+      "title": "M27 single M26 bundle triage"
+    },
+    {
+      "id": "BL-INT-006",
+      "status": "CODE_COMMITTED_REPLAY_PENDING",
+      "title": "M28 2..12 M26 bundle comparative analysis"
+    },
+    {
+      "id": "BL-INT-007",
+      "status": "M29_RUNNER_CODE_COMMITTED_PENDING_REAL_CHECKOUT",
+      "title": "M29 grouped pytest + JUnit/CASE-ID audit",
+      "acceptance": "Complete clean Windows/Linux checkout; no timeouts; source fingerprint stable; original JUnit SHA/CASE-ID tally; all skipped/failed excluded; preserve private local evidence"
+    },
+    {
+      "id": "BL-INT-008",
+      "status": "M30_NEXT",
+      "title": "M30 independently reviewed local and native Windows evidence",
+      "owner_role": "isolated Windows operator + independent reviewer",
+      "acceptance": "Source HEAD verified, M29 grouped regression completed, 2 fresh M26 and M27/M28 comparisons, CRC and SHA of private original ZIP; no release without G0-C/G0-E/G3/G4"
+    }
+  ]
+}
