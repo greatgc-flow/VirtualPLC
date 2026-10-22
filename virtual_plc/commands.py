@@ -3,7 +3,7 @@
 from enum import IntEnum
 import struct
 
-from .codec import pack_bits, pack_words, unpack_bits, unpack_words
+from .codec import normalize_request, pack_bits, pack_words, unpack_bits, unpack_words
 from .memory import OutOfRange
 
 ECHO_MAX = 960
@@ -139,6 +139,8 @@ def dispatch(request, memory, max_points):
     try:
         if handler is None:
             raise CommandError(EndCode.UNSUPPORTED_COMMAND)
-        return EndCode.OK, handler(request, memory, max_points)
+        return EndCode.OK, handler(normalize_request(request, memory.profile), memory, max_points)
     except CommandError as error:
         return error.args[0], b""
+    except ValueError:
+        return EndCode.REQUEST_DATA_ERROR, b""

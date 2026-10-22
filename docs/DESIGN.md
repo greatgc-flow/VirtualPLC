@@ -17,6 +17,9 @@ Not for industrial use. Binds 127.0.0.1 by default.
 - Falsy options (`network=0`, `pc=0`, `timer_sec=0`) ignored by `setaccessopt`.
 - Random binary layouts checked against the installed pinned 0.3.0 client at M2;
   parser names STS/STC/STN select constants SS/SC/SN respectively.
+- ASCII/4E layouts checked against the same installed client at M3/M4: ASCII
+  batch bits are single characters, words are four hex characters, dwords are
+  one eight-digit hex value. 4E serials are uint16; reserved fields are zero.
 
 ## 2. Decisions (consensus cx+cc, with amendments)
 | ID | Decision |
@@ -38,7 +41,7 @@ Not for industrial use. Binds 127.0.0.1 by default.
 - Overlapping/duplicate random-write entries applied in request order.
 - Validation (range, count, legality) completes before any write (atomic).
 
-## 4. Codec (Q wire class, M1–M2)
+## 4. Codec (Q wire class, M1–M4)
 - 3E binary request: `50 00 | net | pc | io(2 LE) | stn | len(2 LE)=2+cmd+sub+data | timer(2) | cmd(2) | sub(2) | data`.
 - Response: `D0 00 | net pc io stn | len(2) | end(2) | data` (end code first inside len).
 - Batch read/write (cmd 0401/1401), sub 0000 (word) / 0001 (bit): `addr(3 LE) devcode(1) points(2)`; words LE; bits 2/byte high nibble first, odd count padded low nibble 0.
@@ -47,6 +50,18 @@ Not for industrial use. Binds 127.0.0.1 by default.
 - Random write (1402/0000): the same two counts, followed by interleaved word address/value entries (4+2 bytes), then dword address/value entries (4+4 bytes).
 - Random bit write (1402/0001): uint8 count, then address(4) + value(1) entries; values must be 0 or 1, not packed nibbles.
 - Zero random counts are accepted as empty lists/no-ops (design policy, unverified against a PLC). Count 256 has no wire representation; raw tests send wrapped/widened counts with 256 entries and require rejection. See [M2 implementation notes](M2.md).
+- The same codec is parameterized by frame (3E/4E) and wire (binary/ASCII).
+  Request headers auto-detect the transport on every request, including mixed
+  requests on a single connection. This does not autodetect address numbering.
+- ASCII uses `5000`/`5400` requests, `D000`/`D400` responses, character lengths,
+  uppercase hexadecimal output, and case-insensitive hex input. Q descriptors
+  are two code characters followed by six **decimal** address digits (`compat`).
+  Overwidth addresses and invalid payloads return a nonzero error without mutation;
+  the manual hex-address policy remains deferred.
+- 4E inserts serial(2 binary bytes / 4 hex characters) and reserved zeros of
+  the same width after the subheader. Responses echo serials. End-code offsets
+  are 9/18 for 3E binary/ASCII and 13/26 for 4E binary/ASCII.
+  See [M3/M4 implementation notes](M3_M4.md), including unverified ASCII dword ordering.
 
 ## 5. Milestones
 | M | Scope | Exit criteria | Status |
@@ -55,8 +70,8 @@ Not for industrial use. Binds 127.0.0.1 by default.
 | M1 | Transport + error table + 3E binary Q: batch word/bit R/W for D,M,X,Y,B,W,R,ZR,SM,SD; echo (0619) and cputype (0101); response-transform hook seam; basic disconnect/timeout tests | Real client round-trips every M1 cell; manual-derived vectors pass | Complete |
 | M2 | Random read/write (+bit random write, mixed word/dword) | boundary counts 0/1/255 via client; malformed 256-entry attempts via raw socket (client rejects 256 separately) | Complete |
 | M2b | Timers/counters, SB, SW, DX, DY, L, F, V | per-device base/range table complete | Complete with synthetic ranges; vendor limits unverified |
-| M3 | 3E ASCII (incl. ascii overflow policy, uppercase out/lowercase in) | cross product generated | Planned |
-| M4 | 4E (serial echo, reserved zeros) | | Planned |
+| M3 | 3E ASCII (incl. ascii overflow policy, uppercase out/lowercase in) | cross product generated | Complete (compat numbering) |
+| M4 | 4E (serial echo, reserved zeros) | All implemented commands across all four transports | Complete |
 | M5 | Control: run/stop/pause/latchclear/reset, lock/unlock; CPU state machine | semantics decided before coding | Planned |
 | M6 | iQ-R profile (4+2 addressing, LT*/LST*/LC*/LZ/RD, pw 6-32, 2-byte random bit) | | Planned |
 | M7 | Fault injection (delay/drop/truncate/bad end code/reset reconnect) on the M1 hook | truncation tests labelled client-misbehaviour | Planned |
@@ -71,4 +86,4 @@ T1 batch word write->read roundtrip D0..D(n); T2 bit roundtrip incl. odd count; 
 Response bodies (add at M1 start): cputype = 16-char space-padded name + 2-byte code; echo = 2-byte length + echoed data.
 
 ## 8. Open items
-Authoritative per-series limits/ranges; ASCII overflow policy; native dword stride; SM/SD per-range RO; lock scope; reset behaviour; real-PLC unaligned bit-head word reads; PLC verification of empty random lists and bit-device dword views. Client 0.3.0 is pinned and checked by the oracle test.
+Authoritative per-series limits/ranges; native dword stride; SM/SD per-range RO; lock scope; reset behaviour; real-PLC unaligned bit-head word reads; PLC verification of empty random lists and bit-device dword views; suspected real-PLC ASCII dword word-order divergence. ASCII overwidth requests are rejected; manual numbering remains deferred. Client 0.3.0 is pinned and checked by the oracle test.

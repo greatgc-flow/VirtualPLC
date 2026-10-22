@@ -1,4 +1,4 @@
-"""Q binary generator inputs, not runtime capabilities or independent byte oracles.
+"""Q generator inputs, not runtime capabilities or independent byte oracles.
 
 Device codes/bases are copied from pymcprotocol/mcprotocolconst.py:
 https://raw.githubusercontent.com/senrust/pymcprotocol/master/src/pymcprotocol/mcprotocolconst.py
@@ -92,10 +92,10 @@ COMMANDS = (
 )
 
 
-def applicable(command: Command, profile: Profile, frame: str, wire: str) -> tuple[bool, str | None]:
-    """Return Q binary seed eligibility and an explicit exclusion reason.
+def applicable(command: Command, profile: Profile, frame: str, wire: str, *, milestone=2, device=None) -> tuple[bool, str | None]:
+    """Return seed eligibility and an explicit exclusion reason.
 
-    frame is 3E/4E; wire is binary/ascii. This selects positive M1–M2b cells.
+    frame is 3E/4E; wire is binary/ascii. milestone preserves earlier seed scopes.
     Negative tests such as T8 deliberately construct excluded requests.
     Shared wire classes do not imply shared per-profile capabilities.
     """
@@ -111,8 +111,10 @@ def applicable(command: Command, profile: Profile, frame: str, wire: str) -> tup
         return False, "iQ-R addressing is deferred to M6"
     if profile.name != "Q":
         return False, "M1 targets Q; other Q-class profile capabilities remain unspecified"
-    if frame == "4E":
+    if device is not None and command.unit == "bit" and device.kind != "bit":
+        return False, "Bit access to word devices is invalid"
+    if frame == "4E" and milestone < 4:
         return False, "4E framing is deferred to M4"
-    if wire == "ascii":
+    if wire == "ascii" and milestone < 3:
         return False, "ASCII encoding is deferred to M3"
     return True, None

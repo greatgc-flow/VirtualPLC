@@ -1,12 +1,11 @@
-# M1–M2b production API required by tests
+# M1–M4 production API required by tests
 
 - `server.Server(host='127.0.0.1', port=0, profile='Q', memory=None,
   response_hook=None, max_points=4096, idle_timeout=2.0)`.
 - `.start()` binds/listens and starts workers before returning; `.address`
   is `(host, actual_port)`. `.stop()` closes listener/clients and joins workers;
   it is synchronous and idempotent, including with incomplete client frames.
-- Accepted sockets use TCP_NODELAY. EOF/malformed framing closes that client.
-  Idle/incomplete clients close after `idle_timeout`; other clients stay usable.
+- Accepted sockets use TCP_NODELAY; EOF/malformed framing or `idle_timeout` closes only that client.
 - `response_hook(response_bytes) -> bytes` transforms each complete response
   after dispatch and before its full transmission. None means identity.
 - M1 Q CPU identity is synthetic: `VirtualPLC-Q`, code `0xFFFF` (not vendor data).
@@ -18,16 +17,15 @@
 - `.read_words(device, head, count)` / `.read_bits(...)` return unsigned lists;
   `.write_words(device, head, values)` / `.write_bits(...)` return None.
 - Memory is sparse, initially zero and isolated by instance/family; invalid input raises ValueError before mutation.
-- Word view of bit devices packs 16 points LSB first, with aligned heads.
-  Bit access to word devices is invalid; SM/SD are writable.
-- `codec.decode_request(frame_bytes)` returns an object with `.route`
-  `(network, pc, io, station)`, `.timer`, `.command`, `.subcommand`, `.data`.
+- Word views pack 16 bits LSB first at aligned heads; bit access to word devices is invalid; SM/SD are writable.
+- `codec.decode_request(frame_bytes)` returns `.frame`, `.wire`, `.serial`, `.route`
+  `(network, pc, io, station)`, `.timer`, `.command`, `.subcommand`, raw wire `.data`.
 - `codec.encode_response(request, end_code=0, data=b'') -> bytes` echoes route.
 - `codec.pack_words(values)` / `unpack_words(data)` use unsigned LE uint16.
 - `codec.pack_bits(values)` / `unpack_bits(data, count)` use high nibble first,
   odd low nibble zero. Invalid values, padding or lengths raise ValueError.
-- `decode_request` requires one exact 3E binary frame, minimum body 6 bytes;
-  bad headers/lengths/trailing data raise ValueError. Dispatch validates data.
+- Frames auto-detect 3E/4E and binary/ASCII per request; replies match, echoing
+  4E serial with zero reserved fields. Invalid framing raises ValueError.
 - `commands.ERROR_CODES` maps integer codes to dicts with `name`, `source`, `status`.
   Names: OK, POINTS_OUT_OF_RANGE, ADDRESS_OUT_OF_RANGE,
   UNSUPPORTED_COMMAND, REQUEST_DATA_ERROR, DATA_LENGTH_MISMATCH.
@@ -38,3 +36,5 @@
   Counts are uint8; zero is an empty list/no-op. Responses put words before dwords.
   Duplicate/overlapping writes apply in wire order; dwords store low word first.
 - SS/SC/SN storage uses STS/STC/STN client names. Timers/counters do not execute.
+- ASCII uses fixed-width hex numbers and compat decimal addresses (six digits);
+  payload/overflow errors return nonzero end codes before mutation. See [transport notes](../docs/M3_M4.md).
