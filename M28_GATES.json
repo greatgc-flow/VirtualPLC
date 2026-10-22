@@ -1,0 +1,30 @@
+{
+  "schema": "virtualplc.m28.gates.v1",
+  "milestone": "M28",
+  "feature": "offline_cross_m26_bundle_triage",
+  "development_branch": "feat/m1-3e-binary-tdd",
+  "new_source_and_synthetic_tests_committed": true,
+  "isolated_synthetic_harness": {
+    "cases_passed": 28,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "scope": "M28 logic with M24/M26/M27 minimal stubs",
+    "junit_sha256": "f8224f83ff9daeaab56716ec7b38b46226b9f2cf3b8b73442afca51086a7564d"
+  },
+  "full_repo_pytest_status": "NOT_RUN",
+  "real_m26_m27_windows_replay_status": "NOT_RUN",
+  "external_p0_hold": 16,
+  "historical_p0_observed": 183,
+  "p0_total": 199,
+  "original_m26_zip_crc_reverified": false,
+  "independent_origin_attested": false,
+  "actual_plc_traffic_permitted": false,
+  "performance_sla_certified": false,
+  "memory_leak_absence_certified": false,
+  "release": "HOLD",
+  "draft_pr_only": true,
+  "main_merge_allowed": false,
+  "ci_auto_enabled": false,
+  "default_thresholds_enabled": false
+}
