@@ -20,19 +20,24 @@ Not for industrial use. Binds 127.0.0.1 by default.
 - ASCII/4E layouts checked against the same installed client at M3/M4: ASCII
   batch bits are single characters, words are four hex characters, dwords are
   one eight-digit hex value. 4E serials are uint16; reserved fields are zero.
+- M6 source inspection: iQ-R binary descriptors are 4-byte addresses + 2-byte
+  codes; ASCII descriptors are 4-character codes + 8 decimal digits. Data
+  subcommands are 0002/0003; random bit values are uint16; passwords are 6–32
+  ASCII characters. LSTC has a constant but no client lookup. LTN's client
+  get_devicetype result is inconsistent (bit); see the explicit M6 model policy.
 
 ## 2. Decisions (consensus cx+cc, with amendments)
 | ID | Decision |
 |---|---|
 | D1 | `archive/m1-m29` tag on old branch; new branch `v2/m0`; main history untouched. Drop gates/evidence/progress docs/scripts. Migrate only: concrete scenarios from `suite/catalog/test_cases.jsonl` (fragmentation, atomicity, concurrency), compat round-trips + wheel-hash pin, fixture provenance labels. Closing PR #1 happens after v2 M0 lands. |
-| D2 | Five named profiles (Q, L, QnA, iQ-L, iQ-R) mapped to two wire classes (`Q-class`, `iQ-R`). Same wire class != same capabilities; ranges/CPU names are per profile. A Q-class server receiving iQ-R subcommands (0x0002/0x0003) returns an error. |
+| D2 | Five named profiles (Q, L, QnA, iQ-L, iQ-R) mapped to two wire classes (`Q-class`, `iQ-R`). Same wire class != same capabilities; ranges/CPU names are per profile. Addressed requests using the opposite wire class's subcommands return an error in either direction. Q-class names and non-addressed packets are indistinguishable on the wire; see M6 notes. |
 | D3 | Layout `virtual_plc/{server,codec,commands,memory,profiles,__main__}.py`; tables in Python. stdlib + pytest only. One lock per request; validate whole request before any mutation; each response fully written via `sendall`/checked send loop; `TCP_NODELAY`; tests bind port 0. |
 | D4 | Tests generated from tables over **applicable** combinations only (explicit exclusions with reasons). Oracles: (i) real pymcprotocol 0.3.0 = *client-compat*; (ii) hand-authored expected bytes in test code, independent of `codec.py`/tables/client = *manual-derived* (never "manual-correct", never "capture"). Oracle pin = PyPI 0.3.0 wheel hash (verify checkout matches). |
 | D5 | Numbering policy is explicit per endpoint/profile (`compat` default = decimal text as client sends). Never autodetect. `manual` policy (hex digits) later; discriminator test address `X0A`. Also record suspected divergence: ASCII dword word-order. All manual claims from memory are marked `unverified`. |
 | D6 | Milestones below. 4096 is a *client receive limit*, documented separately from server limits; large valid responses tested with a raw-socket client. |
 | D7a | Timers/counters (TS/TC/TN, CS/CC/CN, SS/SC/SN): independent storage, no timer execution. Own milestone step. |
 | D7b | SM/SD writable by default; per-range read-only table starts empty. |
-| D7c | Dword on word devices = two consecutive words, low word at lower address. Native-dword devices (LTN etc., iQ-R) need explicit stride rules at M6. |
+| D7c | Dword on word devices = two consecutive words, low word at lower address. M6 native LTN/LSTN/LCN/LZ store one uint32 per native point; word counts stream low/high halves, random dwords occupy one native point, odd word writes preserve the other half. Native stride is an unverified simulator policy, not proven by client encoding. |
 | D7d | M5 agreed: server-wide lock gates run/stop/pause/latchclear/reset only; survives disconnect. Wrong password changes nothing. Reset succeeds only in STOP, replies on the same open connection and clears no memory. See M5 notes. |
 | D7e | Error-table rows carry `source: manual|client|design|memory` + `status: verified|unverified`. M5 explicitly adds memory provenance for C200/C201, superseding the original three-source restriction. Tests never hard-assert `unverified` rows without the marker; reported separately. |
 
@@ -41,7 +46,7 @@ Not for industrial use. Binds 127.0.0.1 by default.
 - Overlapping/duplicate random-write entries applied in request order.
 - Validation (range, count, legality) completes before any write (atomic).
 
-## 4. Codec (Q wire class, M1–M4)
+## 4. Codec (both wire classes, M1–M6)
 - 3E binary request: `50 00 | net | pc | io(2 LE) | stn | len(2 LE)=2+cmd+sub+data | timer(2) | cmd(2) | sub(2) | data`.
 - Response: `D0 00 | net pc io stn | len(2) | end(2) | data` (end code first inside len).
 - Batch read/write (cmd 0401/1401), sub 0000 (word) / 0001 (bit): `addr(3 LE) devcode(1) points(2)`; words LE; bits 2/byte high nibble first, odd count padded low nibble 0.
@@ -62,6 +67,11 @@ Not for industrial use. Binds 127.0.0.1 by default.
   the same width after the subheader. Responses echo serials. End-code offsets
   are 9/18 for 3E binary/ASCII and 13/26 for 4E binary/ASCII.
   See [M3/M4 implementation notes](M3_M4.md), including unverified ASCII dword ordering.
+- M6 parameterizes descriptor sizes, subcommands, random bit-value width and
+  password bounds through profile wire tables. Framing remains shared. iQ-R
+  adds LTS/LTC/LTN, LSTS/LSTC/LSTN, LCS/LCC/LCN, LZ and RD; LSTC is covered by
+  raw requests because the pinned client cannot name it. Z is not client-supported.
+  See [M6 notes](M6.md) for synthetic identities/ranges and native stride policy.
 
 ## 5. Milestones
 | M | Scope | Exit criteria | Status |
@@ -73,7 +83,7 @@ Not for industrial use. Binds 127.0.0.1 by default.
 | M3 | 3E ASCII (incl. ascii overflow policy, uppercase out/lowercase in) | cross product generated | Complete (compat numbering) |
 | M4 | 4E (serial echo, reserved zeros) | All implemented commands across all four transports | Complete |
 | M5 | Control: run/stop/pause/latchclear/reset, lock/unlock; CPU state machine | Agreed semantics, all four transports; vendor behavior unverified | Complete |
-| M6 | iQ-R profile (4+2 addressing, LT*/LST*/LC*/LZ/RD, pw 6-32, 2-byte random bit) | | Planned |
+| M6 | All named profiles; iQ-R 4+2 addressing, LT*/LST*/LC*/LZ/RD, pw 6-32, 2-byte random bit | Profile-driven handlers and generated transport cells; raw LSTC; native stride documented | Complete; vendor ranges/stride unverified |
 | M7 | Fault injection (delay/drop/truncate/bad end code/reset reconnect) on the M1 hook | truncation tests labelled client-misbehaviour | Planned |
 Extension point = command registry dict (no extension milestone).
 
@@ -95,4 +105,4 @@ STOP=0, RUN=1, PAUSE=2 (unverified). Default latch ranges cover L; clearing
 never touches SM/SD, apart from the explicit SD203 state mirror on transitions.
 
 ## 8. Open items
-Authoritative per-series limits/ranges; native dword stride; SM/SD per-range RO; vendor verification of M5 lock/reset/state-code policies; real-PLC unaligned bit-head word reads; PLC verification of empty random lists and bit-device dword views; suspected real-PLC ASCII dword word-order divergence. ASCII overwidth requests are rejected; manual numbering remains deferred. Client 0.3.0 is pinned and checked by the oracle test.
+Authoritative per-series limits/ranges; vendor verification of the selected native dword stride; SM/SD per-range RO; vendor verification of M5 lock/reset/state-code policies; real-PLC unaligned bit-head word reads; PLC verification of empty random lists and bit-device dword views; suspected real-PLC ASCII dword word-order divergence. ASCII overwidth requests are rejected; manual numbering remains deferred. Client 0.3.0 is pinned and checked by the oracle test.

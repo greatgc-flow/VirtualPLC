@@ -1,10 +1,33 @@
-"""Per-profile device capabilities, ranges, and CPU identity (Q binary)."""
+"""Named profiles and the two client wire classes; ranges/identities are synthetic."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 # Synthetic ceiling (3-byte head address); authoritative per-series ranges are open (DESIGN §8).
 MAX_POINT = 0xFFFFFF
 LATCH = {"L": ((0, MAX_POINT),)}  # Synthetic default retention ranges, inclusive.
+
+
+@dataclass(frozen=True)
+class Wire:
+    address_size: int
+    code_size: int
+    ascii_code_size: int
+    ascii_address_size: int
+    bit_value_size: int
+    word_subcommand: int
+    bit_subcommand: int
+    password_min: int
+    password_max: int
+
+    @property
+    def descriptor_size(self):
+        return self.address_size + self.code_size
+
+
+WIRE_CLASSES = {
+    "Q-class": Wire(3, 1, 2, 6, 1, 0, 1, 4, 4),
+    "iQ-R": Wire(4, 2, 4, 8, 2, 2, 3, 6, 32),
+}
 
 
 @dataclass(frozen=True)
@@ -15,6 +38,7 @@ class Device:
     base: int = 10
     minimum: int = 0
     maximum: int = MAX_POINT
+    ascii_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -24,9 +48,18 @@ class Profile:
     cpu_code: int
     devices: dict
     latch_ranges: dict
+    wire_class: str = "Q-class"
+
+    @property
+    def wire(self):
+        return WIRE_CLASSES[self.wire_class]
 
     def device_by_code(self, code):
         return next((device for device in self.devices.values() if device.code == code), None)
+
+    def device_by_ascii(self, code):
+        return next((device for device in self.devices.values()
+                     if (device.ascii_name or device.name).ljust(self.wire.ascii_code_size, "*") == code.upper()), None)
 
 
 # Codes match pymcprotocol mcprotocolconst.DeviceConstants.
@@ -41,6 +74,24 @@ Q_DEVICES = (
     ("CS", 0xC4, "bit"), ("CC", 0xC3, "bit"), ("CN", 0xC5, "word"),
 )
 
-PROFILES = {
-    "Q": Profile("Q", "VirtualPLC-Q", 0xFFFF, {row[0]: Device(*row) for row in Q_DEVICES}, LATCH),
-}
+IQR_DEVICES = (
+    ("LTS", 0x51, "bit"), ("LTC", 0x50, "bit"), ("LTN", 0x52, "dword"),
+    ("LSTS", 0x59, "bit"), ("LSTC", 0x58, "bit"), ("LSTN", 0x5A, "dword"),
+    ("LCS", 0x55, "bit"), ("LCC", 0x54, "bit"), ("LCN", 0x56, "dword"),
+    ("LZ", 0x62, "dword"), ("RD", 0x2C, "word"),
+)
+
+
+def _profile(name, code, wire_class):
+    iqr = wire_class == "iQ-R"
+    maximum = (1 << (8 * WIRE_CLASSES[wire_class].address_size)) - 1
+    aliases = {"SS": "STS", "SC": "STC", "SN": "STN"} if iqr else {}
+    devices = {row[0]: replace(Device(*row), maximum=maximum, ascii_name=aliases.get(row[0]))
+               for row in Q_DEVICES + (IQR_DEVICES if iqr else ())}
+    return Profile(name, "VirtualPLC-" + name, code, devices, {"L": ((0, maximum),)}, wire_class)
+
+
+PROFILES = {name: _profile(name, code, wire_class) for name, code, wire_class in (
+    ("Q", 0xFFFF, "Q-class"), ("L", 0xFFFE, "Q-class"), ("QnA", 0xFFFD, "Q-class"),
+    ("iQ-L", 0xFFFC, "Q-class"), ("iQ-R", 0xFFFB, "iQ-R"),
+)}

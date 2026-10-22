@@ -1,6 +1,6 @@
-"""MC 3E/4E framing and binary/ASCII conversion for the Q wire class.
+"""MC 3E/4E framing and binary/ASCII conversion for both wire classes.
 
-ASCII uses the explicit compat numbering policy: six decimal address digits.
+ASCII uses the explicit compat numbering policy: fixed-width decimal addresses.
 Command handlers operate on canonical binary payloads for every transport.
 """
 
@@ -120,6 +120,23 @@ def encode_response(request, end_code=0, data=b""):
     return prefix + route + layout.number(len(body), 2) + body
 
 
+def read_device(reader, profile):
+    """Read a descriptor using only the selected profile, never guess its class."""
+    wire = profile.wire
+    if reader.wire == "ascii":
+        device = profile.device_by_ascii(reader.take(wire.ascii_code_size).decode("ascii"))
+        digits = reader.take(wire.ascii_address_size)
+        if any(char not in b"0123456789" for char in digits):
+            raise ValueError("invalid compat decimal address")
+        head = int(digits, 10)
+    else:
+        head = reader.number(wire.address_size)
+        device = profile.device_by_code(reader.number(wire.code_size))
+    if device is None:
+        raise ValueError("unknown device")
+    return device, head
+
+
 def normalize_request(request, profile):
     """Convert an ASCII command payload to the existing binary handler format.
 
@@ -129,14 +146,11 @@ def normalize_request(request, profile):
     if request.wire == "binary":
         return request
     reader = Reader(request.data, "ascii")
+    wire = profile.wire
 
     def descriptor():
-        name = reader.take(2).decode("ascii").upper().rstrip("*")
-        device = profile.devices.get(name)
-        digits = reader.take(6)
-        if device is None or any(char not in b"0123456789" for char in digits):
-            raise ValueError("invalid device or compat decimal address")
-        return int(digits, 10).to_bytes(3, "little") + bytes([device.code])
+        device, head = read_device(reader, profile)
+        return head.to_bytes(wire.address_size, "little") + device.code.to_bytes(wire.code_size, "little")
 
     command, subcommand = request.command, request.subcommand
     data = bytearray()
@@ -145,15 +159,15 @@ def normalize_request(request, profile):
         points = reader.number(2)
         data += points.to_bytes(2, "little")
         if command == 0x1401:
-            if subcommand == 1:
+            if subcommand == wire.bit_subcommand:
                 data += pack_bits([char - 48 for char in reader.take(points)])
             else:
                 data += pack_words([reader.number(2) for _ in range(points)])
     elif command in (0x0403, 0x1402):
-        bit = subcommand == 1
+        bit = subcommand == wire.bit_subcommand
         counts = [reader.number(1) for _ in range(1 if bit else 2)]
         data += bytes(counts)
-        for count, width in zip(counts, (1,) if bit else (2, 4)):
+        for count, width in zip(counts, (wire.bit_value_size,) if bit else (2, 4)):
             for _ in range(count):
                 data += descriptor()
                 if command == 0x1402:
@@ -173,8 +187,8 @@ def _ascii_response_data(request, data):
         return reader.take(16) + layout.number(reader.number(2), 2)
     if request.command == 0x0619:
         return layout.number(reader.number(2), 2) + data[2:]
-    if request.command == 0x0401 and request.subcommand == 1:
-        points = Reader(request.data, "ascii", 8).number(2)
+    if request.command == 0x0401 and request.subcommand in (1, 3):
+        points = Reader(request.data, "ascii", len(request.data) - 4).number(2)
         return bytes(48 + bit for bit in unpack_bits(data, points))
     counts = ((len(data) // 2, 2),)
     if request.command == 0x0403:

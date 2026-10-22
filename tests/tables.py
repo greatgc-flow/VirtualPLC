@@ -76,6 +76,20 @@ DEVICES = (
     Device("CN", 0xC5, 10, "word"),
 )
 
+IQR_EXTRA_DEVICES = (
+    Device("LTS", 0x51, 10, "bit"), Device("LTC", 0x50, 10, "bit"),
+    Device("LTN", 0x52, 10, "dword"),
+    Device("LSTS", 0x59, 10, "bit"), Device("LSTC", 0x58, 10, "bit"),
+    Device("LSTN", 0x5A, 10, "dword"),
+    Device("LCS", 0x55, 10, "bit"), Device("LCC", 0x54, 10, "bit"),
+    Device("LCN", 0x56, 10, "dword"), Device("LZ", 0x62, 10, "dword"),
+    Device("RD", 0x2C, 10, "word"),
+)
+
+
+def devices_for(profile):
+    return DEVICES + (IQR_EXTRA_DEVICES if profile.wire_class == "iQ-R" else ())
+
 # The 0.3.0 parser uses ST* while its constants (and Q storage) use S*.
 CLIENT_NAMES = {"SS": "STS", "SC": "STC", "SN": "STN"}
 
@@ -115,10 +129,14 @@ def applicable(command: Command, profile: Profile, frame: str, wire: str, *, mil
         return False, "Unknown frame type"
     if wire not in {"binary", "ascii"}:
         return False, "Unknown wire encoding"
-    if profile.wire_class == "iQ-R":
+    if profile.wire_class == "iQ-R" and milestone < 6:
         return False, "iQ-R addressing is deferred to M6"
-    if profile.name != "Q":
+    if profile.name != "Q" and milestone < 6:
         return False, "M1 targets Q; other Q-class profile capabilities remain unspecified"
+    if device is not None and device not in devices_for(profile):
+        return False, "Device is unavailable on this profile"
+    if device is not None and device.name == "LSTC":
+        return False, "LSTC has a constant but no pinned client lookup; raw-socket tests only"
     if device is not None and command.unit == "bit" and device.kind != "bit":
         return False, "Bit access to word devices is invalid"
     if frame == "4E" and milestone < 4:

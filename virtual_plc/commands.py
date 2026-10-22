@@ -1,10 +1,11 @@
-"""Q binary MC command dispatch and validation."""
+"""Shared MC command handlers, parameterized by profile wire class."""
 
 from enum import IntEnum
 import struct
 
-from .codec import LengthError, Reader, normalize_request, pack_bits, pack_words, unpack_bits, unpack_words
+from .codec import LengthError, Reader, normalize_request, pack_bits, pack_words, read_device, unpack_bits, unpack_words
 from .memory import OutOfRange
+from .profiles import WIRE_CLASSES
 
 ECHO_MAX = 960
 LOCK_GATED = {0x1001, 0x1002, 0x1003, 0x1005, 0x1006}
@@ -36,15 +37,14 @@ class CommandError(Exception):
 
 def batch(request, memory, max_points, control=None):
     """Batch read (0401) or write (1401); the subcommand selects bit or word units."""
-    if len(request.data) < 6:
+    wire = memory.profile.wire
+    if len(request.data) < wire.descriptor_size + 2:
         raise CommandError(EndCode.REQUEST_DATA_ERROR)
-    head = int.from_bytes(request.data[:3], "little")
-    device = memory.profile.device_by_code(request.data[3])
-    points = int.from_bytes(request.data[4:6], "little")
-    payload = request.data[6:]
-    bit, write = request.subcommand == 1, request.command == 0x1401
-    if device is None:
-        raise CommandError(EndCode.REQUEST_DATA_ERROR)
+    reader = Reader(request.data, "binary")
+    device, head = read_device(reader, memory.profile)
+    points = reader.number(2)
+    payload = request.data[reader.offset:]
+    bit, write = request.subcommand == wire.bit_subcommand, request.command == 0x1401
     if not 0 < points <= max_points:
         raise CommandError(EndCode.POINTS_OUT_OF_RANGE)
     expected = ((points + 1) // 2 if bit else 2 * points) if write else 0
@@ -72,13 +72,14 @@ def random_access(request, memory, max_points, control=None):
     The server holds its request lock through validation and application.
     """
     data = request.data
-    bit = request.subcommand == 1
+    wire = memory.profile.wire
+    bit = request.subcommand == wire.bit_subcommand
     write = request.command == 0x1402
     count_size = 1 if bit else 2
     if len(data) < count_size:
         raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
-    groups = ((data[0], 1),) if bit else ((data[0], 2), (data[1], 4))
-    expected = count_size + sum(count * (4 + (width if write else 0)) for count, width in groups)
+    groups = ((data[0], wire.bit_value_size),) if bit else ((data[0], 2), (data[1], 4))
+    expected = count_size + sum(count * (wire.descriptor_size + (width if write else 0)) for count, width in groups)
     if len(data) != expected:
         raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
     entries = []
@@ -86,20 +87,19 @@ def random_access(request, memory, max_points, control=None):
     try:
         for count, width in groups:
             for _ in range(count):
-                head = int.from_bytes(data[offset:offset + 3], "little")
-                device = memory.profile.device_by_code(data[offset + 3])
-                offset += 4
-                if device is None:
-                    raise ValueError("unknown device code")
+                reader = Reader(data, "binary", offset)
+                device, head = read_device(reader, memory.profile)
+                offset = reader.offset
                 memory._check(device.name, head, 1 if bit else width // 2, "bit" if bit else "word")
                 values = None
                 if write:
                     payload = data[offset:offset + width]
                     offset += width
                     if bit:
-                        if payload[0] not in (0, 1):
+                        value = int.from_bytes(payload, "little")
+                        if value not in (0, 1):
                             raise ValueError("bit must be 0 or 1")
-                        values = [payload[0]]
+                        values = [value]
                     else:
                         values = unpack_words(payload)
                 entries.append((device.name, head, width, values))
@@ -146,7 +146,8 @@ def control_request(request, memory, max_points, control=None):
     if reader.offset != len(reader.data):
         raise LengthError("extra control data")
     if auth:
-        if len(password) != 4 or not password.isascii():
+        wire = memory.profile.wire
+        if not wire.password_min <= len(password) <= wire.password_max or not password.isascii():
             raise CommandError(EndCode.REQUEST_DATA_ERROR)
         if password.decode("ascii") != control._password:
             raise CommandError(EndCode.WRONG_PASSWORD)
@@ -171,10 +172,15 @@ def control_request(request, memory, max_points, control=None):
 
 # Extension point: (command, subcommand) -> handler(request, memory, max_points, control).
 HANDLERS = {
-    (0x0401, 0): batch, (0x0401, 1): batch, (0x1401, 0): batch, (0x1401, 1): batch,
     (0x0619, 0): echo, (0x0101, 0): cputype,
-    (0x0403, 0): random_access, (0x1402, 0): random_access, (0x1402, 1): random_access,
 }
+for wire in WIRE_CLASSES.values():
+    for command in (0x0401, 0x1401):
+        HANDLERS[command, wire.word_subcommand] = batch
+        HANDLERS[command, wire.bit_subcommand] = batch
+    HANDLERS[0x0403, wire.word_subcommand] = random_access
+    HANDLERS[0x1402, wire.word_subcommand] = random_access
+    HANDLERS[0x1402, wire.bit_subcommand] = random_access
 HANDLERS.update({(command, 0): control_request for command in LOCK_GATED | {0x1630, 0x1631}})
 
 
@@ -184,6 +190,11 @@ def dispatch(request, memory, max_points, control=None):
     try:
         if handler is None:
             raise CommandError(EndCode.UNSUPPORTED_COMMAND)
+        if handler in (batch, random_access):
+            wire = memory.profile.wire
+            allowed = (wire.word_subcommand,) if request.command == 0x0403 else (wire.word_subcommand, wire.bit_subcommand)
+            if request.subcommand not in allowed:
+                raise CommandError(EndCode.UNSUPPORTED_COMMAND)
         # Control uses the shared Reader directly; data handlers consume canonical binary.
         parsed = request if handler is control_request else normalize_request(request, memory.profile)
         return EndCode.OK, handler(parsed, memory, max_points, control)

@@ -20,6 +20,9 @@ class Memory:
         spec = self._check(device, head, count, "word")
         if spec.kind == "word":
             return self._load(device, head, count)
+        if spec.kind == "dword":
+            cells = self._cells[device]
+            return [(cells.get(head + i // 2, 0) >> (16 * (i % 2))) & 0xFFFF for i in range(count)]
         bits = self._load(device, head, count * 16)
         return [sum(bit << i for i, bit in enumerate(bits[j:j + 16])) for j in range(0, len(bits), 16)]
 
@@ -32,6 +35,13 @@ class Memory:
         if not all(0 <= value <= 0xFFFF for value in values):
             raise ValueError("word out of range")
         spec = self._check(device, head, len(values), "word")
+        if spec.kind == "dword":
+            # Heads address native 32-bit points; word counts stream low/high halves.
+            cells = self._cells[device]
+            for i, value in enumerate(values):
+                point, shift = head + i // 2, 16 * (i % 2)
+                cells[point] = (cells.get(point, 0) & ~(0xFFFF << shift)) | (value << shift)
+            return
         if spec.kind == "bit":
             values = [value >> i & 1 for value in values for i in range(16)]
         self._store(device, head, values)
@@ -49,12 +59,14 @@ class Memory:
         if spec is None or count <= 0:
             raise ValueError(f"invalid access to {device} x{count}")
         points = count
-        if unit == "bit" and spec.kind == "word":
+        if unit == "bit" and spec.kind != "bit":
             raise ValueError(f"bit access to word device {device}")
         if unit == "word" and spec.kind == "bit":
             if head % 16:
                 raise ValueError("word view of a bit device needs a head that is a multiple of 16")
             points = count * 16
+        if unit == "word" and spec.kind == "dword":
+            points = (count + 1) // 2
         minimum, maximum = self._limits[device]
         if head < minimum or head + points - 1 > maximum:
             raise OutOfRange(f"{device}{head} x{points} outside {minimum}..{maximum}")

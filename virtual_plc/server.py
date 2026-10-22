@@ -6,6 +6,7 @@ import threading
 from .codec import decode_request, encode_response, frame_size
 from .commands import CPU_STATES, dispatch
 from .memory import Memory
+from .profiles import PROFILES
 
 ACCEPT_POLL = 0.1  # seconds between stop checks of the accept loop
 
@@ -16,9 +17,15 @@ class Server:
                  initial_state="RUN", latch_ranges=None, password=None):
         if initial_state not in CPU_STATES:
             raise ValueError("initial_state must be RUN, STOP or PAUSE")
-        if password is not None and (not isinstance(password, str) or len(password) != 4 or not password.isascii()):
-            raise ValueError("Q-class password must be exactly four ASCII characters")
+        if profile not in PROFILES:
+            raise ValueError("unknown profile")
+        wire = PROFILES[profile].wire
+        if password is not None and (not isinstance(password, str) or not wire.password_min <= len(password) <= wire.password_max
+                                     or not password.isascii()):
+            raise ValueError("password must be ASCII and within the profile length limits")
         self.memory = Memory(profile) if memory is None else memory
+        if self.memory.profile.name != profile:
+            raise ValueError("memory profile does not match server profile")
         ranges = self.memory.profile.latch_ranges if latch_ranges is None else latch_ranges
         self.latch_ranges = {}
         for name, spans in ranges.items():
