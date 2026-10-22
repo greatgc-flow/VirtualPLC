@@ -1,0 +1,31 @@
+{
+  "schema": "virtualplc.m29.gates.v1",
+  "milestone": "M29",
+  "feature": "opt_in_grouped_local_pytest_and_p0_audit",
+  "release": "HOLD",
+  "development_branch": "feat/m1-3e-binary-tdd",
+  "main_merge_allowed": false,
+  "ci_auto_enabled": false,
+  "draft_pr_only": true,
+  "external_p0_hold": 16,
+  "historical_p0_observed": 183,
+  "p0_total": 199,
+  "local_prototype_observations": {
+    "pytest_cases": 21,
+    "passed": 21,
+    "failed": 0,
+    "scope": "minimal synthetic repo, not exact remote checkout",
+    "junit_sha256": "08be3d8050cb8065a5755de685043687f9cd23cabaf7010b9f4cda1a5cf61637"
+  },
+  "remote_m29_source_executed": false,
+  "complete_repo_regression_executed": false,
+  "native_windows_attested": false,
+  "original_m26_private_zip_crc_reverified": false,
+  "independent_release_approval": false,
+  "safety": {
+    "loopback_only": true,
+    "external_client_wheel_not_run": true,
+    "production_plc_access_permitted": false,
+    "default_thresholds_active": false
+  }
+}
