@@ -17,3 +17,7 @@ packages = ["virtual_plc"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "slow: real pinned-client reset timeout/sleep/reconnect behavior",
+    "client_misbehaviour: client-misbehaviour observed with the pinned client",
+]

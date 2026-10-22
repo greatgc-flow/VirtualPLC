@@ -25,20 +25,24 @@ Not for industrial use. Binds 127.0.0.1 by default.
   subcommands are 0002/0003; random bit values are uint16; passwords are 6–32
   ASCII characters. LSTC has a constant but no client lookup. LTN's client
   get_devicetype result is inconsistent (bit); see the explicit M6 model policy.
+- M7 real-client fault tests observe binary truncation as false success, ASCII
+  truncation as a decode error, and corrupt response subheaders being ignored.
+  Silent/RST reset responses exercise the actual timeout/sleep/reconnect path;
+  these are client-compat observations, labelled client-misbehaviour where applicable.
 
 ## 2. Decisions (consensus cx+cc, with amendments)
 | ID | Decision |
 |---|---|
 | D1 | `archive/m1-m29` tag on old branch; new branch `v2/m0`; main history untouched. Drop gates/evidence/progress docs/scripts. Migrate only: concrete scenarios from `suite/catalog/test_cases.jsonl` (fragmentation, atomicity, concurrency), compat round-trips + wheel-hash pin, fixture provenance labels. Closing PR #1 happens after v2 M0 lands. |
 | D2 | Five named profiles (Q, L, QnA, iQ-L, iQ-R) mapped to two wire classes (`Q-class`, `iQ-R`). Same wire class != same capabilities; ranges/CPU names are per profile. Addressed requests using the opposite wire class's subcommands return an error in either direction. Q-class names and non-addressed packets are indistinguishable on the wire; see M6 notes. |
-| D3 | Layout `virtual_plc/{server,codec,commands,memory,profiles,__main__}.py`; tables in Python. stdlib + pytest only. One lock per request; validate whole request before any mutation; each response fully written via `sendall`/checked send loop; `TCP_NODELAY`; tests bind port 0. |
+| D3 | Layout `virtual_plc/{server,codec,commands,memory,profiles,faults,__main__}.py`; tables in Python. stdlib + pytest only. One lock per request; validate whole request before any mutation; each response fully written via `sendall`/checked send loop; `TCP_NODELAY`; tests bind port 0. M7 explicitly injects response faults after dispatch. |
 | D4 | Tests generated from tables over **applicable** combinations only (explicit exclusions with reasons). Oracles: (i) real pymcprotocol 0.3.0 = *client-compat*; (ii) hand-authored expected bytes in test code, independent of `codec.py`/tables/client = *manual-derived* (never "manual-correct", never "capture"). Oracle pin = PyPI 0.3.0 wheel hash (verify checkout matches). |
 | D5 | Numbering policy is explicit per endpoint/profile (`compat` default = decimal text as client sends). Never autodetect. `manual` policy (hex digits) later; discriminator test address `X0A`. Also record suspected divergence: ASCII dword word-order. All manual claims from memory are marked `unverified`. |
 | D6 | Milestones below. 4096 is a *client receive limit*, documented separately from server limits; large valid responses tested with a raw-socket client. |
 | D7a | Timers/counters (TS/TC/TN, CS/CC/CN, SS/SC/SN): independent storage, no timer execution. Own milestone step. |
 | D7b | SM/SD writable by default; per-range read-only table starts empty. |
 | D7c | Dword on word devices = two consecutive words, low word at lower address. M6 native LTN/LSTN/LCN/LZ store one uint32 per native point; word counts stream low/high halves, random dwords occupy one native point, odd word writes preserve the other half. Native stride is an unverified simulator policy, not proven by client encoding. |
-| D7d | M5 agreed: server-wide lock gates run/stop/pause/latchclear/reset only; survives disconnect. Wrong password changes nothing. Reset succeeds only in STOP, replies on the same open connection and clears no memory. See M5 notes. |
+| D7d | M5 agreed: server-wide lock gates run/stop/pause/latchclear/reset only; survives disconnect. Wrong password changes nothing. Reset succeeds only in STOP, normally replies on the same open connection and clears no memory; M7 faults may alter delivery. See M5/M7 notes. |
 | D7e | Error-table rows carry `source: manual|client|design|memory` + `status: verified|unverified`. M5 explicitly adds memory provenance for C200/C201, superseding the original three-source restriction. Tests never hard-assert `unverified` rows without the marker; reported separately. |
 
 ## 3. Memory model
@@ -84,8 +88,16 @@ Not for industrial use. Binds 127.0.0.1 by default.
 | M4 | 4E (serial echo, reserved zeros) | All implemented commands across all four transports | Complete |
 | M5 | Control: run/stop/pause/latchclear/reset, lock/unlock; CPU state machine | Agreed semantics, all four transports; vendor behavior unverified | Complete |
 | M6 | All named profiles; iQ-R 4+2 addressing, LT*/LST*/LC*/LZ/RD, pw 6-32, 2-byte random bit | Profile-driven handlers and generated transport cells; raw LSTC; native stride documented | Complete; vendor ranges/stride unverified |
-| M7 | Fault injection (delay/drop/truncate/bad end code/reset reconnect) on the M1 hook | truncation tests labelled client-misbehaviour | Planned |
+| M7 | Declarative delay/drop/truncate/end-code/close/RST/hold/corruption/partial-send faults on the response hook; JSON CLI | Counted thread-safe matching, real reset reconnect, client-misbehaviour labels | Complete |
 Extension point = command registry dict (no extension milestone).
+
+M7's optional FaultPlan reserves the first eligible declared step under the
+request lock, after dispatch. Encoding and the existing response hook run next;
+socket faults run outside the lock. None retains normal response delivery.
+Steps match command, per-connection request ordinal and/or accepted connection
+ID, with once/N uses. See [M7 schema and policies](M7.md); waits cancel on stop,
+faults do not roll back committed writes, and no workflows or evidence scripts
+are part of this milestone.
 
 ## 6. M1 test-case seeds (TDD input)
 T1 batch word write->read roundtrip D0..D(n); T2 bit roundtrip incl. odd count; T3 word read over M (16-pt packing); T4 hex-base devices X/Y/B/W/ZR addressing; T5 range overflow -> end code; T6 points=0 / over-limit -> end code; T7 unsupported command -> 0xC059; T8 iQ-R subcommand on Q profile -> error; T9 fragmented request (1 byte at a time); T10 two requests in one segment; T11 EOF mid-frame; T12 atomic failure (partial-range write mutates nothing); T13 concurrent clients, no torn writes; T14 echo 1/960 chars; T15 cputype name+code; T16 large valid response via raw socket (>4096) accepted by server; T18 word-read of `M16` observes M16..M31 (not M256..); T17 golden request bytes: client encoder vs hand-authored vectors.

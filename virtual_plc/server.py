@@ -3,6 +3,7 @@
 import socket
 import threading
 
+from . import faults
 from .codec import decode_request, encode_response, frame_size
 from .commands import CPU_STATES, dispatch
 from .memory import Memory
@@ -14,7 +15,9 @@ ACCEPT_POLL = 0.1  # seconds between stop checks of the accept loop
 class Server:
     def __init__(self, host="127.0.0.1", port=0, profile="Q", memory=None,
                  response_hook=None, max_points=4096, idle_timeout=2.0,
-                 initial_state="RUN", latch_ranges=None, password=None):
+                 initial_state="RUN", latch_ranges=None, password=None, fault_plan=None):
+        if fault_plan is not None and not isinstance(fault_plan, faults.FaultPlan):
+            raise ValueError("fault_plan must be a FaultPlan or None")
         if initial_state not in CPU_STATES:
             raise ValueError("initial_state must be RUN, STOP or PAUSE")
         if profile not in PROFILES:
@@ -44,6 +47,8 @@ class Server:
         self._set_state(initial_state)
         self.address = (host, port)
         self._hook = response_hook
+        self._fault_plan = fault_plan
+        self._connection_number = 0
         self._max_points = max_points
         self._idle_timeout = idle_timeout
         self._request_lock = threading.Lock()
@@ -90,23 +95,26 @@ class Server:
                 return
             connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             connection.settimeout(self._idle_timeout)
-            worker = threading.Thread(target=self._serve, args=(connection,), daemon=True)
+            if self._fault_plan is not None:
+                self._connection_number += 1
+            worker = threading.Thread(target=self._serve, args=(connection, self._connection_number), daemon=True)
             with self._clients_lock:
                 self._clients[connection] = worker
             worker.start()
 
-    def _serve(self, connection):
+    def _serve(self, connection, connection_id):
         with connection:
             try:
-                self._serve_frames(connection)
+                self._serve_frames(connection, connection_id)
             except (OSError, ValueError):
                 pass  # timeout, reset, or malformed framing: drop this client only
             finally:
                 with self._clients_lock:
                     del self._clients[connection]
 
-    def _serve_frames(self, connection):
+    def _serve_frames(self, connection, connection_id):
         buffer = bytearray()
+        nth = 0
         while True:
             chunk = connection.recv(65536)
             if not chunk:
@@ -117,7 +125,14 @@ class Server:
                 del buffer[:size]
                 with self._request_lock:
                     end_code, data = dispatch(request, self.memory, self._max_points, self)
+                    action = None
+                    if self._fault_plan is not None:
+                        nth += 1
+                        action = self._fault_plan.select(request.command, nth=nth, connection=connection_id)
                 response = encode_response(request, end_code, data)
                 if self._hook is not None:
                     response = self._hook(response)
-                connection.sendall(response)
+                if action is None:
+                    connection.sendall(response)
+                elif not faults.send_fault(connection, response, request, action, self._stopping):
+                    return
