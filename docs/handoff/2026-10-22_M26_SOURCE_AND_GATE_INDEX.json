@@ -1,0 +1,105 @@
+{
+  "schema": "virtualplc.handoff.chat_context_index.v1",
+  "project": "VirtualPLC",
+  "handoff_date": "2026-10-22",
+  "repository": "https://github.com/greatgc-flow/VirtualPLC",
+  "visibility": "public",
+  "development_branch": "feat/m1-3e-binary-tdd",
+  "draft_pr": 1,
+  "verified_m26_parent": "289bb903b24ff3b4e531b161a151164f80e1a3f7",
+  "latest_policy": "always verify HEAD and prefer later main/feature updates",
+  "base_main_at_handoff": "07189724a8b2473e54f5e7d74317d7f5d402b6e3",
+  "p0": {
+    "total": 199,
+    "historical_observed": 183,
+    "external_unverified": 16,
+    "gates": [
+      {
+        "id": "G0-C",
+        "cases": [
+          "CASE-0027",
+          "CASE-0028",
+          "CASE-0029",
+          "CASE-0109",
+          "CASE-0110",
+          "CASE-0111"
+        ]
+      },
+      {
+        "id": "G0-E",
+        "cases": [
+          "CASE-0018",
+          "CASE-0019",
+          "CASE-0020",
+          "CASE-0064",
+          "CASE-0088",
+          "CASE-0090"
+        ]
+      },
+      {
+        "id": "G3",
+        "cases": [
+          "CASE-0044",
+          "CASE-0128"
+        ]
+      },
+      {
+        "id": "G4",
+        "cases": [
+          "CASE-0055",
+          "CASE-0147"
+        ]
+      }
+    ]
+  },
+  "m26_reported": {
+    "pytest_pass": 1015,
+    "subtests_pass": 5,
+    "tcp_pass": 45,
+    "junit_files": 11,
+    "observed_p95_us": [
+      613,
+      521,
+      521
+    ],
+    "release": "HOLD",
+    "attested": false
+  },
+  "design": {
+    "protocol": "MC/SLMP 3E Binary TCP",
+    "devices": [
+      "D word",
+      "M bit"
+    ],
+    "commands": [
+      "0x0401",
+      "0x1401"
+    ],
+    "host": "127.0.0.1",
+    "python_min": "3.11",
+    "actual_plc": false
+  },
+  "files_to_read": [
+    "docs/handoff/2026-10-22_M26_COMPLETE_CHAT_HANDOFF.md",
+    "docs/handoff/START_NEW_CHAT_M27_20261022.md",
+    "M27_HANDOFF.md",
+    "docs/M26_PROGRESS.md",
+    "M26_GATES.json",
+    "backlog/M20_BACKLOG.json",
+    "README.md",
+    "scripts/m26_multi_run.py",
+    "tests/test_m26_multi_run.py",
+    "RUN_M26_LOCAL_REPEATS.cmd",
+    "suite/catalog/test_cases.jsonl"
+  ],
+  "evidence_truth": "historical local observations; not independent origin certification",
+  "hard_controls": {
+    "merge_main": false,
+    "enable_auto_ci": false,
+    "draft_pr": true,
+    "publish_operator_logs": false,
+    "release": "HOLD"
+  },
+  "history_archives": "Conversation artifacts are not claimed to reside in the public GitHub repository; validate original bytes if supplied.",
+  "next_milestone": "M27 comparative multi-run evidence diff/anomaly triage with opt-in thresholds"
+}
