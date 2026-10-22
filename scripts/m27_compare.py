@@ -140,7 +140,7 @@ def analyze(folder, limits=None):
         raise ValueError('false M26 completion')
     if state.startswith('HOLD_') and record.get('descriptive_summary') is not None:
         raise ValueError('M26 HOLD with accepted summary')
-    if console.count(b'STATUS=')!=1 or not console.endswith(
+    if sum(line.startswith(b'STATUS=') for line in console.splitlines())!=1 or not console.endswith(
             b'STATUS='+state.encode('ascii')+b' RELEASE=HOLD\n'):
         raise ValueError('M26 console/report mismatch')
     verify_junit(junit,entries,state)
