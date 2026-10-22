@@ -16,7 +16,11 @@ ACCEPT_POLL = 0.1  # seconds between stop checks of the accept loop
 class Server:
     def __init__(self, host="127.0.0.1", port=0, profile="Q", memory=None,
                  response_hook=None, max_points=4096, idle_timeout=None,
-                 initial_state="RUN", latch_ranges=None, password=None, fault_plan=None):
+                 initial_state="RUN", latch_ranges=None, password=None, fault_plan=None,
+                 ascii_dword_order="swapped"):
+        if ascii_dword_order not in ("swapped", "client"):
+            raise ValueError("ascii_dword_order must be swapped or client")
+        self.ascii_dword_order = ascii_dword_order
         if fault_plan is not None and not isinstance(fault_plan, faults.FaultPlan):
             raise ValueError("fault_plan must be a FaultPlan or None")
         if initial_state not in CPU_STATES:
@@ -139,7 +143,7 @@ class Server:
                     if self._fault_plan is not None:
                         nth += 1
                         action = self._fault_plan.select(request.command, nth=nth, connection=connection_id)
-                response = encode_response(request, end_code, data)
+                response = encode_response(request, end_code, data, ascii_dword_order=self.ascii_dword_order)
                 if self._hook is not None:
                     response = self._hook(response)
                 try:

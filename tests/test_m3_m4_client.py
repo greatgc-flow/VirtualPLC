@@ -74,13 +74,14 @@ def test_all_command_device_cells(endpoint, frame, wire, command, device):
             assert read(address(32), 3) == values
             assert getattr(memory, f"read_{unit}s")(device.name, 32, 3) == [v & 0xFFFF for v in values]
         elif command.name in {"random_read", "random_write"}:
+            words = [0x1234, 0x5678] if wire == "ascii" else [0x5678, 0x1234]
             if command.name == "random_write":
                 client.randomwrite([address(32)], [-2], [address(64)], [0x12345678])
             else:
                 memory.write_words(device.name, 32, [65534])
-                memory.write_words(device.name, 64, [0x5678, 0x1234])
+                memory.write_words(device.name, 64, words)
             assert client.randomread([address(32)], [address(64)]) == ([-2], [0x12345678])
-            assert memory.read_words(device.name, 64, 2) == [0x5678, 0x1234]
+            assert memory.read_words(device.name, 64, 2) == words
         else:
             memory.write_bits(device.name, 32, [0, 1, 0])
             client.randomwrite_bitunits([address(32), address(33), address(34)], [1, 0, 1])
@@ -108,7 +109,7 @@ def test_echo_limits_and_signed_random_values(endpoint, frame, wire):
             assert client.echo_test(text) == (len(text), text)
         client.randomwrite(["D0"], [-32768], ["D2", "D4"], [-2147483648, -1])
         assert client.randomread(["D0"], ["D2", "D4"]) == ([-32768], [-2147483648, -1])
-        assert memory.read_words("D", 2, 4) == [0, 32768, 65535, 65535]
+        assert memory.read_words("D", 2, 4) == ([32768, 0, 65535, 65535] if wire == "ascii" else [0, 32768, 65535, 65535])
 
 
 @pytest.mark.parametrize("frame", ["3E", "4E"])

@@ -194,7 +194,8 @@ def dispatch(request, memory, max_points, control=None):
         if handler is None:
             raise CommandError(EndCode.UNSUPPORTED_COMMAND)
         # Control uses the shared Reader directly; data handlers consume canonical binary.
-        parsed = request if handler is control_request else normalize_request(request, memory.profile)
+        parsed = request if handler is control_request else normalize_request(
+            request, memory.profile, ascii_dword_order=control.ascii_dword_order if control is not None else "swapped")
         return EndCode.OK, handler(parsed, memory, max_points, control)
     except CommandError as error:
         return error.args[0], b""

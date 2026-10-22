@@ -8,7 +8,8 @@ See [design](DESIGN.md), [fault injection](FAULTS.md), and [usage/safety](../REA
 
 - `server.Server(host='127.0.0.1', port=0, profile='Q', memory=None,
   response_hook=None, max_points=4096, idle_timeout=None,
-  initial_state='RUN', latch_ranges=None, password=None, fault_plan=None)`.
+  initial_state='RUN', latch_ranges=None, password=None, fault_plan=None,
+  ascii_dword_order='swapped')`.
 - `.start()` binds/listens and starts workers before returning; `.address` is `(host, actual_port)`.
 - `.stop()` synchronously closes clients/listener and joins workers; idempotent, including incomplete frames.
 - Accepted sockets use TCP_NODELAY; EOF, bad framing or `idle_timeout` closes only that client.
@@ -48,7 +49,8 @@ See [design](DESIGN.md), [fault injection](FAULTS.md), and [usage/safety](../REA
 - Direct memory/state access is intended for test setup; callers must serialize it with live requests.
 - An unexpected handler/hook exception is logged to stderr and closes only that connection; committed work is not rolled back.
 - `idle_timeout=None` leaves idle sockets open indefinitely; a positive seconds value closes idle/incomplete clients.
-- CLI options: `--host`, `--port`, `--profile`, `--password`, `--initial-state`, `--max-points`, `--idle-timeout`, `--fault-plan`.
+- `ascii_dword_order` accepts only `swapped` (default) or `client`; invalid configuration raises ValueError.
+- CLI options: `--host`, `--port`, `--profile`, `--password`, `--initial-state`, `--max-points`, `--idle-timeout`, `--fault-plan`, `--ascii-dword-order {swapped,client}`.
   The startup banner goes to stderr; non-127.0.0.1 hosts include a localhost-only safety warning.
 
 ## Random access and common devices
@@ -157,11 +159,42 @@ four hex characters, followed by reserved zeros of the same width. Serial is
 echoed for each request; a nonzero reserved request field closes that client.
 
 ASCII batch bits use one `0`/`1` character per point. Words use four hex digits.
-Random dwords use one eight-digit hex string, not two separately formatted
-words. Random bit write values use two hex characters (`00`/`01`), unlike batch
-bits. Echo text and the CPU name remain literal ASCII, preserving text case;
+The pinned client sends/decodes random dwords as one eight-digit hex integer
+(high word first). The server defaults to swapped halves as described below.
+Q-class random bit write values use two hex characters (`00`/`01`), unlike batch
+bits; iQ-R uses four. Echo text and the CPU name remain literal ASCII, preserving text case;
 only numeric output is uppercased. The synthetic Q CPU code is `FFFF` in ASCII;
 the client returns it as a string without normalizing case (binary yields `ffff`).
+
+### Configurable ASCII dword word order
+
+`Server(ascii_dword_order="swapped")` is the default. Select
+`Server(ascii_dword_order="client")` to retain the previous client-compatible
+mapping, or pass `--ascii-dword-order swapped|client` on the CLI. This is an
+endpoint setting, independent of the decimal ASCII address numbering policy.
+
+| Mode | ASCII wire halves | Random-read bytes for stored words [0x5678, 0x1234] | Stored words after ASCII random-write value `12345678` |
+|---|---|---|---|
+| `swapped` (default) | Low word, then high word | `56781234` | [0x1234, 0x5678] |
+| `client` | High word, then low word | `12345678` | [0x5678, 0x1234] |
+
+Only the two four-character halves of each dword are exchanged; hex digit
+order inside each word is preserved. Conversion applies in both directions
+to random read (0403) response dwords and random write (1402) request dwords,
+across 3E/4E and all profiles, including native iQ-R dword storage. Mixed word
+entries, batch word/bit operations and random bit values are unchanged. Binary
+stays little-endian with the low word at the lower address in either mode.
+
+A pymcprotocol ASCII dword write/read roundtrip remains symmetric in both
+modes. In `swapped` mode, its numeric dword interpretation differs from batch
+word access or direct memory access. For example, the client writes numeric
+0x12345678 as `12345678`; memory then contains [0x1234, 0x5678], and an ASCII
+random read returns the same `12345678` string. With `client`, memory instead
+contains [0x5678, 0x1234]. A client reading preloaded memory must choose the
+mode appropriate to that memory's word interpretation.
+
+Low-word-first ASCII on physical PLCs is **suspected and unverified**. The
+new default is a simulator policy, not a verified claim about vendor behavior.
 
 ### Numbering and overflow policy
 
@@ -421,7 +454,8 @@ remain unverified.
 Empty random lists are accepted as no-ops. Dwords over bit devices span 32
 packed points with 16-point head alignment. Malformed random lengths use C061,
 invalid access uses C05C, and range overflow uses C056; these mappings await
-manual verification. ASCII dwords follow the client's single eight-digit hex
-integer; suspected real-PLC word-order differences are unverified. Nonzero
+manual verification. ASCII dword order is configurable: `swapped` (low word
+first) is the default and `client` (high word first) preserves client mapping.
+The suspected real-PLC low-word-first ordering remains unverified. Nonzero
 reserved fields close the connection. Per-request transport switching is a
 simulator feature. See DESIGN's open items for remaining vendor checks.

@@ -28,10 +28,11 @@ After activating the environment, the installed entry point is equivalent:
 ```text
 virtual-plc --profile iQ-R --initial-state STOP --max-points 128 --idle-timeout 30
 virtual-plc --profile Q --password A1b2 --fault-plan faults.json
+virtual-plc --ascii-dword-order client
 ```
 
 The default profile is Q, CPU state RUN, batch limit 4096 points, idle timeout
-None (no timeout), with no password or faults. `--port 0` asks the OS for an
+None (no timeout), ASCII dword order `swapped`, with no password or faults. `--port 0` asks the OS for an
 available port. The startup address/profile/state banner is written to stderr.
 See `virtual-plc --help` for options and [fault plans](docs/FAULTS.md) for the
 JSON schema. On POSIX, use `.venv/bin/python` instead of the Windows path.
@@ -79,7 +80,12 @@ executing a PLC program. Fault plans apply to all transports and profiles.
 ## Known divergences from a real PLC
 
 - ASCII addresses use the pinned client's decimal text, including hex-base devices.
-  ASCII dwords use one eight-digit hex integer; physical word order is unverified.
+- ASCII dword order is configurable with `--ascii-dword-order swapped|client`
+  or `Server(ascii_dword_order=...)`. The default `swapped` sends the low-word
+  half first; `client` preserves pymcprotocol's high-word-first interpretation.
+  Write/read dword roundtrips work in both modes, but batch-word/direct memory
+  views differ. Binary and plain words are unchanged. Suspected physical PLC
+  low-word-first ASCII behavior remains unverified; see [examples](docs/BEHAVIOR.md#configurable-ascii-dword-word-order).
 - Lock state is server-wide, survives disconnect, and gates only CPU control
   commands. It is not authentication. Vendor lock scope is unverified.
 - The default batch limit is 4096 **points**. The client performs a single

@@ -74,13 +74,14 @@ def test_profile_command_device_matrix(endpoints, profile, frame, wire, command,
                 getattr(memory, f"write_{command.unit}s")(device.name, 32, [v & 0xFFFF for v in values])
             assert getattr(client, f"batchread_{command.unit}units")(address(32), 3) == values
         elif command.name in {"random_read", "random_write"}:
+            words = [0x1234, 0x5678] if wire == "ascii" else [0x5678, 0x1234]
             if command.name == "random_write":
                 client.randomwrite([address(32)], [-2], [address(64)], [0x12345678])
             else:
                 memory.write_words(device.name, 32, [65534])
-                memory.write_words(device.name, 64, [0x5678, 0x1234])
+                memory.write_words(device.name, 64, words)
             assert client.randomread([address(32)], [address(64)]) == ([-2], [0x12345678])
-            assert memory.read_words(device.name, 64, 2) == [0x5678, 0x1234]
+            assert memory.read_words(device.name, 64, 2) == words
         else:
             memory.write_bits(device.name, 32, [0, 1, 0])
             client.randomwrite_bitunits([address(32), address(33), address(34)], [1, 0, 1])
@@ -126,10 +127,10 @@ def test_native_random_dword_stride_is_one_point(endpoints, frame, wire, device)
     server = endpoints("iQ-R")
     with connected_profile(server, frame, wire) as client:
         client.randomwrite([], [], [device + "7", device + "8"], [0x12345678, -1])
-        assert client.batchread_wordunits(device + "7", 4) == [0x5678, 0x1234, -1, -1]
+        assert client.batchread_wordunits(device + "7", 4) == ([0x1234, 0x5678, -1, -1] if wire == "ascii" else [0x5678, 0x1234, -1, -1])
         assert client.randomread([device + "8"], [device + "7", device + "8"]) == ([-1], [0x12345678, -1])
         client.randomwrite([device + "7"], [1], [], [])
-        assert client.randomread([], [device + "7"]) == ([], [0x12340001])
+        assert client.randomread([], [device + "7"]) == ([], [0x00015678 if wire == "ascii" else 0x12340001])
 
 
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)

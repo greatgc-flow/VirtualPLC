@@ -40,7 +40,7 @@ Not for industrial use. Binds 127.0.0.1 by default.
 | D2 | Five named profiles (Q, L, QnA, iQ-L, iQ-R) mapped to two wire classes (`Q-class`, `iQ-R`). Same wire class != same capabilities; ranges/CPU names are per profile. Addressed requests using the opposite wire class's subcommands return an error in either direction. Q-class names and non-addressed packets are indistinguishable on the wire; see BEHAVIOR. |
 | D3 | Layout `virtual_plc/{server,codec,commands,memory,profiles,faults,__main__}.py`; tables in Python. stdlib + pytest only. One lock per request; validate whole request before any mutation; each response fully written via `sendall`/checked send loop; `TCP_NODELAY`; tests bind port 0. M7 explicitly injects response faults after dispatch. |
 | D4 | Tests generated from tables over **applicable** combinations only (explicit exclusions with reasons). Oracles: (i) real pymcprotocol 0.3.0 = *client-compat*; (ii) hand-authored expected bytes in test code, independent of `codec.py`/tables/client = *manual-derived* (never "manual-correct", never "capture"). Oracle pin = PyPI 0.3.0 wheel hash (verify checkout matches). |
-| D5 | Numbering policy is explicit (`compat` default = decimal text as client sends). Never autodetect. `manual` policy (hex digits) later; discriminator test address `X0A`. Also record suspected divergence: ASCII dword word-order. All manual claims from memory are marked `unverified`. |
+| D5 | Numbering policy is explicit (`compat` default = decimal text as client sends). Never autodetect. `manual` policy (hex digits) later; discriminator test address `X0A`. ASCII dword order is a separate endpoint option: `swapped` (default, low word first) or `client` (high word first); physical PLC ordering remains unverified. All manual claims from memory are marked `unverified`. |
 | D6 | Milestones below. 4096 is a *client receive limit*, documented separately from server limits; large valid responses tested with a raw-socket client. |
 | D7a | Timers/counters (TS/TC/TN, CS/CC/CN, SS/SC/SN): independent storage, no timer execution. Own milestone step. |
 | D7b | SM/SD writable by default; no read-only ranges are currently enforced. |
@@ -75,7 +75,7 @@ Not for industrial use. Binds 127.0.0.1 by default.
 - 4E inserts serial(2 binary bytes / 4 hex characters) and reserved zeros of
   the same width after the subheader. Responses echo serials. End-code offsets
   are 9/18 for 3E binary/ASCII and 13/26 for 4E binary/ASCII.
-  See [transport behavior](BEHAVIOR.md), including unverified ASCII dword ordering.
+  See [transport behavior](BEHAVIOR.md), including configurable ASCII dword ordering (`swapped` default, `client` optional; physical PLC order unverified).
 - M6 parameterizes descriptor sizes, subcommands, random bit-value width and
   password bounds through profile wire tables. Framing remains shared. iQ-R
   adds LTS/LTC/LTN, LSTS/LSTC/LSTN, LCS/LCC/LCN, LZ and RD; LSTC is covered by
@@ -124,14 +124,14 @@ never touches SM/SD, apart from the explicit SD203 state mirror on transitions.
 
 ## 8. Open items
 
-Authoritative per-series limits/ranges; vendor verification of the selected native dword stride; SM/SD per-range RO; vendor verification of M5 lock/reset/state-code policies; real-PLC unaligned bit-head word reads; PLC verification of empty random lists and bit-device dword views; suspected real-PLC ASCII dword word-order divergence. ASCII overwidth requests are rejected; manual numbering remains deferred. Client 0.3.0 is pinned and checked by the oracle test.
+Authoritative per-series limits/ranges; vendor verification of the selected native dword stride; SM/SD per-range RO; vendor verification of M5 lock/reset/state-code policies; real-PLC unaligned bit-head word reads; PLC verification of empty random lists and bit-device dword views; vendor verification of ASCII dword word order (configurable: default `swapped`, optional `client`; low-word-first PLC behavior remains suspected/unverified). ASCII overwidth requests are rejected; manual numbering remains deferred. Client 0.3.0 is pinned and checked by the oracle test.
 
 
 ## 9. Server lifecycle and CLI
 
 `Server(host="127.0.0.1", port=0, profile="Q", memory=None,
 response_hook=None, max_points=4096, idle_timeout=None, initial_state="RUN",
-latch_ranges=None, password=None, fault_plan=None)` starts with `.start()`;
+latch_ranges=None, password=None, fault_plan=None, ascii_dword_order="swapped")` starts with `.start()`;
 `.address` contains the actual bound port. `.stop()` closes sockets and joins
 workers. Idle sockets have no timeout unless explicitly configured. Malformed
 framing, EOF and configured idle timeouts close only that connection. Unexpected
@@ -140,7 +140,7 @@ committed commands are not rolled back. See [public API](BEHAVIOR.md#public-api)
 
 `python -m virtual_plc` and installed `virtual-plc` accept `--host`, `--port`,
 `--profile`, `--password`, `--initial-state`, `--max-points`, `--idle-timeout`,
-and `--fault-plan`. Defaults are localhost:5000, Q, RUN, no password, 4096 batch
-points, no idle timeout, no faults. A one-line startup banner goes to stderr;
+`--fault-plan`, and `--ascii-dword-order {swapped,client}`. Defaults are localhost:5000, Q, RUN, no password, 4096 batch
+points, no idle timeout, no faults, swapped ASCII dword halves. A one-line startup banner goes to stderr;
 a host other than 127.0.0.1 includes a localhost-only safety warning. Passwords
 simulate lock behavior and provide no network authentication.

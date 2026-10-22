@@ -18,13 +18,15 @@ def main(argv=None):
     parser.add_argument("--initial-state", choices=("RUN", "STOP", "PAUSE"), default="RUN")
     parser.add_argument("--max-points", type=int, default=4096)
     parser.add_argument("--idle-timeout", type=float, default=None, help="seconds; default: no timeout")
+    parser.add_argument("--ascii-dword-order", choices=("swapped", "client"), default="swapped",
+                        help="ASCII dword word order (default: swapped, low word first)")
     parser.add_argument("--fault-plan", metavar="FILE", help="load a declarative response fault plan from JSON")
     args = parser.parse_args(argv)
     try:
         plan = FaultPlan.from_file(args.fault_plan) if args.fault_plan else None
         server = Server(args.host, args.port, profile=args.profile, password=args.password,
                         initial_state=args.initial_state, max_points=args.max_points,
-                        idle_timeout=args.idle_timeout, fault_plan=plan)
+                        idle_timeout=args.idle_timeout, fault_plan=plan, ascii_dword_order=args.ascii_dword_order)
     except (OSError, ValueError) as error:
         parser.error(str(error))
     server.start()

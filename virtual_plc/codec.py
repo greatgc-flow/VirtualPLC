@@ -106,10 +106,10 @@ def decode_request(frame):
     return Request(route, timer, command, subcommand, frame[reader.offset:], layout.frame, layout.wire, serial)
 
 
-def encode_response(request, end_code=0, data=b""):
+def encode_response(request, end_code=0, data=b"", *, ascii_dword_order="swapped"):
     layout = Layout(request.frame, request.wire)
     if request.wire == "ascii" and data:
-        data = _ascii_response_data(request, data)
+        data = _ascii_response_data(request, data, ascii_dword_order)
     body = layout.number(end_code, 2) + data
     prefix = b"\xd4\x00" if request.frame == "4E" else b"\xd0\x00"
     if request.wire == "ascii":
@@ -137,7 +137,7 @@ def read_device(reader, profile):
     return device, head
 
 
-def normalize_request(request, profile):
+def normalize_request(request, profile, *, ascii_dword_order="swapped"):
     """Convert an ASCII command payload to the existing binary handler format.
 
     A payload error is returned by dispatch as an end code, not a framing close.
@@ -171,7 +171,8 @@ def normalize_request(request, profile):
             for _ in range(count):
                 data += descriptor()
                 if command == 0x1402:
-                    data += reader.number(width).to_bytes(width, "little")
+                    value = _ascii_dword_value(reader.number(width), width, ascii_dword_order)
+                    data += value.to_bytes(width, "little")
     elif command == 0x0619:
         size = reader.number(2)
         data += size.to_bytes(2, "little") + reader.take(size)
@@ -180,7 +181,12 @@ def normalize_request(request, profile):
     return replace(request, data=bytes(data))
 
 
-def _ascii_response_data(request, data):
+def _ascii_dword_value(value, width, order):
+    """Exchange the two word halves only for an ASCII dword in swapped mode."""
+    return ((value & 0xFFFF) << 16) | (value >> 16) if width == 4 and order == "swapped" else value
+
+
+def _ascii_response_data(request, data, ascii_dword_order):
     reader = Reader(data, "binary")
     layout = Layout(request.frame, "ascii")
     if request.command == 0x0101:
@@ -194,7 +200,8 @@ def _ascii_response_data(request, data):
     if request.command == 0x0403:
         sizes = Reader(request.data, "ascii")
         counts = ((sizes.number(1), 2), (sizes.number(1), 4))
-    return b"".join(layout.number(reader.number(width), width) for count, width in counts for _ in range(count))
+    return b"".join(layout.number(_ascii_dword_value(reader.number(width), width, ascii_dword_order), width)
+                    for count, width in counts for _ in range(count))
 
 
 def pack_words(values):
