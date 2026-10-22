@@ -1,0 +1,20 @@
+{
+  "schema": "virtualplc.m27.gates.v1",
+  "milestone": "M27",
+  "feature": "offline_m26_multirun_triage",
+  "code_committed": true,
+  "new_tests_committed": true,
+  "run_tests_in_current_session": false,
+  "reason_not_run": "GitHub connector read/write available; isolated Python runtime has no network checkout or original repository files",
+  "release": "HOLD",
+  "independent_approval": false,
+  "hardware_certified": false,
+  "windows_native_attested": false,
+  "external_p0_hold": 16,
+  "historical_observed_p0": 183,
+  "p0_total": 199,
+  "default_thresholds_enabled": false,
+  "ci_auto_enabled": false,
+  "main_merge_allowed": false,
+  "original_m26_11_junit_reverified_this_session": false
+}
