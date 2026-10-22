@@ -3,10 +3,12 @@
 from enum import IntEnum
 import struct
 
-from .codec import normalize_request, pack_bits, pack_words, unpack_bits, unpack_words
+from .codec import LengthError, Reader, normalize_request, pack_bits, pack_words, unpack_bits, unpack_words
 from .memory import OutOfRange
 
 ECHO_MAX = 960
+LOCK_GATED = {0x1001, 0x1002, 0x1003, 0x1005, 0x1006}
+CPU_STATES = {"STOP": 0, "RUN": 1, "PAUSE": 2}  # SD203 layout: design, unverified.
 
 
 class EndCode(IntEnum):
@@ -16,11 +18,15 @@ class EndCode(IntEnum):
     UNSUPPORTED_COMMAND = 0xC059
     REQUEST_DATA_ERROR = 0xC05C
     DATA_LENGTH_MISMATCH = 0xC061
+    LOCKED = 0xC200
+    WRONG_PASSWORD = 0xC201
+    INVALID_STATE = 0xC202
 
 
 # DESIGN §7 rows: no manual cross-check yet.
 ERROR_CODES = {
-    code.value: {"name": code.name, "source": "design", "status": "unverified"} for code in EndCode
+    code.value: {"name": code.name, "source": "memory" if code in (EndCode.LOCKED, EndCode.WRONG_PASSWORD) else "design",
+                 "status": "unverified"} for code in EndCode
 }
 
 
@@ -28,7 +34,7 @@ class CommandError(Exception):
     """A request rejected with the end code in args[0]."""
 
 
-def batch(request, memory, max_points):
+def batch(request, memory, max_points, control=None):
     """Batch read (0401) or write (1401); the subcommand selects bit or word units."""
     if len(request.data) < 6:
         raise CommandError(EndCode.REQUEST_DATA_ERROR)
@@ -58,7 +64,7 @@ def batch(request, memory, max_points):
         raise CommandError(EndCode.REQUEST_DATA_ERROR)
 
 
-def random_access(request, memory, max_points):
+def random_access(request, memory, max_points, control=None):
     """Random word/dword read/write or bit write; validate all entries first.
 
     Counts are uint8, so a purported 256-entry list cannot match its payload.
@@ -111,7 +117,7 @@ def random_access(request, memory, max_points):
         raise CommandError(EndCode.REQUEST_DATA_ERROR)
 
 
-def echo(request, memory, max_points):
+def echo(request, memory, max_points, control=None):
     length, text = int.from_bytes(request.data[:2], "little"), request.data[2:]
     if len(request.data) < 2 or length != len(text):
         raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
@@ -120,27 +126,71 @@ def echo(request, memory, max_points):
     return request.data
 
 
-def cputype(request, memory, max_points):
+def cputype(request, memory, max_points, control=None):
     profile = memory.profile
     return profile.cpu_name.ljust(16).encode("ascii") + struct.pack("<H", profile.cpu_code)
 
 
-# Extension point: (command, subcommand) -> handler(request, memory, max_points) -> response data.
+def control_request(request, memory, max_points, control=None):
+    """Agreed M5 policies, using the same field reader for every transport."""
+    command = request.command
+    auth = command in (0x1630, 0x1631)
+    if control is None or (auth and control._password is None):
+        raise CommandError(EndCode.UNSUPPORTED_COMMAND)
+    if control.locked and command in LOCK_GATED:
+        raise CommandError(EndCode.LOCKED)
+    reader = Reader(request.data, request.wire)
+    mode = reader.number(2)  # password length for auth commands
+    clear, fixed = (reader.number(1), reader.number(1)) if command == 0x1001 else (0, 0)
+    password = reader.take(mode) if auth else b""
+    if reader.offset != len(reader.data):
+        raise LengthError("extra control data")
+    if auth:
+        if len(password) != 4 or not password.isascii():
+            raise CommandError(EndCode.REQUEST_DATA_ERROR)
+        if password.decode("ascii") != control._password:
+            raise CommandError(EndCode.WRONG_PASSWORD)
+        control.locked = command == 0x1631
+        return b""
+    if mode not in ((1, 3) if command in (0x1001, 0x1003) else (1,)) or clear not in (0, 1, 2) or fixed:
+        raise CommandError(EndCode.REQUEST_DATA_ERROR)
+    if (command == 0x1003 and control.state == "STOP") or (command in (0x1005, 0x1006) and control.state != "STOP"):
+        raise CommandError(EndCode.INVALID_STATE)
+    if command == 0x1001 and clear:
+        memory._clear(control.latch_ranges, "non_latch" if clear == 1 else "all")
+    if command == 0x1005:
+        memory._clear(control.latch_ranges, "latch")
+    else:
+        if command in (0x1001, 0x1003):
+            control.last_force = mode == 3
+        if command == 0x1006:
+            control.reset_count += 1
+        control._set_state({0x1001: "RUN", 0x1003: "PAUSE"}.get(command, "STOP"))
+    return b""
+
+
+# Extension point: (command, subcommand) -> handler(request, memory, max_points, control).
 HANDLERS = {
     (0x0401, 0): batch, (0x0401, 1): batch, (0x1401, 0): batch, (0x1401, 1): batch,
     (0x0619, 0): echo, (0x0101, 0): cputype,
     (0x0403, 0): random_access, (0x1402, 0): random_access, (0x1402, 1): random_access,
 }
+HANDLERS.update({(command, 0): control_request for command in LOCK_GATED | {0x1630, 0x1631}})
 
 
-def dispatch(request, memory, max_points):
+def dispatch(request, memory, max_points, control=None):
     """Return (end_code, data); a rejected request leaves memory unchanged."""
     handler = HANDLERS.get((request.command, request.subcommand))
     try:
         if handler is None:
             raise CommandError(EndCode.UNSUPPORTED_COMMAND)
-        return EndCode.OK, handler(normalize_request(request, memory.profile), memory, max_points)
+        # Control uses the shared Reader directly; data handlers consume canonical binary.
+        parsed = request if handler is control_request else normalize_request(request, memory.profile)
+        return EndCode.OK, handler(parsed, memory, max_points, control)
     except CommandError as error:
         return error.args[0], b""
+    except LengthError:
+        code = EndCode.DATA_LENGTH_MISMATCH if handler is control_request else EndCode.REQUEST_DATA_ERROR
+        return code, b""
     except ValueError:
         return EndCode.REQUEST_DATA_ERROR, b""

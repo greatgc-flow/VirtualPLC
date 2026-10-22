@@ -66,3 +66,16 @@ class Memory:
 
     def _store(self, device, head, values):
         self._cells[device].update(enumerate(values, head))
+
+    def _clear(self, latch_ranges, mode):
+        """Clear stored points only; the server holds its request lock.
+
+        mode is latch, non_latch, or all. Special devices are always preserved.
+        """
+        for device, cells in self._cells.items():
+            if device in {"SM", "SD"}:
+                continue
+            for head in list(cells):
+                latched = any(low <= head <= high for low, high in latch_ranges.get(device, ()))
+                if mode == "all" or (mode == "latch" and latched) or (mode == "non_latch" and not latched):
+                    del cells[head]

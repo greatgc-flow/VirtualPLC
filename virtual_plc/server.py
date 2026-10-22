@@ -4,7 +4,7 @@ import socket
 import threading
 
 from .codec import decode_request, encode_response, frame_size
-from .commands import dispatch
+from .commands import CPU_STATES, dispatch
 from .memory import Memory
 
 ACCEPT_POLL = 0.1  # seconds between stop checks of the accept loop
@@ -12,8 +12,29 @@ ACCEPT_POLL = 0.1  # seconds between stop checks of the accept loop
 
 class Server:
     def __init__(self, host="127.0.0.1", port=0, profile="Q", memory=None,
-                 response_hook=None, max_points=4096, idle_timeout=2.0):
+                 response_hook=None, max_points=4096, idle_timeout=2.0,
+                 initial_state="RUN", latch_ranges=None, password=None):
+        if initial_state not in CPU_STATES:
+            raise ValueError("initial_state must be RUN, STOP or PAUSE")
+        if password is not None and (not isinstance(password, str) or len(password) != 4 or not password.isascii()):
+            raise ValueError("Q-class password must be exactly four ASCII characters")
         self.memory = Memory(profile) if memory is None else memory
+        ranges = self.memory.profile.latch_ranges if latch_ranges is None else latch_ranges
+        self.latch_ranges = {}
+        for name, spans in ranges.items():
+            device = self.memory.profile.devices.get(name)
+            if device is None:
+                raise ValueError("unknown latch device")
+            spans = tuple(tuple(span) for span in spans)
+            if any(len(span) != 2 or not all(isinstance(point, int) for point in span)
+                   or not device.minimum <= span[0] <= span[1] <= device.maximum for span in spans):
+                raise ValueError("invalid latch range")
+            self.latch_ranges[name] = spans
+        self._password = password
+        self.locked = False
+        self.last_force = False
+        self.reset_count = 0
+        self._set_state(initial_state)
         self.address = (host, port)
         self._hook = response_hook
         self._max_points = max_points
@@ -24,6 +45,10 @@ class Server:
         self._stopping = threading.Event()
         self._listener = None
         self._acceptor = None
+
+    def _set_state(self, state):
+        self.memory.write_words("SD", 203, [CPU_STATES[state]])
+        self.state = state
 
     def start(self):
         self._listener = socket.create_server(self.address)
@@ -84,7 +109,7 @@ class Server:
                 request = decode_request(bytes(buffer[:size]))
                 del buffer[:size]
                 with self._request_lock:
-                    end_code, data = dispatch(request, self.memory, self._max_points)
+                    end_code, data = dispatch(request, self.memory, self._max_points, self)
                 response = encode_response(request, end_code, data)
                 if self._hook is not None:
                     response = self._hook(response)

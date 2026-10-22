@@ -91,6 +91,12 @@ COMMANDS = (
     Command("random_write_bit", 0x1402, "bit"),
 )
 
+CONTROL_COMMANDS = (
+    Command("run", 0x1001), Command("stop", 0x1002), Command("pause", 0x1003),
+    Command("latchclear", 0x1005), Command("reset", 0x1006),
+    Command("unlock", 0x1630), Command("lock", 0x1631),
+)
+
 
 def applicable(command: Command, profile: Profile, frame: str, wire: str, *, milestone=2, device=None) -> tuple[bool, str | None]:
     """Return seed eligibility and an explicit exclusion reason.
@@ -99,8 +105,10 @@ def applicable(command: Command, profile: Profile, frame: str, wire: str, *, mil
     Negative tests such as T8 deliberately construct excluded requests.
     Shared wire classes do not imply shared per-profile capabilities.
     """
-    if command not in COMMANDS:
+    if command not in COMMANDS + CONTROL_COMMANDS:
         return False, "Command is outside the batch/random/echo/cputype scope"
+    if command in CONTROL_COMMANDS and milestone < 5:
+        return False, "CPU control and authentication are deferred to M5"
     if profile not in PROFILES:
         return False, "Unknown profile or inconsistent wire class"
     if frame not in {"3E", "4E"}:

@@ -33,8 +33,8 @@ Not for industrial use. Binds 127.0.0.1 by default.
 | D7a | Timers/counters (TS/TC/TN, CS/CC/CN, SS/SC/SN): independent storage, no timer execution. Own milestone step. |
 | D7b | SM/SD writable by default; per-range read-only table starts empty. |
 | D7c | Dword on word devices = two consecutive words, low word at lower address. Native-dword devices (LTN etc., iQ-R) need explicit stride rules at M6. |
-| D7d | Lock/unlock semantics deferred to M5 (affected commands, connection vs server scope, failed auth, disconnect/reset). |
-| D7e | Error-table rows carry `source: manual|client|design` + `status: verified|unverified`. Tests never hard-assert `unverified` rows without the marker; reported separately. |
+| D7d | M5 agreed: server-wide lock gates run/stop/pause/latchclear/reset only; survives disconnect. Wrong password changes nothing. Reset succeeds only in STOP, replies on the same open connection and clears no memory. See M5 notes. |
+| D7e | Error-table rows carry `source: manual|client|design|memory` + `status: verified|unverified`. M5 explicitly adds memory provenance for C200/C201, superseding the original three-source restriction. Tests never hard-assert `unverified` rows without the marker; reported separately. |
 
 ## 3. Memory model
 - Sparse unsigned storage per device family. Bit devices: 1 bit/point. Word view of a bit device: for head address h, response word j bit i == point h+16j+i (LSB first; `M16` word-read yields M16..M31); head must be a multiple of 16 (unverified vs real PLC -> reject otherwise, flagged). Bit access to word devices (D etc.): rejected with error.
@@ -72,7 +72,7 @@ Not for industrial use. Binds 127.0.0.1 by default.
 | M2b | Timers/counters, SB, SW, DX, DY, L, F, V | per-device base/range table complete | Complete with synthetic ranges; vendor limits unverified |
 | M3 | 3E ASCII (incl. ascii overflow policy, uppercase out/lowercase in) | cross product generated | Complete (compat numbering) |
 | M4 | 4E (serial echo, reserved zeros) | All implemented commands across all four transports | Complete |
-| M5 | Control: run/stop/pause/latchclear/reset, lock/unlock; CPU state machine | semantics decided before coding | Planned |
+| M5 | Control: run/stop/pause/latchclear/reset, lock/unlock; CPU state machine | Agreed semantics, all four transports; vendor behavior unverified | Complete |
 | M6 | iQ-R profile (4+2 addressing, LT*/LST*/LC*/LZ/RD, pw 6-32, 2-byte random bit) | | Planned |
 | M7 | Fault injection (delay/drop/truncate/bad end code/reset reconnect) on the M1 hook | truncation tests labelled client-misbehaviour | Planned |
 Extension point = command registry dict (no extension milestone).
@@ -85,5 +85,14 @@ T1 batch word write->read roundtrip D0..D(n); T2 bit roundtrip incl. odd count; 
 
 Response bodies (add at M1 start): cputype = 16-char space-padded name + 2-byte code; echo = 2-byte length + echoed data.
 
+M5 adds 0xC200 LOCKED and 0xC201 WRONG_PASSWORD (`source: memory`,
+`status: unverified`), and 0xC202 INVALID_STATE (`source: design`,
+`status: unverified`). Bad M5 payload lengths use C061; invalid fields use C05C.
+These codes and classifications are simulator policies, not vendor-verified rows.
+See [M5 notes](M5.md) for the state table and the agreed divergence from
+per-connection, all-command lock gating. Initial/transition SD203 values are
+STOP=0, RUN=1, PAUSE=2 (unverified). Default latch ranges cover L; clearing
+never touches SM/SD, apart from the explicit SD203 state mirror on transitions.
+
 ## 8. Open items
-Authoritative per-series limits/ranges; native dword stride; SM/SD per-range RO; lock scope; reset behaviour; real-PLC unaligned bit-head word reads; PLC verification of empty random lists and bit-device dword views; suspected real-PLC ASCII dword word-order divergence. ASCII overwidth requests are rejected; manual numbering remains deferred. Client 0.3.0 is pinned and checked by the oracle test.
+Authoritative per-series limits/ranges; native dword stride; SM/SD per-range RO; vendor verification of M5 lock/reset/state-code policies; real-PLC unaligned bit-head word reads; PLC verification of empty random lists and bit-device dword views; suspected real-PLC ASCII dword word-order divergence. ASCII overwidth requests are rejected; manual numbering remains deferred. Client 0.3.0 is pinned and checked by the oracle test.

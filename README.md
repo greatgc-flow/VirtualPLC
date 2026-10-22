@@ -2,11 +2,12 @@
 
 Virtual Mitsubishi MC protocol PLC for local testing. Not for industrial use.
 
-**Status:** M4 complete on `v2/m0`: Q-profile 3E/4E binary and ASCII batch and random
+**Status:** M5 complete on `v2/m0`: Q-profile 3E/4E binary and ASCII batch and random
 word/bit/dword access, echo, CPU type, and independent timer/counter storage.
-The full suite passes 1020 tests using the pinned client. Device capacities
+CPU run/stop/pause, selective latch clearing, reset and server-wide locking follow
+the agreed simulator policy. The full suite passes 1354 tests using the pinned client. Device capacities
 remain synthetic and error codes await manual verification.
-See [DESIGN](docs/DESIGN.md), [M2 notes](docs/M2.md), [M3/M4 notes](docs/M3_M4.md), and
+See [DESIGN](docs/DESIGN.md), [M2 notes](docs/M2.md), [M3/M4 notes](docs/M3_M4.md), [M5 notes](docs/M5.md), and
 [migration notes](docs/MIGRATION.md).
 
 With Python 3.10 or newer and PyPI access, run from the repository root:

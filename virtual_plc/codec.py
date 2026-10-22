@@ -29,6 +29,10 @@ class Layout:
         return f"{value:0{size * 2}X}".encode() if self.wire == "ascii" else binary
 
 
+class LengthError(ValueError):
+    """A fixed-width field is truncated or a payload has extra bytes."""
+
+
 class Reader:
     """Exact-width numeric fields; ASCII hex permits either case, no whitespace."""
 
@@ -38,7 +42,7 @@ class Reader:
     def take(self, size):
         result = self.data[self.offset:self.offset + size]
         if len(result) != size:
-            raise ValueError("short field")
+            raise LengthError("short field")
         self.offset += size
         return result
 

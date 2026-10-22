@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 # Synthetic ceiling (3-byte head address); authoritative per-series ranges are open (DESIGN §8).
 MAX_POINT = 0xFFFFFF
+LATCH = {"L": ((0, MAX_POINT),)}  # Synthetic default retention ranges, inclusive.
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,7 @@ class Profile:
     cpu_name: str
     cpu_code: int
     devices: dict
+    latch_ranges: dict
 
     def device_by_code(self, code):
         return next((device for device in self.devices.values() if device.code == code), None)
@@ -40,5 +42,5 @@ Q_DEVICES = (
 )
 
 PROFILES = {
-    "Q": Profile("Q", "VirtualPLC-Q", 0xFFFF, {row[0]: Device(*row) for row in Q_DEVICES}),
+    "Q": Profile("Q", "VirtualPLC-Q", 0xFFFF, {row[0]: Device(*row) for row in Q_DEVICES}, LATCH),
 }

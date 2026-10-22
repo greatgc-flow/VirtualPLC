@@ -1,40 +1,39 @@
-# M1–M4 production API required by tests
+# M1–M5 production API required by tests
 
 - `server.Server(host='127.0.0.1', port=0, profile='Q', memory=None,
-  response_hook=None, max_points=4096, idle_timeout=2.0)`.
-- `.start()` binds/listens and starts workers before returning; `.address`
-  is `(host, actual_port)`. `.stop()` closes listener/clients and joins workers;
-  it is synchronous and idempotent, including with incomplete client frames.
-- Accepted sockets use TCP_NODELAY; EOF/malformed framing or `idle_timeout` closes only that client.
-- `response_hook(response_bytes) -> bytes` transforms each complete response
-  after dispatch and before its full transmission. None means identity.
-- M1 Q CPU identity is synthetic: `VirtualPLC-Q`, code `0xFFFF` (not vendor data).
-  Wire body: 16 ASCII bytes padded with spaces, then a little-endian uint16.
-- Echo body: little-endian uint16 length followed by echoed ASCII bytes.
-- `memory.Memory(profile='Q', limits=None)` accepts optional inclusive
-  `{device_name: (minimum, maximum)}` test ranges, in device points.
-- Profile devices expose `code`, `base`, `kind`, `minimum`, `maximum`.
-- `.read_words(device, head, count)` / `.read_bits(...)` return unsigned lists;
-  `.write_words(device, head, values)` / `.write_bits(...)` return None.
-- Memory is sparse, initially zero and isolated by instance/family; invalid input raises ValueError before mutation.
-- Word views pack 16 bits LSB first at aligned heads; bit access to word devices is invalid; SM/SD are writable.
+  response_hook=None, max_points=4096, idle_timeout=2.0,
+  initial_state='RUN', latch_ranges=None, password=None)`.
+- `.start()` binds/listens and starts workers before returning; `.address` is `(host, actual_port)`.
+- `.stop()` synchronously closes clients/listener and joins workers; idempotent, including incomplete frames.
+- Accepted sockets use TCP_NODELAY; EOF, bad framing or `idle_timeout` closes only that client.
+- `response_hook(response_bytes) -> bytes` transforms each complete encoded response; None means identity.
+- Synthetic Q CPU identity: `VirtualPLC-Q`, `0xFFFF`; name padded to 16 ASCII characters.
+- Echo response: length uint16 + text. ASCII encodes numeric fields as uppercase hex.
+- `memory.Memory(profile='Q', limits=None)` accepts inclusive `{device: (min, max)}` point ranges.
+- Profile devices expose `code`, `base`, `kind`, `minimum`, `maximum`; ranges remain synthetic.
+- `.read_words(device, head, count)` / `.read_bits(...)` return unsigned lists.
+- `.write_words(device, head, values)` / `.write_bits(...)` return None; invalid input raises ValueError.
+- Memory is sparse, initially zero and isolated by instance/family; no timer/counter execution.
+- Bit-device word views pack 16 bits LSB first at aligned heads; bit access to word devices is invalid.
 - `codec.decode_request(frame_bytes)` returns `.frame`, `.wire`, `.serial`, `.route`
   `(network, pc, io, station)`, `.timer`, `.command`, `.subcommand`, raw wire `.data`.
-- `codec.encode_response(request, end_code=0, data=b'') -> bytes` echoes route.
+- `codec.encode_response(request, end_code=0, data=b'') -> bytes` echoes route/serial.
 - `codec.pack_words(values)` / `unpack_words(data)` use unsigned LE uint16.
-- `codec.pack_bits(values)` / `unpack_bits(data, count)` use high nibble first,
-  odd low nibble zero. Invalid values, padding or lengths raise ValueError.
-- Frames auto-detect 3E/4E and binary/ASCII per request; replies match, echoing
-  4E serial with zero reserved fields. Invalid framing raises ValueError.
-- `commands.ERROR_CODES` maps integer codes to dicts with `name`, `source`, `status`.
-  Names: OK, POINTS_OUT_OF_RANGE, ADDRESS_OUT_OF_RANGE,
-  UNSUPPORTED_COMMAND, REQUEST_DATA_ERROR, DATA_LENGTH_MISMATCH.
-  DESIGN §7 rows initially have source='design', status='unverified'.
-- Server validates whole requests before mutation and serializes each request;
-  `max_points` limits batch requests, independent of the 4096-byte client recv.
-- Random: 0403/0000 read, 1402/0000 mixed write, 1402/0001 bit write.
-  Counts are uint8; zero is an empty list/no-op. Responses put words before dwords.
-  Duplicate/overlapping writes apply in wire order; dwords store low word first.
-- SS/SC/SN storage uses STS/STC/STN client names. Timers/counters do not execute.
-- ASCII uses fixed-width hex numbers and compat decimal addresses (six digits);
-  payload/overflow errors return nonzero end codes before mutation. See [transport notes](../docs/M3_M4.md).
+- `codec.pack_bits(values)` / `unpack_bits(data, count)` use high nibble first, odd low nibble zero.
+- Frames auto-detect 3E/4E, binary/ASCII per request; reserved fields must be zero; bad framing raises ValueError.
+- `commands.ERROR_CODES[code]` has `name`, `source`, `status`; all current rows remain unverified.
+- Each request validates before mutation under one lock; `max_points` limits batch points, not response bytes.
+- Random counts are uint8; zero is empty/no-op. Responses put words before dwords; dwords store low word first.
+- Duplicate/overlapping random writes apply in wire order. SS/SC/SN use STS/STC/STN client names.
+- ASCII compat addresses are six decimal digits; invalid/overwidth payloads return nonzero end codes.
+- `.state` is RUN/STOP/PAUSE (default RUN); SD203 mirrors STOP=0, RUN=1, PAUSE=2 (unverified).
+- `.last_force` records the last accepted run/pause force flag; initially False, with no extra force semantics.
+- `.reset_count` starts at zero; successful reset requires STOP, replies on the same connection and keeps it open.
+- Reset sets STOP and clears no memory; state mirroring still writes SD203. SD203 must be addressable.
+- Profile `LATCH` defaults to all L points; `latch_ranges={device: [(lo, hi), ...]}` replaces it; `{}` disables retention.
+- Latchclear requires STOP and clears only latch ranges. Run clear modes: 0 none, 1 non-latch, 2 all non-special.
+- SM/SD are writable and never cleared. `.latch_ranges` contains a copied, validated table of inclusive point spans.
+- `.locked` starts False and survives disconnect; password None disables lock/unlock with C059.
+- Configured Q password must be exactly four ASCII characters; invalid configuration raises ValueError.
+- `commands.LOCK_GATED` contains run/stop/pause/latchclear/reset; all data/echo/cputype commands stay available.
+- See [M5](../docs/M5.md) for transitions, validation order, source classifications and unverified error codes.
