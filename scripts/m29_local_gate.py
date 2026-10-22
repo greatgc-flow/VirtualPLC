@@ -259,6 +259,7 @@ def run(root,out,groups=6,timeout=240,runner=None,emit=None):
                 break
         if fingerprint(checkout,tests)!=before:
             status='HOLD_SOURCE_DRIFT'
+            audit={'status':'HOLD_SOURCE_DRIFT'}
         elif len(lines)==len(partitions) and all(x['status']=='LOCAL_PASS' for x in lines):
             audit=audit_p0(checkout,owners)
             status=('HOLD_P0_COVERAGE' if audit['status']=='HOLD_MISSING_OR_UNPASSED_CASES'
