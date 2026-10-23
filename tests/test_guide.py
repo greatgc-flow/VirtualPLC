@@ -243,3 +243,39 @@ def test_agent_files_exist_within_budget_and_are_packaged():
     assert ".venv" in agents and "pytest" in agents and "guide.py" in agents
     manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
     assert "llms.txt" in manifest and "AGENTS.md" in manifest
+
+
+def test_latch_semantics_in_all_usage_docs(parser):
+    phrase = "Latch ranges are cleared by latchclear and preserved by remote_run(clear_mode=1)."
+    for text in (guide.render(parser, "memory"),
+                 (ROOT / "README.md").read_text(encoding="utf-8"),
+                 (ROOT / "docs/BEHAVIOR.md").read_text(encoding="utf-8")):
+        assert phrase in text
+        assert "points latch clear preserves" not in text
+
+
+def test_client_guidance_is_self_contained(parser):
+    client = guide.render(parser, "client")
+    assert "pymcprotocol 0.3.0" not in client
+    for text in (client, (ROOT / "README.md").read_text(encoding="utf-8")):
+        assert 'Type3E(plctype="iQ-R")' in text
+        assert "--profile iQ-R --port 5001" in text
+        assert 'connect("127.0.0.1", 5001)' in text
+    llms = (ROOT / "llms.txt").read_text(encoding="utf-8")
+    assert "pip install pymcprotocol" in llms
+    assert 'Type3E(plctype="Q")' in llms and 'connect("127.0.0.1", 5000)' in llms
+    assert "batches under ~1000 words" in llms
+
+
+def test_embed_pytest_example_runs(parser):
+    text = guide.render(parser, "embed")
+    example = text.split("pytest fixture:\n", 1)[1]
+    namespace = {}
+    exec(__import__("textwrap").dedent(example), namespace)
+    fixture = namespace["plc"].__wrapped__()
+    server = next(fixture)
+    try:
+        namespace["test_seeded"](server)
+    finally:
+        with pytest.raises(StopIteration):
+            next(fixture)

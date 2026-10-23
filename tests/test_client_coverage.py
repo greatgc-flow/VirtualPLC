@@ -1,7 +1,9 @@
 """Closed-loop inventory: new client public methods/device constants need tests."""
 
+import ast
 import inspect
 from pathlib import Path
+import textwrap
 
 import pymcprotocol
 from pymcprotocol.mcprotocolconst import DeviceConstants
@@ -37,6 +39,7 @@ COVERED = {
                         ("test_m2b_devices.py", "test_m6_client.py")),
         **dict.fromkeys(("LTS", "LTC", "LTN", "LSTS", "LSTN", "LCS", "LCC", "LCN", "LZ", "RD"), ("test_m6_client.py",)),
         "LSTC": ("test_m6_wire.py",),  # constant exists, client lookup does not
+        **dict.fromkeys(("STS", "STC", "STN"), ("test_m6_client.py",)),  # client aliases for SS/SC/SN
         "BIT": ("test_client_coverage.py",),
         "WORD": ("test_client_coverage.py",),
         "DWORD": ("test_client_coverage.py",),
@@ -47,6 +50,41 @@ COVERED = {
 def assert_covered(actual, category):
     missing = set(actual) - COVERED[category].keys()
     assert not missing, f"Uncovered pymcprotocol {category}: {sorted(missing)}. Add tests and update COVERED."
+
+
+def lookup_device_names():
+    """Read the actual name->code/type branches, including names without constants."""
+    names = set()
+    for method in (DeviceConstants.get_binary_devicecode,
+                   DeviceConstants.get_ascii_devicecode, DeviceConstants.get_devicetype):
+        tree = ast.parse(textwrap.dedent(inspect.getsource(method)))
+        found = {value.value for node in ast.walk(tree) if isinstance(node, ast.Compare)
+                 and isinstance(node.left, ast.Name) and node.left.id == "devicename"
+                 for value in node.comparators if isinstance(value, ast.Constant)
+                 and isinstance(value.value, str)}
+        assert found, ("pymcprotocol lookup source changed: review name->code/type lookup "
+                       "and update lookup_device_names plus COVERED before accepting the oracle bump.")
+        names.update(found)
+    return names
+
+
+def test_lookup_only_names_are_covered():
+    names = lookup_device_names()
+    assert {"STS", "STC", "STN"} <= names
+    assert_covered(names, "devices")
+
+
+def test_guard_rejects_lookup_only_addition(monkeypatch):
+    original = DeviceConstants.get_binary_devicecode
+
+    def expanded(plctype, devicename):
+        if devicename == "FUTURE_LOOKUP_ONLY":
+            return 0xFE, 10
+        return original(plctype, devicename)
+
+    monkeypatch.setattr(DeviceConstants, "get_binary_devicecode", staticmethod(expanded))
+    with pytest.raises(AssertionError, match="Uncovered pymcprotocol devices.*FUTURE_LOOKUP_ONLY"):
+        assert_covered(lookup_device_names(), "devices")
 
 
 @pytest.mark.parametrize("client_class", [pymcprotocol.Type3E, pymcprotocol.Type4E])

@@ -359,6 +359,7 @@ act only on sparse stored points; table spans may extend beyond a narrower
 custom memory range without allocating or accessing those points.
 
 - Latchclear clears only points inside latch ranges and requires STOP.
+  Latch ranges are cleared by latchclear and preserved by remote_run(clear_mode=1).
 - Run clear_mode 0 leaves all memory alone; 1 clears non-latch, non-special
   points; 2 clears every non-special point, including latch ranges. An
   idempotent run still honors its clear_mode.

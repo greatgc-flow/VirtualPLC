@@ -1,3 +1,4 @@
 # Published PyPI wheel digest; https://pypi.org/pypi/pymcprotocol/0.3.0/json
 # Wheel: pymcprotocol-0.3.0-py3-none-any.whl
-pymcprotocol==0.3.0 --hash=sha256:614217d43fbf8d9e409c1928993cbb4339d17828c1002c1766ce900aaee12dd6
+version=0.3.0
+sha256=614217d43fbf8d9e409c1928993cbb4339d17828c1002c1766ce900aaee12dd6

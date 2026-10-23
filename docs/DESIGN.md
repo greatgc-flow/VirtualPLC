@@ -210,7 +210,11 @@ unchanged. See [text behavior](BEHAVIOR.md#fixed-width-text-padding).
 
 Monitoring timers are parsed/ignored. Routes alias one target. SD203 is a
 one-way state mirror. The installed-client coverage guard explicitly maps
-public Type3E/Type4E methods and device constants to covering test modules.
+public Type3E/Type4E methods, device constants and lookup-only names to covering
+test modules. Lookup names come from the client's name->code/type branches;
+a mutation test proves that an added lookup-only name fails coverage.
+requirements-dev.txt is the only exact oracle pin; tests/oracle_pin.txt records
+only wheel version/hash/provenance metadata. The test extra declares compatibility.
 Dependency bumps must add tests for new features; a stale wheel hash alone
 does not block a bumped oracle. CI covers Linux/Windows on Python 3.10–3.13
 and installs built wheels in clean environments. Trusted publishing requires
@@ -239,6 +243,13 @@ valid JSON examples, no stale flags and marked README recipe equality. README
 remains the human entry point without duplicating generated reference tables.
 Root llms.txt is a usage index; AGENTS.md describes repository development.
 Both ship in the sdist through MANIFEST.in.
+
+The runnable embed fixture seeds memory before start and closes clients in
+finally; its test body runs in guide tests. Q uses port 5000 and the iQ-R
+recipe/client pair uses 5001. Live timer tests check socket timeouts before and
+after setaccessopt, ignored zero and successful subsequent requests on all
+transports. Latch ranges are cleared by latchclear and preserved by
+remote_run(clear_mode=1); SM/SD remain exempt from clearing.
 
 Configuration errors are one line ending with a relevant guide topic. Argument
 errors use the option name; file loading uses the faults/memory stage, and

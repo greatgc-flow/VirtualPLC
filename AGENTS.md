@@ -22,9 +22,9 @@ This file is for agents developing this repository. For product usage, run
 - README marked `guide:run` recipes must match guide run (test-enforced).
 - README is the human entry point; docs/BEHAVIOR.md and docs/FAULTS.md explain semantics.
 - Update docs/DESIGN.md when design decisions or open items change.
-- `requirements-dev.txt` pins the test oracle; test_oracle_pin.py checks its version.
+- `requirements-dev.txt` is the only exact oracle pin; test_oracle_pin.py checks it.
 - The wheel hash is checked only for its recorded version. Keep the full suite and
-  tests/test_client_coverage.py guard green after oracle bumps; cover new methods/devices.
+  tests/test_client_coverage.py green after bumps; cover methods/constants/lookup names.
 
 ## Do not
 

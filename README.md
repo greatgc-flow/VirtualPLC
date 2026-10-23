@@ -12,7 +12,7 @@ Install with `pip install virtual-plc`, then choose a recipe:
 <!-- guide:run -->
 ```text
 virtual-plc --port 5000 --text-pad 0x20
-virtual-plc --profile iQ-R --port 0 --initial-state STOP
+virtual-plc --profile iQ-R --port 5001 --initial-state STOP
 virtual-plc --init seed.json --fault-plan faults.json --dump-on-exit saved.json
 ```
 <!-- /guide:run -->
@@ -31,6 +31,19 @@ client.connect("127.0.0.1", 5000)
 try:
     client.batchwrite_wordunits("D0", [123, -45])
     assert client.batchread_wordunits("D0", 2) == [123, -45]
+finally:
+    client.close()
+```
+
+For the iQ-R recipe (`virtual-plc --profile iQ-R --port 5001 --initial-state STOP`):
+
+```python
+from pymcprotocol import Type3E
+
+client = Type3E(plctype="iQ-R")
+try:
+    client.connect("127.0.0.1", 5001)
+    assert client.batchread_wordunits("D0", 1) == [0]
 finally:
     client.close()
 ```
@@ -106,6 +119,9 @@ graceful shutdown. Dumps preserve explicit zeros and include SD203. Loads
 validate the complete snapshot before overlaying data. See
 `virtual-plc guide memory` for bounds, retention and device names.
 
+Latch ranges are cleared by latchclear and preserved by remote_run(clear_mode=1).
+SM and SD are never cleared; latchclear requires STOP.
+
 ```python
 from virtual_plc import Server, Memory, FaultPlan, __version__
 
@@ -177,9 +193,9 @@ python -m pytest -q
 ```
 
 The dev extra installs pytest only. The test extra adds the compatible oracle
-range in requirements-oracle.txt. Reproducible tests use the exact client pin
-in requirements-dev.txt. Dependabot updates that file and pyproject; the
-coverage guard rejects newly uncovered public methods/device constants.
+range declared in pyproject.toml. requirements-dev.txt is the only exact client
+pin. Dependabot updates that file and pyproject; the coverage guard rejects
+newly uncovered public methods, device constants and lookup-only names.
 
 The [wheel hash](https://github.com/greatgc-flow/VirtualPLC/blob/main/tests/oracle_pin.txt)
 is checked when a matching-version wheel is retained under .venv/oracle. A

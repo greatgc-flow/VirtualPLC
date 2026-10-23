@@ -11,6 +11,13 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_no_secondary_oracle_requirements():
+    assert not (ROOT / "requirements-oracle.txt").exists()
+    for path in [ROOT / "MANIFEST.in", ROOT / "README.md"]:
+        assert "requirements-oracle.txt" not in path.read_text(encoding="utf-8")
+    assert "pymcprotocol==" not in (ROOT / "tests/oracle_pin.txt").read_text()
+
+
 def test_oracle_pin():
     installed = distribution("pymcprotocol")
     requirement = next(line for line in (ROOT / "requirements-dev.txt").read_text().splitlines()
@@ -21,9 +28,8 @@ def test_oracle_pin():
 def test_oracle_wheel_hash():
     installed = distribution("pymcprotocol")
     pin = (ROOT / "tests/oracle_pin.txt").read_text(encoding="utf-8")
-    requirement = next(line for line in pin.splitlines() if line.startswith("pymcprotocol=="))
-    package, digest = requirement.split(" --hash=sha256:")
-    pinned_version = package.split("==", 1)[1]
+    metadata = dict(line.split("=", 1) for line in pin.splitlines() if line and not line.startswith("#"))
+    pinned_version, digest = metadata["version"], metadata["sha256"]
     if installed.version != pinned_version:
         pytest.skip(f"Wheel hash records {pinned_version}; installed oracle is {installed.version}. Run full suite/coverage guard.")
     assert len(digest) == 64

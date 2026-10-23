@@ -16,6 +16,21 @@ CELLS = list(product(PROFILES, TRANSPORTS))
 
 
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
+def test_connected_monitoring_timer_updates_socket_timeout(endpoints, frame, wire):
+    with connected_profile(endpoints("Q"), frame, wire) as client:
+        assert client._sock.gettimeout() == 1
+        for seconds in (2, 16383, 1):
+            client.setaccessopt(timer_sec=seconds)
+            assert client.soc_timeout == seconds + 1
+            assert client._sock.gettimeout() == seconds + 1
+            assert client.echo_test("ABC") == (3, "ABC")
+            client.setaccessopt(timer_sec=0)
+            assert client._sock.gettimeout() == seconds + 1
+            assert client.soc_timeout == seconds + 1
+            assert client.echo_test("DEF") == (3, "DEF")
+
+
+@pytest.mark.parametrize("frame,wire", TRANSPORTS)
 @pytest.mark.parametrize("seconds", [1, 16383])
 def test_monitoring_timer_bytes_and_socket_timeout(monkeypatch, frame, wire, seconds):
     client = (pymcprotocol.Type3E if frame == "3E" else pymcprotocol.Type4E)()

@@ -1,2 +1,0 @@
-# Compatible with the test extra; use requirements-dev.txt for the pinned oracle.
-pymcprotocol>=0.3.0

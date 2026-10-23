@@ -27,7 +27,7 @@ OPTION_TOPICS = {"--profile": "profiles", "--fault-plan": "faults", "--init": "m
 # Mirrored verbatim in the README quickstart (a test fails on drift).
 RECIPES = (
     "virtual-plc --port 5000 --text-pad 0x20",
-    "virtual-plc --profile iQ-R --port 0 --initial-state STOP",
+    "virtual-plc --profile iQ-R --port 5001 --initial-state STOP",
     "virtual-plc --init seed.json --fault-plan faults.json --dump-on-exit saved.json",
 )
 RECIPE_LINES = "\n".join("  " + recipe for recipe in RECIPES)
@@ -59,7 +59,7 @@ Idle clients stay connected unless --idle-timeout SECONDS is set.
 """.strip("\n")
 
 CLIENT = """
-Client: pymcprotocol 0.3.0 (python -m pip install pymcprotocol). Its plctype must match --profile.
+Client: pymcprotocol (python -m pip install pymcprotocol). Its plctype must match --profile.
   from pymcprotocol import Type3E               # Type4E for 4E frames
   c = Type3E(plctype="Q")                       # Q, L, QnA, iQ-L, iQ-R
   c.setaccessopt(commtype="ascii")              # default is "binary"
@@ -70,6 +70,8 @@ Client: pymcprotocol 0.3.0 (python -m pip install pymcprotocol). Its plctype mus
   c.echo_test("ABC"); c.read_cputype()          # CPU name has NUL fill unless --text-pad 0x20
   c.remote_stop(); c.remote_run(0)              # remote_reset() needs STOP; remote_unlock(pw) needs --password
   c.close()
+iQ-R: start virtual-plc --profile iQ-R --port 5001 --initial-state STOP, then:
+  c = Type3E(plctype="iQ-R"); c.connect("127.0.0.1", 5001); c.close()
 Hex-numbered devices (X Y B W SB SW DX DY ZR) take hex digits in the client: "X1F". Names are case-sensitive.
 ASCII frames carry device numbers as decimal text (pymcprotocol "compat" numbering); the client handles it.
 setaccessopt(timer_sec=2) sets the PLC monitoring timer (ignored here) and a 3 s client socket timeout.
@@ -166,7 +168,8 @@ Device names by kind (Q-class profiles lack LT*/LST*/LC*/LZ/RD; see guide profil
 
 MEMORY_TAIL = """
 --limit DEV:LO-HI (repeatable) sets the inclusive valid points of a device; requests outside get an error.
---latch-range DEV:LO-HI (repeatable) lists the points latch clear preserves; default: all of L. SM and SD are never cleared.
+--latch-range DEV:LO-HI (repeatable) selects latch ranges; default: all of L. SM and SD are never cleared.
+Latch ranges are cleared by latchclear and preserved by remote_run(clear_mode=1).
 Example: virtual-plc --init seed.json --limit D:0-102 --latch-range D:100-101 --dump-on-exit saved.json
 Word access to a bit device needs a head divisible by 16 (a word read of M16 returns M16..M31).
 Bit access to a word device is rejected. Python: Memory.load(dict) and Memory.dump(); see guide embed.
@@ -269,13 +272,23 @@ FaultPlan(steps) or FaultPlan.from_file(path) -> Server(fault_plan=...); schema:
 response_hook(bytes) -> bytes transforms every complete reply before it is sent.
 pytest fixture:
   import pytest
+  from pymcprotocol import Type3E
   from virtual_plc import Server, Memory
 
   @pytest.fixture
   def plc():
-      with Server(memory=Memory()) as server:
+      memory = Memory()
+      memory.write_words("D", 0, [123])
+      with Server(memory=memory, port=0) as server:
           yield server
-  # test body: Type3E(plctype="Q").connect(*plc.address)
+
+  def test_seeded(plc):
+      client = Type3E(plctype="Q")
+      try:
+          client.connect(*plc.address)
+          assert client.batchread_wordunits("D0", 1) == [123]
+      finally:
+          client.close()
 """.strip("\n")
 
 

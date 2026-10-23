@@ -2,6 +2,9 @@
 
 Local Mitsubishi MC protocol PLC simulator for client tests; Python 3.10+, stdlib only.
 Install: pip install virtual-plc
+Client: pip install pymcprotocol
+  from pymcprotocol import Type3E
+  c = Type3E(plctype="Q"); c.connect("127.0.0.1", 5000); c.close()
 Start here: virtual-plc guide
 Topics: run options client profiles embed faults memory troubleshoot divergences
 Machine-readable: virtual-plc guide options --json; virtual-plc guide profiles --json
@@ -13,7 +16,7 @@ Rules:
 - CPU names have NUL fill by default; --text-pad 0x20 gives space fill.
 - Seed direct Memory before start; snapshot after stop; use clients for live writes.
 - Faults happen after execution; faulted writes are not rolled back.
-- The client's single recv(4096) limits reads; split large batches.
+- The client's single recv(4096) limits reads; keep batches under ~1000 words.
 - PLC ordering, capacities and control policies remain partly unverified.
 
 Docs:
