@@ -14,10 +14,10 @@ jobs:
     outputs:
       failed: ${{ steps.tests.outcome == 'failure' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - run: python -m pip install -e . pytest
@@ -42,7 +42,7 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         env:
           WATCH_RESULT: ${{ needs.watch.result }}
           TESTS_FAILED: ${{ needs.watch.outputs.failed }}
