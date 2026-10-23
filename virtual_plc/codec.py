@@ -9,6 +9,8 @@ import struct
 
 HEADER_SIZE = 9  # subheader 2 + route 5 + length 2
 MIN_BODY = 6  # timer 2 + command 2 + subcommand 2 (binary bytes)
+FRAMES = ("3E", "4E")
+WIRES = ("binary", "ascii")
 
 
 @dataclass(frozen=True)

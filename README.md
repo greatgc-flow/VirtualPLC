@@ -1,32 +1,32 @@
 # VirtualPLC
 
-A local Mitsubishi MC protocol simulator for client tests. Sparse device
-memory, CPU control and declarative faults use only the Python standard
-library. Python 3.10 or newer is required.
+A local Mitsubishi MC protocol PLC simulator for client tests, with sparse
+memory, CPU control and declarative faults. Python 3.10+, standard library only.
 
-## Safety
+AI agents: run `virtual-plc guide` for a compact usage guide; use `--json` for data.
 
-Use localhost only. There is no network authentication: passwords simulate
-PLC locking. Ranges, CPU identities and some error meanings are synthetic or
-unverified. Never connect to real equipment or production networks. Non-local
-binds print a warning, not an access control. Localhost, ::1 and IPv4 loopback
-addresses are recognized as local.
+## 30-second quickstart
 
-## Quickstart
+Install with `pip install virtual-plc`, then choose a recipe:
 
+<!-- guide:run -->
 ```text
-python -m pip install virtual_plc
 virtual-plc --port 5000 --text-pad 0x20
+virtual-plc --profile iQ-R --port 0 --initial-state STOP
+virtual-plc --init seed.json --fault-plan faults.json --dump-on-exit saved.json
 ```
+<!-- /guide:run -->
 
-From a checkout, use `python -m pip install -e .`. The equivalent module entry
-point is `python -m virtual_plc`. Install pymcprotocol separately for clients:
+The third recipe needs the JSON files shown below. From a checkout, install
+with `python -m pip install -e .`. `python -m virtual_plc` is the equivalent
+entry point. For more startup details, run `virtual-plc guide run`.
+
+Install the client separately with `pip install pymcprotocol`:
 
 ```python
 from pymcprotocol import Type3E
 
 client = Type3E(plctype="Q")
-client.setaccessopt(commtype="ascii")
 client.connect("127.0.0.1", 5000)
 try:
     client.batchwrite_wordunits("D0", [123, -45])
@@ -35,71 +35,45 @@ finally:
     client.close()
 ```
 
+Use localhost only. Passwords simulate PLC locking; there is no network
+authentication. Never connect to real equipment or production networks.
+Non-local binds print a warning, not an access control.
+
 ## CLI reference
 
-This is the canonical option reference; `virtual-plc --help` is also available.
-The stderr startup banner lists the bound address/profile/state, effective
-idle timeout, text pad, dword order and fault-plan path. Ctrl+C, SIGTERM and
-Windows SIGBREAK stop workers and exit 0. Windows SIGBREAK needs a shared
-console; forced termination bypasses handlers and cannot save an exit snapshot.
+Run `virtual-plc guide options` for the option/default/meaning table generated
+from the parser, or `virtual-plc --help`. For programs, use
+`virtual-plc guide options --json`. Bad configuration exits 2 with a topic
+hint; bind failures exit 1 without a traceback.
 
-| Option | Default | Meaning |
-|---|---|---|
-| `--host HOST` | `127.0.0.1` | IPv4/IPv6 bind address |
-| `--port PORT` | `5000` | Integer 0..65535; 0 chooses an available port |
-| `--profile NAME` | `Q` | Q, L, QnA, iQ-L, iQ-R |
-| `--initial-state STATE` | `RUN` | RUN, STOP or PAUSE |
-| `--password TEXT` | Disabled | Q-class: 4 ASCII chars; iQ-R: 6–32; not authentication |
-| `--max-points N` | `4096` | Positive batch point limit |
-| `--idle-timeout SECONDS` | None | Positive finite idle timeout; omitted means no timeout |
-| `--ascii-dword-order MODE` | `swapped` | Low-word-first; `client` keeps high-word-first |
-| `--text-pad BYTE` | `0x00` | Integer byte 0..255; `0x20` is space |
-| `--fault-plan FILE` | None | Declarative fault JSON |
-| `--init FILE` | None | Load memory JSON before listening |
-| `--limit DEV:LO-HI` | Profile ceiling | Repeatable inclusive point limit; last per device wins |
-| `--latch-range DEV:LO-HI` | All L points | Repeatable retained spans; replaces defaults |
-| `--dump-on-exit FILE` | None | Save memory JSON after graceful shutdown |
-| `-v`, `--verbose` | Off | Log request summaries and connection-close reasons |
-| `--version` | — | Installed distribution version |
-| `-h`, `--help` | — | Show usage |
+The stderr banner reports the bound address (including the assigned port for
+`--port 0`), profile/state, idle timeout, text pad, dword order and fault plan.
+Ctrl+C, SIGTERM and Windows SIGBREAK stop workers and save exit snapshots.
+SIGBREAK needs a shared console; forced termination bypasses Python handlers.
+`-v` logs request summaries and close reasons, excluding payloads/passwords.
 
-Bad configuration exits 2 before bind. Bind failures print
-`cannot listen on host:port: reason` and exit 1 without a traceback. Range
-endpoints accept decimal or 0x notation, independent of client address syntax.
-Request summaries exclude passwords and payload contents.
+| Guide topic | Contents |
+|---|---|
+| `virtual-plc guide run` | Installation, startup and shutdown |
+| `virtual-plc guide options` | All flags and defaults, generated from argparse |
+| `virtual-plc guide client` | Client reads/writes, control and addressing |
+| `virtual-plc guide profiles` | Generated command/frame/wire/profile/device matrix |
+| `virtual-plc guide embed` | Python API and pytest fixture |
+| `virtual-plc guide faults` | Plan schema, actions and three examples |
+| `virtual-plc guide memory` | Seeding, snapshots, ranges and devices |
+| `virtual-plc guide troubleshoot` | Symptoms and fixes |
+| `virtual-plc guide divergences` | Simulator policies and unverified PLC behavior |
+
+Every topic accepts `--json`. Unknown topics list the choices and exit 2.
 
 ## Profiles, frames and encodings
 
-All commands support every frame/encoding pair on each profile. Addressed
-iQ-R packets have different descriptors/subcommands: client `plctype` and
-server `--profile` must agree for iQ-R. Q-class names are wire-identical but
-return different synthetic identities.
+Commands support 3E/4E and binary/ASCII on all profiles. Q, L, QnA and iQ-L
+share a wire class; iQ-R uses different descriptors/subcommands. Client
+`plctype` and server `--profile` must agree for iQ-R. Inspect
+`virtual-plc guide profiles --json` for the current matrix and device kinds.
 
-| Server recipe | Client plctype | Wire class |
-|---|---|---|
-| `virtual-plc --profile Q` | `Q` | Q-class |
-| `virtual-plc --profile L` | `L` | Q-class |
-| `virtual-plc --profile QnA` | `QnA` | Q-class |
-| `virtual-plc --profile iQ-L` | `iQ-L` | Q-class |
-| `virtual-plc --profile iQ-R` | `iQ-R` | iQ-R |
-
-For an iQ-R server with 4E ASCII, use this client (binary uses
-`setaccessopt(commtype="binary")`; 3E uses Type3E):
-
-```python
-from pymcprotocol import Type4E
-
-client = Type4E(plctype="iQ-R")
-client.setaccessopt(commtype="ascii")
-client.connect("127.0.0.1", 5000)
-try:
-    client.randomwrite([], [], ["D0"], [0x12345678])
-    assert client.randomread([], ["D0"]) == ([], [0x12345678])
-finally:
-    client.close()
-```
-
-This local recipe covers the complete profile x frame x wire product:
+This local recipe covers every profile/frame/wire combination:
 
 ```python
 from itertools import product
@@ -119,38 +93,18 @@ for profile in ("Q", "L", "QnA", "iQ-L", "iQ-R"):
                 client.close()
 ```
 
-| Commands | 3E binary | 3E ASCII | 4E binary | 4E ASCII | Profiles |
-|---|---|---|---|---|---|
-| Batch word/bit R/W (0401/1401) | Yes | Yes | Yes | Yes | All five |
-| Random word/dword R/W (0403/1402) | Yes | Yes | Yes | Yes | All five |
-| Random bit write (1402) | Yes | Yes | Yes | Yes | All five |
-| Echo / CPU type (0619/0101) | Yes | Yes | Yes | Yes | All five |
-| Run/stop/pause/latchclear/reset | Yes | Yes | Yes | Yes | All five |
-| Unlock/lock (1630/1631) | Yes | Yes | Yes | Yes | All five; password configured |
-
-Common devices include D/M/X/Y/B/W/R/ZR/SM/SD, L/F/V, SB/SW/DX/DY and
-TS/TC/TN/CS/CC/CN/SS/SC/SN. iQ-R adds
-LTS/LTC/LTN/LSTS/LSTC/LSTN/LCS/LCC/LCN/LZ/RD. LSTC is raw-only because the
-client cannot name it; Z is unsupported. Bit commands require bit families.
-Timers/counters store values without executing PLC logic. See
-[behavior](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md).
-
 ## Memory seeding, snapshots and embedding
 
-Save this as seed.json:
+Save seed.json (decimal address keys, unsigned native point values):
 
 ```json
 {"D": {"100": [1, 2, 3]}, "M": {"0": [1, 0, 1]}}
 ```
 
-```text
-virtual-plc --init seed.json --limit D:0-102 --latch-range D:100-101 --dump-on-exit saved.json
-```
-
-Addresses are decimal JSON keys. Values are unsigned native points: bits 0/1,
-words 0..65535, native dwords 0..4294967295. Dumps group contiguous stored
-points, including explicit zeros and SD203, using the same schema. Loads
-validate the complete snapshot before overlaying stored data.
+`--init` loads before listening; `--dump-on-exit` saves the same schema after
+graceful shutdown. Dumps preserve explicit zeros and include SD203. Loads
+validate the complete snapshot before overlaying data. See
+`virtual-plc guide memory` for bounds, retention and device names.
 
 ```python
 from virtual_plc import Server, Memory, FaultPlan, __version__
@@ -163,25 +117,10 @@ with Server(memory=memory, fault_plan=FaultPlan([])) as server:
 snapshot = memory.dump()
 ```
 
-Seed before start/context entry; dump after stop. Direct Memory operations
-are not synchronized with wire requests, so never load/mutate/dump concurrently.
-Live writes should use clients: each request validates/applies under one lock.
-Server construction initializes SD203; CLI seeding runs afterward. Writing
-SD203 changes that word but does not change CPU state.
-
-A pytest fixture:
-
-```python
-import pytest
-from virtual_plc import Server, Memory
-
-@pytest.fixture
-def plc():
-    memory = Memory()
-    memory.write_words("D", 0, [123])
-    with Server(memory=memory) as server:
-        yield server
-```
+Seed before start/context entry; dump after stop. Direct Memory calls are not
+synchronized with requests. Use clients for live writes. Server construction
+initializes SD203; CLI seeding runs afterward. Writing SD203 changes the word
+without changing CPU state. For a pytest fixture, run `virtual-plc guide embed`.
 
 ## Response faults
 
@@ -192,51 +131,43 @@ Save faults.json and pass `--fault-plan faults.json`:
             "action": {"type": "delay", "seconds": 0.02}}]}
 ```
 
-Faults run after execution and do not roll back writes. Delay/drop/truncate/
-error/close/RST/hold/corruption/partial-send policies are described in
-[FAULTS](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/FAULTS.md).
+Faults run after execution and do not roll back writes. Run
+`virtual-plc guide faults` for the schema and examples; see
+[FAULTS](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/FAULTS.md)
+for delivery semantics.
 
 ## Troubleshooting
 
-- Large responses: pymcprotocol performs one `recv(4096)` in bytes. The server
-  default is 4096 points, a different limit. Split requests or use a raw reader
-  that follows response lengths.
+- Large reads: the client calls `recv(4096)` once. Split batches; the server's
+  point limit is separate. A raw reader can follow response lengths.
 - CPU names: default Q returns `"VirtualPLC-Q\x00\x00\x00\x00"`. The client
-  removes spaces but retains NULs. Select `--text-pad 0x20` for `"VirtualPLC-Q"`.
-  Non-UTF-8 fill such as 0xFF causes client decoding failure in either encoding.
-- Reset: the client uses a 1 s receive timeout and sleeps about 1 s before
-  reconnecting after receive/status failure. Normal reset requires STOP and
-  keeps the socket open. Use raw sockets to observe swallowed reset errors.
-- False success: missing header/length validation means truncated or gracefully
-  closed binary responses can decode as status/value 0. This is not proof of
-  success. Silence/RST can exercise actual reconnect behavior.
-- Idle closes: no timeout is enabled by default; explicit positive idle timeouts
-  close idle or incomplete connections, after which clients must reconnect.
-- Monitoring timer: parsed but ignored. `setaccessopt(timer_sec=seconds)` sends
-  seconds*4 and sets `soc_timeout=seconds+1`. Zero is ignored. `soc_timeout` is
-  an attribute, not a setaccessopt keyword.
-- Routes: responses echo routes but every route aliases the same memory/state.
-  Client zero-valued route options are ignored even after nonzero values.
-- Spelling/Unicode: client device names are case-sensitive; hex suffixes can
-  be lowercase. Raw ASCII names are case-insensitive. Unicode echo can pass
-  client validation but is rejected by the server without disconnecting.
+  retains NULs; `--text-pad 0x20` returns `"VirtualPLC-Q"`. Non-UTF-8 fill
+  such as 0xFF causes client decoding failure.
+- Reset requires STOP. On receive/status failure, the client waits about 1 s
+  and reconnects. A normal reset keeps the connection open.
+- Truncated or closed binary replies can look like status/value 0 because
+  the client does not validate headers/lengths. This is not proof of success.
+- Idle timeout is disabled by default; explicit timeouts close idle or
+  incomplete connections. Reconnect afterward.
+
+More fixes: `virtual-plc guide troubleshoot`. Protocol details:
+[BEHAVIOR](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md).
 
 ## Known divergences from a real PLC
 
-- CPU identities/ranges/SD203 encoding are synthetic. SD203 is a one-way state
-  mirror. CPU-name fill defaults to NUL in binary and ASCII, and the pinned
-  client retains those NULs; use `--text-pad 0x20` for the previous name.
-  Physical PLC fill remains unverified.
-- ASCII addresses use decimal text even for hex-base devices. Default dword
-  order `swapped` puts the low word first; `client` keeps high-word-first
-  interpretation. Roundtrips are symmetric but batch-word views differ.
-  Physical PLC ASCII order is unverified.
-- Locking is server-wide, survives disconnect, and gates only CPU control.
-  It provides no authentication. Physical lock scope is unverified.
-- Native iQ-R dword stride is one 32-bit point per address; word operations
-  stream low/high halves. This stride and the LTN interpretation are unverified.
-- Error codes await manual checks; C200/C201 may be swapped. Timers/counters
-  store independent values without execution.
+- CPU identities, ranges and SD203 state encoding are synthetic; SD203 mirrors
+  state in one direction. CPU names default to NUL fill on both encodings;
+  the client retains NULs. Physical fill remains unverified.
+- ASCII addresses use decimal text even for hex-base devices. Dword order
+  defaults to low-word-first (`swapped`); `client` selects high-word-first.
+  Physical order is unverified; roundtrips remain symmetric.
+- Locking is server-wide, survives disconnect and gates only CPU control.
+  It provides no authentication. Native iQ-R dword stride is one 32-bit point
+  per address; this and physical lock/reset policies are unverified.
+- Timers/counters store values without execution. Monitoring timers are
+  parsed/ignored; routes alias one memory/state. Error meanings await checks.
+
+Run `virtual-plc guide divergences` for the compact list of simulator policies.
 
 ## Development and releases
 

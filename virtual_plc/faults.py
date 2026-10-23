@@ -22,6 +22,17 @@ def _seconds(value):
         raise ValueError("seconds must be finite and nonnegative")
 
 
+# Action type -> (required, optional) parameter names; also drives `virtual-plc guide faults`.
+ACTION_FIELDS = {
+    "delay": ({"seconds"}, set()), "drop": (set(), set()),
+    "truncate": ({"n"}, set()), "bad_end_code": ({"code"}, set()),
+    "close_before_response": (set(), set()), "close_after_response": (set(), set()),
+    "rst": (set(), set()), "silent_hold": (set(), set()),
+    "corrupt_header": (set(), {"offset", "xor"}),
+    "partial_send": ({"chunks"}, {"pause"}),
+}
+
+
 def _validate(step):
     if not isinstance(step, dict) or set(step) - {"match", "times", "action"} or "action" not in step:
         raise ValueError("a fault step requires action and optional match/times")
@@ -36,18 +47,10 @@ def _validate(step):
     action = step["action"]
     if not isinstance(action, dict):
         raise ValueError("action must be an object")
-    fields = {
-        "delay": ({"seconds"}, set()), "drop": (set(), set()),
-        "truncate": ({"n"}, set()), "bad_end_code": ({"code"}, set()),
-        "close_before_response": (set(), set()), "close_after_response": (set(), set()),
-        "rst": (set(), set()), "silent_hold": (set(), set()),
-        "corrupt_header": (set(), {"offset", "xor"}),
-        "partial_send": ({"chunks"}, {"pause"}),
-    }
     kind = action.get("type")
-    if not isinstance(kind, str) or kind not in fields:
+    if not isinstance(kind, str) or kind not in ACTION_FIELDS:
         raise ValueError("unknown fault action")
-    required, optional = fields[kind]
+    required, optional = ACTION_FIELDS[kind]
     if not required <= set(action) or set(action) - required - optional - {"type"}:
         raise ValueError(f"invalid fields for {kind}")
     if kind == "delay":

@@ -1,4 +1,4 @@
-include LICENSE README.md requirements-dev.txt requirements-oracle.txt
+include LICENSE README.md llms.txt AGENTS.md requirements-dev.txt requirements-oracle.txt
 graft docs
 graft tests
 global-exclude __pycache__ *.py[cod]

@@ -1,0 +1,24 @@
+# VirtualPLC
+
+Local Mitsubishi MC protocol PLC simulator for client tests; Python 3.10+, stdlib only.
+Install: pip install virtual-plc
+Start here: virtual-plc guide
+Topics: run options client profiles embed faults memory troubleshoot divergences
+Machine-readable: virtual-plc guide options --json; virtual-plc guide profiles --json
+Equivalent entry point: python -m virtual_plc guide
+
+Rules:
+- Use localhost; never connect to equipment or production networks.
+- Client plctype and server profile must agree for iQ-R.
+- CPU names have NUL fill by default; --text-pad 0x20 gives space fill.
+- Seed direct Memory before start; snapshot after stop; use clients for live writes.
+- Faults happen after execution; faulted writes are not rolled back.
+- The client's single recv(4096) limits reads; split large batches.
+- PLC ordering, capacities and control policies remain partly unverified.
+
+Docs:
+- [README](https://raw.githubusercontent.com/greatgc-flow/VirtualPLC/main/README.md)
+- [Behavior](https://raw.githubusercontent.com/greatgc-flow/VirtualPLC/main/docs/BEHAVIOR.md)
+- [Faults](https://raw.githubusercontent.com/greatgc-flow/VirtualPLC/main/docs/FAULTS.md)
+- [Design](https://raw.githubusercontent.com/greatgc-flow/VirtualPLC/main/docs/DESIGN.md)
+- [Repository workflow](https://raw.githubusercontent.com/greatgc-flow/VirtualPLC/main/AGENTS.md)

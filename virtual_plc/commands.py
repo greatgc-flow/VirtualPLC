@@ -186,6 +186,19 @@ for wire_class, wire in WIRE_CLASSES.items():
     DATA_HANDLERS[wire_class] = handlers
 HANDLERS.update({(command, 0): control_request for command in LOCK_GATED | {0x1630, 0x1631}})
 
+# Human-readable names for `virtual-plc guide profiles`; a test keeps this equal to the dispatch tables.
+COMMAND_NAMES = {
+    0x0101: "cpu type", 0x0401: "batch read", 0x0403: "random read", 0x0619: "echo",
+    0x1001: "run", 0x1002: "stop", 0x1003: "pause", 0x1005: "latch clear", 0x1006: "reset",
+    0x1401: "batch write", 0x1402: "random write (word/dword/bit)",
+    0x1630: "unlock (needs --password)", 0x1631: "lock (needs --password)",
+}
+
+
+def supported_commands(profile):
+    """Command codes dispatch accepts on this profile, for any subcommand."""
+    return sorted({command for command, _ in HANDLERS} | {command for command, _ in DATA_HANDLERS[profile.wire_class]})
+
 
 def dispatch(request, memory, max_points, control=None):
     """Return (end_code, data); a rejected request leaves memory unchanged."""

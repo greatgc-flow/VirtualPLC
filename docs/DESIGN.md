@@ -178,7 +178,8 @@ is pinned and checked by the oracle test.
 
 ## 9. Server lifecycle and CLI
 
-Use the [canonical CLI reference](../README.md#cli-reference), `--help`, and
+Use `virtual-plc guide options` (generated from argparse), `--help`, and the
+[human CLI reference](../README.md#cli-reference), plus
 [embedding/snapshot examples](../README.md#memory-seeding-snapshots-and-embedding).
 Package exports are Server, Memory, FaultPlan and the installed version.
 Context exit stops/joins workers. Seed direct memory before start and take
@@ -220,3 +221,26 @@ ASCII dword order, error meanings and physical lock/reset/state behavior.
 Windows SIGBREAK needs a console; TerminateProcess cannot flush snapshots.
 Artifact builds need setuptools>=77; build/twine are release tools, not runtime
 dependencies. Workflow execution/publishing require configured hosted runners.
+
+## 12. Compact usage guide
+
+`main` dispatches a leading `guide` before parsing server arguments; existing
+server invocations keep their syntax. The console script and module use the
+same entry point. Guide rendering never creates or starts a server.
+
+`guide.py` owns English prose. `build_parser()` supplies option names, defaults,
+choices and help. Profile/device tables and command dispatch registries supply
+the matrix; codec frame/wire constants describe its transport product. Fault
+action fields are shared with validation. JSON exposes structured options and
+profiles, or version/topic/text for other topics. No runtime dependencies added.
+
+Tests enforce 45 overview lines, 40 lines per topic, parser/table coverage,
+valid JSON examples, no stale flags and marked README recipe equality. README
+remains the human entry point without duplicating generated reference tables.
+Root llms.txt is a usage index; AGENTS.md describes repository development.
+Both ship in the sdist through MANIFEST.in.
+
+Configuration errors are one line ending with a relevant guide topic. Argument
+errors use the option name; file loading uses the faults/memory stage, and
+constructor validation uses options (or memory for latch ranges). Diagnostics
+collapse embedded newlines. Unknown guide topics list available topics, exit 2.
