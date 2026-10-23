@@ -18,10 +18,10 @@ jobs:
         python: ['3.10', '3.11', '3.12', '3.13']
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -e . -r requirements-dev.txt
@@ -29,10 +29,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - run: python -m pip install build twine
@@ -44,7 +44,7 @@ jobs:
           .smoke/bin/python -m pip install --no-deps dist/*.whl
           .smoke/bin/python -I -m virtual_plc --help
           .smoke/bin/python -I -c "from virtual_plc import Server, Memory; m=Memory(); m.load({'D': {'0': [123]}}); s=Server(memory=m); s.start(); assert s.memory.read_words('D',0,1)==[123]; s.stop()"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: distributions
           path: dist/*
