@@ -13,7 +13,8 @@ Extraction: `markitdown-gc[pdf]` (manual.md) and `pdftotext -layout` (m.txt). Th
 | Device number notation | Decimal or hexadecimal by device type; X, Y, B, W (and others) are hexadecimal (p.68 device code list, device number field) | implemented as opt-in |
 | Batch read/write points | Word 1-960 (iQ-R) / 480 (Q/L via C24) per request, bit up to 7168 points, depending on target module | module-dependent; the 4096 default `max_points` is not a manual value |
 | Error code table | Not in SH-080008. See SH-081257 below. | see below |
-| Zero-point random ops, bad_end_code frame shape | Not located yet | unverified |
+| Error information in abnormal response and bad_end_code frame shape | Abnormal response carries access route, command, subcommand after end code with response data dropped and length updated (5.2 p.92, 5.3 p.102) | applied (manual-derived; other-station routing and real-PLC no-error-info unverified) |
+| Zero-point random ops | Not located yet | unverified |
 
 ## Second source: MELSEC iQ-R Ethernet User's Manual (Application), SH-081257ENG rev AD
 URL: https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf (fetched 2026-10-30)

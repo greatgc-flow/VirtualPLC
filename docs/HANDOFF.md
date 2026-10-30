@@ -45,3 +45,8 @@ ag tip: first turn of a fresh ag session returns empty (shell denied); resend wi
 Sources (kept local in git-ignored `.manual/`; see docs/manual/PROVENANCE.md): SH-080008 rev AB, SH-081257 rev AD. Unanimous ballot (ag, cx, cc) applied via ag: DATA_LENGTH_MISMATCH 0xC061 -> 0xC057; echo payload 0-9/A-F (both cases, case unverified); C200/C201/C202 documented as manual-unsupported. 5,903 tests pass.
 Open: #5 remap password end codes to C203/C204; #6 hex ASCII numbering policy for X/Y/B/W; #2 remaining unverified (zero-point random ops, bad_end_code frame shape, batch limits per module); #4 handoff issue; pymcprotocol fork work not started; PyPI auto-publish unexercised (next tag push).
 Gotcha: repeated full pytest runs exhaust Windows ephemeral ports (WinError 10048 in client.connect); wait ~2-3 min for TIME_WAIT to drain, then rerun.
+
+## Update 2026-10-30 (late): #6 and error information
+- #6 closed: `--ascii-numbering manual` (hex X/Y/B/W/SB/SW/DX/DY/ZR), default compat.
+- Error responses now carry error information (route + command + subcommand) per SH-080008 5.2/5.3; bad_end_code injection strips data and appends it (unanimous ballot). 5,937 tests pass.
+- Still open: #5 (blocked: manual does not define locked-gate end code), #2 (zero-point random ops, per-module batch limits unverified), pymcprotocol fork work (needs user scope), PyPI auto-publish (next tag push).

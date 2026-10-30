@@ -9,7 +9,7 @@ import socket
 import struct
 import threading
 
-from .codec import Layout
+from .codec import Layout, encode_response
 
 
 def _integer(value, minimum, maximum):
@@ -117,9 +117,9 @@ def send_fault(connection, response, request, action, stopping):
     if kind == "truncate":
         response = response[:action["n"]]
     elif kind == "bad_end_code":
-        layout = Layout(request.frame, request.wire)
-        offset = layout.header_size
-        response = response[:offset] + layout.number(action["code"], 2) + response[offset + 2 * layout.scale:]
+        if action["code"] != 0:
+            response = encode_response(request, action["code"])
+
     elif kind == "corrupt_header":
         changed = bytearray(response)
         changed[action["offset"]] ^= action["xor"]

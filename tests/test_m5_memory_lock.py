@@ -5,7 +5,7 @@ import socket
 import pytest
 
 from test_m3_m4_client import TRANSPORTS, connected
-from test_m5_control import GATED, numbers, payload, transact
+from test_m5_control import GATED, numbers, payload, transact, error_info
 
 
 pytestmark = pytest.mark.unverified
@@ -83,7 +83,7 @@ def test_lock_is_server_wide_survives_disconnect_and_gates_only_control(server_f
     assert server.locked
     with socket.create_connection(server.address, timeout=1) as connection:
         for code in sorted(GATED):
-            assert transact(connection, frame, wire, code, payload(wire, code)) == (0xC200, b"")
+            assert transact(connection, frame, wire, code, payload(wire, code)) == (0xC200, error_info(wire, code))
     assert server.state == "STOP" and server.reset_count == 0
     # A different transport on another connection sees the same lock.
     other_frame, other_wire = ("4E", "ascii") if (frame, wire) != ("4E", "ascii") else ("3E", "binary")
@@ -110,7 +110,7 @@ def test_wrong_password_does_not_change_lock_or_state(server_factory, frame, wir
     with socket.create_connection(server.address, timeout=1) as connection:
         if locked:
             assert transact(connection, frame, wire, 0x1631, payload(wire, 0x1631)) == (0, b"")
-        assert transact(connection, frame, wire, command, numbers(wire, (4, 2)) + b"a1b2") == (0xC201, b"")
+        assert transact(connection, frame, wire, command, numbers(wire, (4, 2)) + b"a1b2") == (0xC201, error_info(wire, command))
     assert server.locked is locked and server.state == "RUN"
 
 
@@ -119,7 +119,7 @@ def test_wrong_password_does_not_change_lock_or_state(server_factory, frame, wir
 def test_no_password_disables_lock_commands(server_factory, frame, wire, command):
     server = server_factory()
     with socket.create_connection(server.address, timeout=1) as connection:
-        assert transact(connection, frame, wire, command, payload(wire, command)) == (0xC059, b"")
+        assert transact(connection, frame, wire, command, payload(wire, command)) == (0xC059, error_info(wire, command))
 
 
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
@@ -127,7 +127,7 @@ def test_no_password_disables_lock_commands(server_factory, frame, wire, command
 def test_password_payload_must_be_four_ascii_characters(server_factory, frame, wire, text):
     server = server_factory(password="A1b2")
     with socket.create_connection(server.address, timeout=1) as connection:
-        assert transact(connection, frame, wire, 0x1631, numbers(wire, (len(text), 2)) + text) == (0xC05C, b"")
+        assert transact(connection, frame, wire, 0x1631, numbers(wire, (len(text), 2)) + text) == (0xC05C, error_info(wire, 0x1631))
     assert not server.locked
 
 
@@ -135,4 +135,4 @@ def test_password_payload_must_be_four_ascii_characters(server_factory, frame, w
 def test_password_declared_length_must_match_bytes(server_factory, frame, wire):
     server = server_factory(password="A1b2")
     with socket.create_connection(server.address, timeout=1) as connection:
-        assert transact(connection, frame, wire, 0x1630, numbers(wire, (3, 2)) + b"A1b2") == (0xC057, b"")
+        assert transact(connection, frame, wire, 0x1630, numbers(wire, (3, 2)) + b"A1b2") == (0xC057, error_info(wire, 0x1630))

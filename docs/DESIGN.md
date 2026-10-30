@@ -264,11 +264,11 @@ The following simulator policies await physical PLC verification or manual cross
 - **0xC057 vs 0xC05C on length mismatch**: which end code a real PLC returns is unverified.
 - **Zero-point random ops**: current behavior is unverified against a real PLC.
 - **Batch point limit**: `max_points` default (4096) vs the documented 960-word protocol limit is unverified.
-- **bad_end_code frame shape**: injected error frames replace only the end-code field; real error frame layout is unverified.
+- **Error information and bad_end_code frame shape**: abnormal responses (and `bad_end_code` with code != 0) append error information per SH-080008 5.2/5.3 (route, command, subcommand; response data dropped; length field = end code + error info; manual-derived). Other-station routing and real-PLC no-error-info cases remain unverified.
 - **Echo (0x0619) payload**: 0-9, A-F, a-f only, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py; unverified (case).
 - **Remote STOP (0x1002) mode**: only mode 1 accepted, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py.
 
-Manual cross-check results (SH-080008, see `docs/manual/PROVENANCE.md`): STOP mode `0001H` verified; echo data is 0-9/A-F only (simulator accepts a-f, unverified (case)); X/Y/B/W numbers are hexadecimal; C057 is the documented length mismatch code in SH-081257 3.5; C200/C201/C202 are not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5.
+Manual cross-check results (SH-080008, see `docs/manual/PROVENANCE.md`): STOP mode `0001H` verified; echo data is 0-9/A-F only (simulator accepts a-f, unverified (case)); X/Y/B/W numbers are hexadecimal; error information in abnormal responses per 5.2/5.3 applied (manual-derived; other-station routing and real-PLC no-error-info unverified); C057 is the documented length mismatch code in SH-081257 3.5; C200/C201/C202 are not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5.
 
 ### Restart semantics
 

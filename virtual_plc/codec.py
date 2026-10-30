@@ -110,9 +110,14 @@ def decode_request(frame):
 
 def encode_response(request, end_code=0, data=b"", *, ascii_dword_order="swapped"):
     layout = Layout(request.frame, request.wire)
-    if request.wire == "ascii" and data:
+    if request.wire == "ascii" and data and end_code == 0:
         data = _ascii_response_data(request, data, ascii_dword_order)
-    body = layout.number(end_code, 2) + data
+    if end_code != 0:
+        error_info = (b"".join(layout.number(value, size) for value, size in zip(request.route, (1, 1, 2, 1)))
+                      + layout.number(request.command, 2) + layout.number(request.subcommand, 2))
+        body = layout.number(end_code, 2) + error_info
+    else:
+        body = layout.number(end_code, 2) + data
     prefix = b"\xd4\x00" if request.frame == "4E" else b"\xd0\x00"
     if request.wire == "ascii":
         prefix = prefix.hex().upper().encode()

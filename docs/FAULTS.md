@@ -76,7 +76,7 @@ drop or close; transformations operate on its returned response bytes.
 | `delay` | `seconds` | Wait, then send the complete response |
 | `drop` | None | Send nothing; keep reading requests on the connection |
 | `truncate` | `n` >= 0 | Send the first n bytes only; do not fix lengths or close |
-| `bad_end_code` | `code`, integer 0..65535 | Replace only the end-code field, in the correct encoding/offset |
+| `bad_end_code` | `code`, integer 0..65535 | When code != 0, format as abnormal response with error info and no response data; code 0 keeps normal response |
 | `close_before_response` | None | Close with no response bytes |
 | `close_after_response` | None | Send the complete response, then close |
 | `rst` | None | Set SO_LINGER to enabled/zero and close without shutdown |
@@ -85,9 +85,10 @@ drop or close; transformations operate on its returned response bytes.
 | `partial_send` | `chunks`: nonempty positive byte-count list; optional `pause` seconds (default 0) | Send those prefix chunks, then any remainder, pausing between nonempty chunks |
 
 Header corruption is restricted to offsets shared by every response header.
-Truncating past the end preserves the response; n=0 sends nothing. Error-code
-replacement leaves the declared length and body intact, intentionally allowing
-an error code alongside success-shaped data. Partial sends use sendall for each
+Truncating past the end preserves the response; n=0 sends nothing. For code != 0,
+bad_end_code formats the response as an abnormal frame carrying error information per
+SH-080008 (route, command, subcommand) with read data dropped and response length set
+accordingly; code 0 leaves the normal response unchanged. Partial sends use sendall for each
 chunk; oversized chunk sizes are clipped and no response bytes are omitted.
 Chunk boundaries are send calls, not guaranteed TCP packet or recv boundaries.
 

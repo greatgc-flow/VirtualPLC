@@ -28,6 +28,12 @@ def transact(connection, frame, wire, command, data, subcommand=0):
     return receive(connection, frame, wire)
 
 
+def error_info(wire, command, subcommand=0):
+    if wire == "ascii":
+        return b"00FF03FF00" + f"{command:04X}{subcommand:04X}".encode()
+    return b"\x00\xff\xff\x03\x00" + command.to_bytes(2, "little") + subcommand.to_bytes(2, "little")
+
+
 def payload(wire, command):
     if command in (0x1630, 0x1631):
         return numbers(wire, (4, 2)) + b"A1b2"
@@ -64,7 +70,7 @@ def test_state_transition_table(server_factory, frame, wire, initial, command):
     server.memory.write_words("D", 0, [42])
     with socket.create_connection(server.address, timeout=1) as connection:
         status, data = transact(connection, frame, wire, command, payload(wire, command))
-        assert (status, data) == (0xC202 if invalid else 0, b"")
+        assert (status, data) == ((0xC202, error_info(wire, command)) if invalid else (0, b""))
         assert transact(connection, frame, wire, 0x0619, numbers(wire, (2, 2)) + b"0A") == (
             0, (b"0002" if wire == "ascii" else b"\x02\x00") + b"0A"
         )
@@ -152,7 +158,7 @@ def test_invalid_fields_do_not_change_state_or_memory(server_factory, frame, wir
     server = server_factory(initial_state="STOP")
     server.memory.write_words("D", 0, [7])
     with socket.create_connection(server.address, timeout=1) as connection:
-        assert transact(connection, frame, wire, command, numbers(wire, *fields)) == (0xC05C, b"")
+        assert transact(connection, frame, wire, command, numbers(wire, *fields)) == (0xC05C, error_info(wire, command))
     assert server.state == "STOP" and server.reset_count == 0
     assert server.memory.read_words("D", 0, 1) == [7]
 
@@ -164,7 +170,7 @@ def test_bad_payload_length_is_length_error(server_factory, frame, wire, command
     data = payload(wire, command.code)
     data = data[:-1] if change == "short" else data + b"0"
     with socket.create_connection(server.address, timeout=1) as connection:
-        assert transact(connection, frame, wire, command.code, data) == (0xC057, b"")
+        assert transact(connection, frame, wire, command.code, data) == (0xC057, error_info(wire, command.code))
     assert server.state == "STOP" and not server.locked and server.reset_count == 0
 
 
@@ -172,7 +178,7 @@ def test_bad_payload_length_is_length_error(server_factory, frame, wire, command
 def test_nonzero_subcommand_is_unsupported(server_factory, frame, wire, command):
     server = server_factory()
     with socket.create_connection(server.address, timeout=1) as connection:
-        assert transact(connection, frame, wire, command.code, payload(wire, command.code), subcommand=1) == (0xC059, b"")
+        assert transact(connection, frame, wire, command.code, payload(wire, command.code), subcommand=1) == (0xC059, error_info(wire, command.code, subcommand=1))
 
 
 def test_control_table_and_error_provenance():
@@ -189,4 +195,4 @@ def test_older_ascii_data_error_mapping_is_preserved(server_factory):
     server = server_factory()
     with socket.create_connection(server.address, timeout=1) as connection:
         # Truncated ASCII word payload: the established M3 policy is C05C.
-        assert transact(connection, "3E", "ascii", 0x1401, b"D*000000000112") == (0xC05C, b"")
+        assert transact(connection, "3E", "ascii", 0x1401, b"D*000000000112") == (0xC05C, error_info("ascii", 0x1401))

@@ -91,7 +91,8 @@ def test_bad_end_code_uses_correct_offset_after_existing_hook(server_factory, fr
     server = start_fault_server(server_factory, {"type": "bad_end_code", "code": 0xC05C}, response_hook=hook)
     with socket.create_connection(server.address, timeout=1) as connection:
         connection.sendall(echo_packet(frame, wire))
-        assert receive(connection, frame, wire) == (0xC05C, expected_echo(frame, wire))
+        expected_error = b"00FF03FF0006190000" if wire == "ascii" else b"\x00\xff\xff\x03\x00\x19\x06\x00\x00"
+        assert receive(connection, frame, wire) == (0xC05C, expected_error)
     offset = (13 if frame == "4E" else 9) * (2 if wire == "ascii" else 1)
     assert original[0][offset:offset + (4 if wire == "ascii" else 2)] == (b"0000" if wire == "ascii" else b"\x00\x00")
 

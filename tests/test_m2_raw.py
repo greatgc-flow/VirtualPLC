@@ -124,7 +124,7 @@ def test_random_read_validates_dword_tail(raw_socket, memory, tail):
     memory.write_words("D", 0, [7])
     status, data = exchange(raw_socket, request(0x0403, 0, b"\x01\x01" + entry(0) + tail))
     assert status != 0
-    assert data == b""
+    assert data == b"\x00\xff\xff\x03\x00\x03\x04\x00\x00"
     assert memory.read_words("D", 0, 1) == [7]
 
 

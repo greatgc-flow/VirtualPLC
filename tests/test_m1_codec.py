@@ -30,7 +30,7 @@ def test_decode_literal_requests(codec, frame, command, subcommand, data):
     (READ_D100, 0, bytes.fromhex("95 19 02 12 30 11"),
      "d0 00 00 ff ff 03 00 08 00 00 00 95 19 02 12 30 11"),
     (WRITE_M10, 0, b"", "d0 00 00 ff ff 03 00 02 00 00 00"),
-    (READ_D100, 0xC059, b"", "d0 00 00 ff ff 03 00 02 00 59 c0"),
+    (READ_D100, 0xC059, b"", "d0 00 00 ff ff 03 00 0b 00 59 c0 00 ff ff 03 00 01 04 00 00"),
     (bytes.fromhex("50 00 12 34 78 56 9a 06 00 04 00 01 01 00 00"),
      0, b"", "d0 00 12 34 78 56 9a 02 00 00 00"),
 ])

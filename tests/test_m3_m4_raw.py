@@ -104,7 +104,8 @@ def test_error_offsets_and_response_in_kind(endpoint, frame, wire):
     server, _ = endpoint
     with socket.create_connection(server.address, timeout=0.5) as connection:
         connection.sendall(packet(frame, wire, 0xFFFF, data=b""))
-        assert receive(connection, frame, wire) == (0xC059, b"")
+        expected_info = b"00FF03FF00FFFF0000" if wire == "ascii" else b"\x00\xff\xff\x03\x00\xff\xff\x00\x00"
+        assert receive(connection, frame, wire) == (0xC059, expected_info)
 
 
 @pytest.mark.parametrize("frame", ["3E", "4E"])
