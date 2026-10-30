@@ -54,3 +54,4 @@ Gotcha: repeated full pytest runs exhaust Windows ephemeral ports (WinError 1004
 ## Update 2026-10-30 (final of session)
 Zero-point random ops now return C053 (bit) / C054 (word,dword) (unanimous ballot; path-to-code assignment unverified). 5,977 tests pass.
 Remaining: #5 blocked on evidence (locked-gate end code); weighted random upper bounds (1920/960) and per-module batch caps deferred (formula symbols unreadable in extraction; read the PDF page visually if needed); pymcprotocol fork work needs user scope; PyPI auto-publish unverified until next tag push (consider releasing 0.4.0 with these behavior changes).
+CI: Windows runners hit WinError 10048 (ephemeral port exhaustion); fixed by a `netsh ... dynamicport` step in ci.yml (run 41029671000 green on all 8 jobs). Verbose-close test idle timeout widened to 0.3 s.
