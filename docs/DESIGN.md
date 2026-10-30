@@ -87,8 +87,10 @@ policy](BEHAVIOR.md#native-dword-stride-policy-unverified).
   address/value entries (4+2 bytes), then dword address/value entries (4+4 bytes).
 - Q-class random bit write (1402/0001): uint8 count, then address(4) + value(1) entries;
   values must be 0 or 1, not packed nibbles.
-- Zero random counts are accepted as empty lists/no-ops (design policy, unverified
-  against a PLC). Count 256 has no wire representation; raw tests send wrapped/widened
+- Zero random counts (total count == 0) are rejected with RANDOM_POINTS_OUT_OF_RANGE
+  (0xC054) for words/dwords or RANDOM_BIT_POINTS_OUT_OF_RANGE (0xC053) for bits per manual
+  SH-081257 3.5 (source: manual, status: unverified). A single zero count with the other
+  nonzero is valid. Count 256 has no wire representation; raw tests send wrapped/widened
   counts with 256 entries and require rejection. See [random access
   behavior](BEHAVIOR.md).
 - The same codec is parameterized by frame (3E/4E) and wire (binary/ASCII).
@@ -169,7 +171,7 @@ never touches SM/SD, apart from the explicit SD203 state mirror on transitions.
 Vendor verification of CPU-name text fill (configurable, default NUL); authoritative
 per-series limits/ranges; vendor verification of the selected native dword stride; SM/SD
 per-range RO; vendor verification of M5 lock/reset/state-code policies; real-PLC
-unaligned bit-head word reads; PLC verification of empty random lists and bit-device
+unaligned bit-head word reads; bit-device
 dword views; vendor verification of ASCII dword word order (configurable: default
 `swapped`, optional `client`; low-word-first PLC behavior remains suspected/unverified).
 ASCII overwidth requests are rejected; manual numbering is implemented as an opt-in policy (`ascii_numbering="manual"`). Client 0.3.0
@@ -262,13 +264,13 @@ The following simulator policies await physical PLC verification or manual cross
 
 - **ASCII hex addressing for X/Y/B/W**: default behavior (`compat`) accepts decimal digits only; `manual` opt-in policy accepts hex digits for base-16 devices; real PLC numbering is unverified.
 - **0xC057 vs 0xC05C on length mismatch**: which end code a real PLC returns is unverified.
-- **Zero-point random ops**: current behavior is unverified against a real PLC.
+- **Zero-point random ops**: total count 0 rejected with C053 (random bit points) or C054 (random word/dword points) per manual SH-081257 3.5 (applied; source: manual, status: unverified for path-to-code assignment); weighted upper bounds and 960/1920 cap remain deferred; manual batch limits (word 960 / bit 7168 on E71/iQ-R, 480/3584 on C24) recorded as reference only.
 - **Batch point limit**: `max_points` default (4096) vs the documented 960-word protocol limit is unverified.
 - **Error information and bad_end_code frame shape**: abnormal responses (and `bad_end_code` with code != 0) append error information per SH-080008 5.2/5.3 (route, command, subcommand; response data dropped; length field = end code + error info; manual-derived). Other-station routing and real-PLC no-error-info cases remain unverified.
 - **Echo (0x0619) payload**: 0-9, A-F, a-f only, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py; unverified (case).
 - **Remote STOP (0x1002) mode**: only mode 1 accepted, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py.
 
-Manual cross-check results (SH-080008, see `docs/manual/PROVENANCE.md`): STOP mode `0001H` verified; echo data is 0-9/A-F only (simulator accepts a-f, unverified (case)); X/Y/B/W numbers are hexadecimal; error information in abnormal responses per 5.2/5.3 applied (manual-derived; other-station routing and real-PLC no-error-info unverified); C057 is the documented length mismatch code in SH-081257 3.5; C200/C201/C202 are not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5.
+Manual cross-check results (SH-080008, see `docs/manual/PROVENANCE.md`): STOP mode `0001H` verified; echo data is 0-9/A-F only (simulator accepts a-f, unverified (case)); X/Y/B/W numbers are hexadecimal; error information in abnormal responses per 5.2/5.3 applied (manual-derived; other-station routing and real-PLC no-error-info unverified); zero-point random access total count 0 mapped to C053 (bits) and C054 (words/dwords) per SH-081257 3.5; C057 is the documented length mismatch code in SH-081257 3.5; C200/C201/C202 are not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5.
 
 ### Restart semantics
 

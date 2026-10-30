@@ -12,6 +12,12 @@ def test_mixed_random_count_boundaries(client, memory, word_count, dword_count):
     dwords = [f"D{1024 + 2 * i}" for i in range(dword_count)]
     word_values = ([0, -1, 32767, -32768] * 64)[:word_count]
     dword_values = ([0x12345678, -1, 2147483647, -2147483648] * 64)[:dword_count]
+    if word_count == dword_count == 0:
+        # Manual SH-080008 8.3: total access points must be >= 1 (C054, unverified assignment).
+        with pytest.raises(pymcprotocol.mcprotocolerror.MCProtocolError) as err:
+            client.randomwrite(words, word_values, dwords, dword_values)
+        assert err.value.errorcode == "0xC054"
+        return
     client.randomwrite(words, word_values, dwords, dword_values)
     assert client.randomread(words, dwords) == (word_values, dword_values)
     if word_count:
@@ -25,6 +31,11 @@ def test_mixed_random_count_boundaries(client, memory, word_count, dword_count):
 @pytest.mark.parametrize("count", [0, 1, 255])
 def test_random_bit_count_boundaries(client, memory, count):
     values = [i % 2 for i in range(count)]
+    if count == 0:
+        with pytest.raises(pymcprotocol.mcprotocolerror.MCProtocolError) as err:
+            client.randomwrite_bitunits([], [])
+        assert err.value.errorcode == "0xC053"
+        return
     client.randomwrite_bitunits([f"M{i}" for i in range(count)], values)
     if count:
         assert client.batchread_bitunits("M0", count) == values

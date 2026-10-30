@@ -11,10 +11,10 @@ Extraction: `markitdown-gc[pdf]` (manual.md) and `pdftotext -layout` (m.txt). Th
 | Remote STOP 1002 mode | Fixed value `0001H` (p.174) | verified; current `(1,)` correct |
 | Loopback 0619 data | Numerals 0-9 and characters A-F, 1-960 bytes (p.184) | applied: restricted to 0-9, A-F, a-f (case unverified) |
 | Device number notation | Decimal or hexadecimal by device type; X, Y, B, W (and others) are hexadecimal (p.68 device code list, device number field) | implemented as opt-in |
-| Batch read/write points | Word 1-960 (iQ-R) / 480 (Q/L via C24) per request, bit up to 7168 points, depending on target module | module-dependent; the 4096 default `max_points` is not a manual value |
+| Batch read/write points | Word 1-960 (iQ-R) / 480 (Q/L via C24) per request, bit up to 7168 points, depending on target module | module-dependent; the 4096 default `max_points` is not a manual value; manual batch limits word 960 / bit 7168 on E71/iQ-R, 480/3584 on C24 as reference only |
 | Error code table | Not in SH-080008. See SH-081257 below. | see below |
 | Error information in abnormal response and bad_end_code frame shape | Abnormal response carries access route, command, subcommand after end code with response data dropped and length updated (5.2 p.92, 5.3 p.102) | applied (manual-derived; other-station routing and real-PLC no-error-info unverified) |
-| Zero-point random ops | Not located yet | unverified |
+| Zero-point random ops | Total count 0 rejected: C053 (random bit points out of range), C054 (random word/dword points out of range) per SH-081257 3.5 | applied (source: manual, status: unverified for path-to-code assignment; weighted upper bounds and 960/1920 cap remain deferred) |
 
 ## Second source: MELSEC iQ-R Ethernet User's Manual (Application), SH-081257ENG rev AD
 URL: https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf (fetched 2026-10-30)
@@ -25,7 +25,7 @@ Section: 3.5 List of Error Codes (p.458+). Extraction: `pdftotext -layout` (colu
 |---|---|---|
 | C050H | ASCII data that cannot be converted to binary | not used |
 | C051H | word read/write points out of range | POINTS_OUT_OF_RANGE (ok) |
-| C052H / C053H / C054H | bit points / random bit points / random word-dword points out of range | all mapped to C051 or C05C |
+| C052H / C053H / C054H | bit points / random bit points / random word-dword points out of range | applied: C053 for random bit zero points, C054 for random word/dword zero points; C052 not used |
 | C056H | read/write exceeds largest address | ADDRESS_OUT_OF_RANGE (ok) |
 | C057H | request data length does not match number of data in text | applied: DATA_LENGTH_MISMATCH (0xC057) |
 | C058H | request data length after ASCII/binary conversion mismatch | not used |

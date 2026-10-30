@@ -47,8 +47,7 @@ See the [canonical CLI reference](../README.md#cli-reference),
   unverified.
 - Each request validates before mutation under one lock; `max_points` limits batch
   points, not response bytes.
-- Random counts are uint8; zero is empty/no-op. Responses put words before dwords;
-  dwords store low word first.
+- Random counts are uint8; total count zero returns C053 (bits) or C054 (words/dwords). A single zero count with the other nonzero is valid. Responses put words before dwords; dwords store low word first.
 - Duplicate/overlapping random writes apply in wire order. SS/SC/SN use STS/STC/STN
   client names.
 - `Profile.wire` selects widths/subcommands; ASCII compat addresses use 6 (Q-class) / 8

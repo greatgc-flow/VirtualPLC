@@ -50,3 +50,7 @@ Gotcha: repeated full pytest runs exhaust Windows ephemeral ports (WinError 1004
 - #6 closed: `--ascii-numbering manual` (hex X/Y/B/W/SB/SW/DX/DY/ZR), default compat.
 - Error responses now carry error information (route + command + subcommand) per SH-080008 5.2/5.3; bad_end_code injection strips data and appends it (unanimous ballot). 5,937 tests pass.
 - Still open: #5 (blocked: manual does not define locked-gate end code), #2 (zero-point random ops, per-module batch limits unverified), pymcprotocol fork work (needs user scope), PyPI auto-publish (next tag push).
+
+## Update 2026-10-30 (final of session)
+Zero-point random ops now return C053 (bit) / C054 (word,dword) (unanimous ballot; path-to-code assignment unverified). 5,977 tests pass.
+Remaining: #5 blocked on evidence (locked-gate end code); weighted random upper bounds (1920/960) and per-module batch caps deferred (formula symbols unreadable in extraction; read the PDF page visually if needed); pymcprotocol fork work needs user scope; PyPI auto-publish unverified until next tag push (consider releasing 0.4.0 with these behavior changes).

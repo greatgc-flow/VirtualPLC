@@ -16,10 +16,12 @@ CPU_STATES = {"STOP": 0, "RUN": 1, "PAUSE": 2}  # SD203 layout: design, unverifi
 class EndCode(IntEnum):
     OK = 0x0000
     POINTS_OUT_OF_RANGE = 0xC051
+    RANDOM_BIT_POINTS_OUT_OF_RANGE = 0xC053
+    RANDOM_POINTS_OUT_OF_RANGE = 0xC054
     ADDRESS_OUT_OF_RANGE = 0xC056
+    DATA_LENGTH_MISMATCH = 0xC057
     UNSUPPORTED_COMMAND = 0xC059
     REQUEST_DATA_ERROR = 0xC05C
-    DATA_LENGTH_MISMATCH = 0xC057
     LOCKED = 0xC200
     WRONG_PASSWORD = 0xC201
     INVALID_STATE = 0xC202
@@ -27,7 +29,7 @@ class EndCode(IntEnum):
 
 # DESIGN §7 rows: no manual cross-check yet.
 ERROR_CODES = {
-    code.value: {"name": code.name, "source": "memory" if code in (EndCode.LOCKED, EndCode.WRONG_PASSWORD) else "design",
+    code.value: {"name": code.name, "source": "manual" if code in (EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE, EndCode.RANDOM_POINTS_OUT_OF_RANGE) else ("memory" if code in (EndCode.LOCKED, EndCode.WRONG_PASSWORD) else "design"),
                  "status": "unverified"} for code in EndCode
 }
 
@@ -83,6 +85,8 @@ def random_access(request, memory, max_points, control=None):
     expected = count_size + sum(count * (wire.descriptor_size + (width if write else 0)) for count, width in groups)
     if len(data) != expected:
         raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
+    if sum(count for count, _ in groups) == 0:
+        raise CommandError(EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE if bit else EndCode.RANDOM_POINTS_OUT_OF_RANGE)
     entries = []
     offset = count_size
     try:

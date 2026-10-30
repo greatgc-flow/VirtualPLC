@@ -95,13 +95,27 @@ def test_random_count_extrema_and_bit_boundaries(endpoints, profile, transport, 
         dwords = [f"D{1024+2*i}" for i in range(count)]
         word_values = ([-32768, 32767, -1] * 85)[:count]
         dword_values = ([-2147483648, 2147483647, -1] * 85)[:count]
-        client.randomwrite(words, word_values, dwords, dword_values)
-        assert client.randomread(words, dwords) == (word_values, dword_values)
-        bits = [f"M{i}" for i in range(count)]
-        values = [i % 2 for i in range(count)]
-        client.randomwrite_bitunits(bits, values)
-        if count:
+        if count == 0:
+            from pymcprotocol.mcprotocolerror import MCProtocolError
+            with pytest.raises(MCProtocolError) as err:
+                client.randomwrite(words, word_values, dwords, dword_values)
+            assert err.value.errorcode == "0xC054"
+            with pytest.raises(MCProtocolError) as err:
+                client.randomread(words, dwords)
+            assert err.value.errorcode == "0xC054"
+            bits = []
+            with pytest.raises(MCProtocolError) as err:
+                client.randomwrite_bitunits(bits, [])
+            assert err.value.errorcode == "0xC053"
+        else:
+            client.randomwrite(words, word_values, dwords, dword_values)
+            assert client.randomread(words, dwords) == (word_values, dword_values)
+            bits = [f"M{i}" for i in range(count)]
+            values = [i % 2 for i in range(count)]
+            client.randomwrite_bitunits(bits, values)
             assert client.batchread_bitunits("M0", count) == values
+
+
 
 
 @pytest.mark.parametrize("profile,transport", CELLS)
