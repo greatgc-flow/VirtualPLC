@@ -25,11 +25,11 @@ def start_fault_server(server_factory, action, *, match=None, times=1, **options
 
 
 def echo_packet(frame, wire):
-    return packet(frame, wire, ECHO, data=b"0002OK" if wire == "ascii" else b"\x02\x00OK")
+    return packet(frame, wire, ECHO, data=b"00020A" if wire == "ascii" else b"\x02\x000A")
 
 
 def expected_echo(frame, wire):
-    return b"0002OK" if wire == "ascii" else b"\x02\x00OK"
+    return b"00020A" if wire == "ascii" else b"\x02\x000A"
 
 
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
@@ -126,16 +126,16 @@ def test_connection_and_request_matches_are_local_and_repeated(server_factory):
     with socket.create_connection(server.address, timeout=1) as first, socket.create_connection(server.address, timeout=1) as second:
         for connection in (first, second):
             connection.sendall(echo_packet("3E", "binary"))
-            assert receive(connection, "3E", "binary") == (0, b"\x02\x00OK")
+            assert receive(connection, "3E", "binary") == (0, b"\x02\x000A")
         first.sendall(echo_packet("3E", "binary"))
         first.settimeout(0.03)
         with pytest.raises(socket.timeout):
             first.recv(1)
         second.sendall(echo_packet("3E", "binary"))
-        assert receive(second, "3E", "binary") == (0, b"\x02\x00OK")
+        assert receive(second, "3E", "binary") == (0, b"\x02\x000A")
         first.settimeout(1)
         first.sendall(echo_packet("3E", "binary"))
-        assert receive(first, "3E", "binary") == (0, b"\x02\x00OK")
+        assert receive(first, "3E", "binary") == (0, b"\x02\x000A")
 
 
 @pytest.mark.parametrize("kind", ["drop", "close_before_response", "silent_hold"])
@@ -178,4 +178,4 @@ def test_no_plan_is_inert_and_skips_fault_sender(server_factory, monkeypatch):
     server = server_factory(fault_plan=None)
     with socket.create_connection(server.address, timeout=1) as connection:
         connection.sendall(echo_packet("3E", "binary"))
-        assert receive(connection, "3E", "binary") == (0, b"\x02\x00OK")
+        assert receive(connection, "3E", "binary") == (0, b"\x02\x000A")

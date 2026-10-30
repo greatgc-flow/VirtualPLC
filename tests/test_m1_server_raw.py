@@ -54,7 +54,7 @@ def test_error_table_has_provenance():
 
     expected = {
         0x0000: "OK", 0xC051: "POINTS_OUT_OF_RANGE", 0xC056: "ADDRESS_OUT_OF_RANGE",
-        0xC059: "UNSUPPORTED_COMMAND", 0xC05C: "REQUEST_DATA_ERROR", 0xC061: "DATA_LENGTH_MISMATCH",
+        0xC059: "UNSUPPORTED_COMMAND", 0xC05C: "REQUEST_DATA_ERROR", 0xC057: "DATA_LENGTH_MISMATCH",
     }
     for code, name in expected.items():
         assert ERROR_CODES[code] == {"name": name, "source": "design", "status": "unverified"}
@@ -66,8 +66,8 @@ def test_error_table_has_provenance():
     (0x0401, 0, device_data(points=4097), 0xC051),
     (0x0401, 0, device_data(head=8192), 0xC056),
     (0xFFFF, 0, b"", 0xC059),
-    (0x1401, 0, device_data(points=2, payload=b"\x01\x00"), 0xC061),
-    (0x1401, 0, device_data(points=1, payload=b"\x01\x00\x02\x00"), 0xC061),
+    (0x1401, 0, device_data(points=2, payload=b"\x01\x00"), 0xC057),
+    (0x1401, 0, device_data(points=1, payload=b"\x01\x00\x02\x00"), 0xC057),
     (0x1401, 1, device_data(code=0x90, points=2, payload=b"\x20"), 0xC05C),
     (0x1401, 1, device_data(code=0x90, points=2, payload=b"\x1f"), 0xC05C),
     (0x1401, 1, device_data(code=0x90, points=1, payload=b"\x11"), 0xC05C),

@@ -148,7 +148,7 @@ request bytes: client encoder vs hand-authored vectors.
 ## 7. End-code table (all `unverified` until manual cross-check)
 
 0x0000 OK; 0xC051 points out of range; 0xC056 address out of range; 0xC059 unsupported
-command; 0xC05C request data error; 0xC061 data length mismatch. Opposite wire-class
+command; 0xC05C request data error; 0xC057 data length mismatch. Opposite wire-class
 subcommands return C059; invalid device/access/alignment returns C05C. Some regression
 scenarios assert only nonzero until vendor verification.
 
@@ -157,8 +157,8 @@ code; echo = 2-byte length + echoed data.
 
 0xC200 LOCKED and 0xC201 WRONG_PASSWORD (`source: memory`,
 `status: unverified`), and 0xC202 INVALID_STATE (`source: design`,
-`status: unverified`). Bad M5 payload lengths use C061; invalid fields use C05C.
-C200/C201 may be swapped; meanings and classifications are unverified simulator policies.
+`status: unverified`). Bad M5 payload lengths use C057; invalid fields use C05C.
+C200, C201 and C202 are not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5. Their meanings and classifications are unverified simulator policies.
 See [control behavior](BEHAVIOR.md) for the state table and server-wide, control-only
 lock gating (vendor comparison unverified). Initial/transition SD203 values are
 STOP=0, RUN=1, PAUSE=2 (unverified). Default latch ranges cover L; clearing
@@ -261,14 +261,14 @@ collapse embedded newlines. Unknown guide topics list available topics, exit 2.
 The following simulator policies await physical PLC verification or manual cross-check:
 
 - **ASCII hex addressing for X/Y/B/W**: current behavior accepts decimal digits only; real PLC numbering is unverified.
-- **0xC061 vs 0xC05C on length mismatch**: which end code a real PLC returns is unverified.
+- **0xC057 vs 0xC05C on length mismatch**: which end code a real PLC returns is unverified.
 - **Zero-point random ops**: current behavior is unverified against a real PLC.
 - **Batch point limit**: `max_points` default (4096) vs the documented 960-word protocol limit is unverified.
 - **bad_end_code frame shape**: injected error frames replace only the end-code field; real error frame layout is unverified.
-- **Echo (0x0619) payload**: alphanumeric only, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py.
+- **Echo (0x0619) payload**: 0-9, A-F, a-f only, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py; unverified (case).
 - **Remote STOP (0x1002) mode**: only mode 1 accepted, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py.
 
-Manual cross-check results (SH-080008, see `docs/manual/PROVENANCE.md`): STOP mode `0001H` verified; echo data is 0-9/A-F only (current check is wider); X/Y/B/W numbers are hexadecimal; the end-code table is not in that manual.
+Manual cross-check results (SH-080008, see `docs/manual/PROVENANCE.md`): STOP mode `0001H` verified; echo data is 0-9/A-F only (simulator accepts a-f, unverified (case)); X/Y/B/W numbers are hexadecimal; C057 is the documented length mismatch code in SH-081257 3.5; C200/C201/C202 are not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5.
 
 ### Restart semantics
 

@@ -92,7 +92,7 @@ Run/stop/pause/latch-clear/reset fail: locked (unlock with the --password text; 
   guide profiles) or wrong state: latch clear and reset need STOP, pause needs RUN or PAUSE.
   A normal reset keeps the connection open.
 iQ-R vs Q mismatch: addressed commands use different subcommands -> set --profile and plctype together.
-Echo rejected: data must be ASCII letters/digits, 1..960 chars (an error end code, no disconnect).
+Echo rejected: data must be hex characters (0-9, A-F, a-f), 1..960 chars (an error end code, no disconnect).
 Client device-name error: names are case-sensitive; hex devices need a digit first ("X0FFF", not "XFFF").
 """.strip("\n")
 
@@ -110,7 +110,7 @@ This is a simulator, not a PLC. These behaviors are synthetic or unverified; do 
   low/high halves. The stride is unverified.
 - Timers and counters hold plain values; no PLC logic executes. The monitoring timer is parsed and ignored.
   Every network/PC/station route aliases one memory.
-- Error codes are design values; C200 and C201 may be swapped. Z devices are unsupported.
+- Error codes are design values. Z devices are unsupported.
 - Faults act after execution: a faulted write or reset has already happened.
 """.strip("\n")
 

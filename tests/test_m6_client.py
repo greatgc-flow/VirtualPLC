@@ -110,7 +110,7 @@ def test_profile_control_matrix(profile, frame, wire, command):
                 client.remote_run(clear_mode=0, force_exec=True)
             else:
                 getattr(client, f"remote_{command.name}")()
-            assert client.echo_test("OK") == (2, "OK")
+            assert client.echo_test("0A") == (2, "0A")
         assert server.state == {"run": "RUN", "stop": "STOP", "pause": "PAUSE"}.get(command.name, initial)
         assert server.locked == (command.name == "lock")
         assert server.reset_count == (1 if command.name == "reset" else 0)

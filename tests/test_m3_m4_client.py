@@ -147,7 +147,7 @@ def test_ascii_overwidth_address_is_rejected_without_mutation(endpoint, frame, o
                 client.randomwrite(["D0"], [42], ["D1000000"], [123])
             else:
                 client.randomwrite_bitunits(["M0", "M1000000"], [1, 1])
-        assert client.echo_test("OK") == (2, "OK")
+        assert client.echo_test("0A") == (2, "0A")
     assert memory.read_words("D", 100000, 2) == [7, 8]
     assert memory.read_words("D", 1000000, 2) == [9, 10]
     assert memory.read_words("D", 0, 1) == [11]

@@ -48,7 +48,7 @@ def test_client_control_matrix(server_factory, frame, wire, command):
         else:
             result = getattr(client, f"remote_{command.name}")()
         assert result is None
-        assert client.echo_test("OK") == (2, "OK")
+        assert client.echo_test("0A") == (2, "0A")
     expected = {"run": "RUN", "stop": "STOP", "pause": "PAUSE"}.get(command.name, initial)
     assert server.state == expected
     assert server.memory.read_words("SD", 203, 1) == [STATE_CODES[expected]]
@@ -65,8 +65,8 @@ def test_state_transition_table(server_factory, frame, wire, initial, command):
     with socket.create_connection(server.address, timeout=1) as connection:
         status, data = transact(connection, frame, wire, command, payload(wire, command))
         assert (status, data) == (0xC202 if invalid else 0, b"")
-        assert transact(connection, frame, wire, 0x0619, numbers(wire, (2, 2)) + b"OK") == (
-            0, (b"0002" if wire == "ascii" else b"\x02\x00") + b"OK"
+        assert transact(connection, frame, wire, 0x0619, numbers(wire, (2, 2)) + b"0A") == (
+            0, (b"0002" if wire == "ascii" else b"\x02\x00") + b"0A"
         )
     expected = initial if invalid else {0x1001: "RUN", 0x1002: "STOP", 0x1003: "PAUSE"}.get(command, "STOP")
     assert server.state == expected
@@ -131,7 +131,7 @@ def test_successful_reset_uses_same_socket_and_clears_no_memory(server_factory, 
         client.remote_reset()
         assert client._sock is original_socket
         assert original_socket.gettimeout() == 1
-        assert client.echo_test("OK") == (2, "OK")
+        assert client.echo_test("0A") == (2, "0A")
     assert server.reset_count == 2 and server.state == "STOP"
     assert server.memory.read_words("D", 0, 1) == [123]
     assert server.memory.read_bits("L", 0, 1) == [1]
@@ -164,7 +164,7 @@ def test_bad_payload_length_is_length_error(server_factory, frame, wire, command
     data = payload(wire, command.code)
     data = data[:-1] if change == "short" else data + b"0"
     with socket.create_connection(server.address, timeout=1) as connection:
-        assert transact(connection, frame, wire, command.code, data) == (0xC061, b"")
+        assert transact(connection, frame, wire, command.code, data) == (0xC057, b"")
     assert server.state == "STOP" and not server.locked and server.reset_count == 0
 
 

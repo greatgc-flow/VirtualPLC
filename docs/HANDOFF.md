@@ -40,3 +40,8 @@ Next: peer ballot (cx/cc) on triage, then TDD fixes for confirmed items.
 Unanimous ballot (ag, cx, cc): fix 3 low-risk server items, defer MC-spec items to issue #2, keep guide.py. Implemented via ag.effort (stream vplc-impl-ag): Server restart/idempotent start/stop, shared `valid_span` (memory.py) for latch ranges, tests/test_server_lifecycle.py. 5,900 tests pass.
 Open follow-ups from ballot: pin echo-alnum and STOP mode (1,) with tests; list deferred unverified items in docs/DESIGN.md; document restart semantics (port 0 rebinds a new port).
 ag tip: first turn of a fresh ag session returns empty (shell denied); resend with "ONLY file read/edit tools" on the same stream. cx X-7D was 88% on 2026-10-30; avoid until reset.
+
+## Update 2026-10-30 (manual cross-check applied)
+Sources (kept local in git-ignored `.manual/`; see docs/manual/PROVENANCE.md): SH-080008 rev AB, SH-081257 rev AD. Unanimous ballot (ag, cx, cc) applied via ag: DATA_LENGTH_MISMATCH 0xC061 -> 0xC057; echo payload 0-9/A-F (both cases, case unverified); C200/C201/C202 documented as manual-unsupported. 5,903 tests pass.
+Open: #5 remap password end codes to C203/C204; #6 hex ASCII numbering policy for X/Y/B/W; #2 remaining unverified (zero-point random ops, bad_end_code frame shape, batch limits per module); #4 handoff issue; pymcprotocol fork work not started; PyPI auto-publish unexercised (next tag push).
+Gotcha: repeated full pytest runs exhaust Windows ephemeral ports (WinError 10048 in client.connect); wait ~2-3 min for TIME_WAIT to drain, then rerun.

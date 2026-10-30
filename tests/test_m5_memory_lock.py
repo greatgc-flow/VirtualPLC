@@ -94,7 +94,7 @@ def test_lock_is_server_wide_survives_disconnect_and_gates_only_control(server_f
         assert client.randomread(["D1"], ["D2"]) == ([7], [0x12345678])
         client.randomwrite_bitunits(["M0"], [1])
         assert client.batchread_bitunits("M0", 1) == [1]
-        assert client.echo_test("OK") == (2, "OK")
+        assert client.echo_test("0A") == (2, "0A")
         assert client.read_cputype()[0] == "VirtualPLC-Q\x00\x00\x00\x00"
         client.remote_unlock(password="A1b2")
         client.remote_unlock(password="A1b2")
@@ -135,4 +135,4 @@ def test_password_payload_must_be_four_ascii_characters(server_factory, frame, w
 def test_password_declared_length_must_match_bytes(server_factory, frame, wire):
     server = server_factory(password="A1b2")
     with socket.create_connection(server.address, timeout=1) as connection:
-        assert transact(connection, frame, wire, 0x1630, numbers(wire, (3, 2)) + b"A1b2") == (0xC061, b"")
+        assert transact(connection, frame, wire, 0x1630, numbers(wire, (3, 2)) + b"A1b2") == (0xC057, b"")

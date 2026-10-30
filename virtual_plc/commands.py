@@ -8,6 +8,7 @@ from .memory import OutOfRange
 from .profiles import WIRE_CLASSES
 
 ECHO_MAX = 960
+HEX_BYTES = set(b"0123456789ABCDEFabcdef")
 LOCK_GATED = {0x1001, 0x1002, 0x1003, 0x1005, 0x1006}
 CPU_STATES = {"STOP": 0, "RUN": 1, "PAUSE": 2}  # SD203 layout: design, unverified.
 
@@ -18,7 +19,7 @@ class EndCode(IntEnum):
     ADDRESS_OUT_OF_RANGE = 0xC056
     UNSUPPORTED_COMMAND = 0xC059
     REQUEST_DATA_ERROR = 0xC05C
-    DATA_LENGTH_MISMATCH = 0xC061
+    DATA_LENGTH_MISMATCH = 0xC057
     LOCKED = 0xC200
     WRONG_PASSWORD = 0xC201
     INVALID_STATE = 0xC202
@@ -121,7 +122,7 @@ def echo(request, memory, max_points, control=None):
     length, text = int.from_bytes(request.data[:2], "little"), request.data[2:]
     if len(request.data) < 2 or length != len(text):
         raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
-    if not 0 < length <= ECHO_MAX or not text.isalnum():
+    if not 0 < length <= ECHO_MAX or not all(byte in HEX_BYTES for byte in text):
         raise CommandError(EndCode.REQUEST_DATA_ERROR)
     return request.data
 

@@ -36,7 +36,7 @@ def test_client_misbehaviour_corrupt_subheader_is_not_validated(server_factory, 
     """client-misbehaviour: real client accepts a flipped response subheader."""
     server = start_fault_server(server_factory, {"type": "corrupt_header"})
     with connected(server, frame, wire) as client:
-        assert client.echo_test("OK") == (2, "OK")
+        assert client.echo_test("0A") == (2, "0A")
 
 
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
@@ -45,8 +45,8 @@ def test_injected_end_codes_raise_real_client_errors(server_factory, frame, wire
     server = start_fault_server(server_factory, {"type": "bad_end_code", "code": code})
     with connected(server, frame, wire) as client:
         with pytest.raises(error):
-            client.echo_test("OK")
-        assert client.echo_test("OK") == (2, "OK")
+            client.echo_test("0A")
+        assert client.echo_test("0A") == (2, "0A")
 
 
 @pytest.mark.slow
@@ -72,7 +72,7 @@ def test_real_remote_reset_sleeps_reconnects_same_address_and_stays_usable(serve
             assert targets == [server.address]
             assert client._sock is not original_socket
             assert client._sock.gettimeout() == client.soc_timeout
-            assert client.echo_test("OK") == (2, "OK")
+            assert client.echo_test("0A") == (2, "0A")
             assert server.reset_count == 1 and server.state == "STOP"
         finally:
             original_socket.close()

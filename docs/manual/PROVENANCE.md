@@ -9,7 +9,7 @@ Extraction: `markitdown-gc[pdf]` (manual.md) and `pdftotext -layout` (m.txt). Th
 | Item | Manual says | Status |
 |---|---|---|
 | Remote STOP 1002 mode | Fixed value `0001H` (p.174) | verified; current `(1,)` correct |
-| Loopback 0619 data | Numerals 0-9 and characters A-F, 1-960 bytes (p.184) | current alnum check is wider than the manual; narrowing to 0-9/A-F is a candidate (case sensitivity unconfirmed) |
+| Loopback 0619 data | Numerals 0-9 and characters A-F, 1-960 bytes (p.184) | applied: restricted to 0-9, A-F, a-f (case unverified) |
 | Device number notation | Decimal or hexadecimal by device type; X, Y, B, W (and others) are hexadecimal (p.68 device code list, device number field) | verified; ASCII `manual` numbering policy for X/Y/B/W remains unimplemented |
 | Batch read/write points | Word 1-960 (iQ-R) / 480 (Q/L via C24) per request, bit up to 7168 points, depending on target module | module-dependent; the 4096 default `max_points` is not a manual value |
 | Error code table | Not in SH-080008. See SH-081257 below. | see below |
@@ -26,13 +26,13 @@ Section: 3.5 List of Error Codes (p.458+). Extraction: `pdftotext -layout` (colu
 | C051H | word read/write points out of range | POINTS_OUT_OF_RANGE (ok) |
 | C052H / C053H / C054H | bit points / random bit points / random word-dword points out of range | all mapped to C051 or C05C |
 | C056H | read/write exceeds largest address | ADDRESS_OUT_OF_RANGE (ok) |
-| C057H | request data length does not match number of data in text | **simulator uses C061** |
+| C057H | request data length does not match number of data in text | applied: DATA_LENGTH_MISMATCH (0xC057) |
 | C058H | request data length after ASCII/binary conversion mismatch | not used |
 | C059H | command/subcommand incorrect or unsupported | UNSUPPORTED_COMMAND (ok) |
 | C05AH / C05BH | cannot read/write the specified device | not used |
 | C05CH | request data incorrect | REQUEST_DATA_ERROR (ok) |
-| C061H | request message with no-response command sent to another network | **simulator uses it as data-length mismatch (wrong)** |
-| C202H | remote password could not be unlocked on another station | not used |
-| C203H | error checking the remote password | simulator uses C200/C201 (memory provenance) |
-| C204H | lock request from a different device than the unlock requester | not used |
-| C200H / C201H | listed with SLMPSND dedicated-instruction failure (layout ambiguous) | simulator: LOCKED / WRONG_PASSWORD (unsupported by manual) |
+| C061H | request message with no-response command sent to another network | applied: remapped data-length mismatch to C057 |
+| C202H | remote password could not be unlocked on another station | simulator uses C202 as INVALID_STATE (not supported by manual SH-081257 3.5; remap tracked in issue #5) |
+| C203H | error checking the remote password | documented remote-password error code; simulator uses C200/C201 (remap tracked in issue #5) |
+| C204H | lock request from a different device than the unlock requester | documented remote-password lock code (remap tracked in issue #5) |
+| C200H / C201H | listed with SLMPSND dedicated-instruction failure (layout ambiguous) | simulator: LOCKED / WRONG_PASSWORD (not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5) |

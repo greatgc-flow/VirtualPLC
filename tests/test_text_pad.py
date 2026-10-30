@@ -92,7 +92,7 @@ def test_length_delimited_echo_and_password_are_not_trimmed(server_factory, fram
     password = "Ab1" + character
     server = server_factory(text_pad=pad, password=password)
     with connected(server, frame, wire) as client:
-        assert client.echo_test("A0Z") == (3, "A0Z")
+        assert client.echo_test("A0F") == (3, "A0F")
         client.remote_lock(password=password)
         assert server.locked
         client.remote_unlock(password=password)

@@ -1,7 +1,7 @@
 """Pinned unverified simulator policy, see issue #2.
 
 Pins current simulator policies that await physical PLC verification:
-- echo (0x0619) rejects non-alphanumeric payload with REQUEST_DATA_ERROR and accepts alphanumeric
+- echo (0x0619) accepts 0-9, A-F, a-f only; rejects non-hex with REQUEST_DATA_ERROR (unverified (case))
 - Remote STOP (0x1002) rejects mode 0 and accepts mode 1
 """
 
@@ -15,20 +15,20 @@ from virtual_plc.commands import EndCode
 pytestmark = pytest.mark.unverified
 
 
-def test_echo_rejects_non_alphanumeric_and_accepts_alphanumeric(raw_socket):
-    """Echo (0x0619) rejects non-alphanumeric payload with REQUEST_DATA_ERROR and accepts alphanumeric.
+def test_echo_rejects_non_hex_and_accepts_hex(raw_socket):
+    """Echo (0x0619) rejects non-hex payload with REQUEST_DATA_ERROR and accepts 0-9, A-F, a-f.
 
-    unverified simulator policy, see issue #2
+    unverified simulator policy, see issue #2; unverified (case)
     """
-    # Alphanumeric payloads are accepted with OK (0x0000)
-    for text in [b"abc", b"XYZ123", b"999", b"AlphaNumericTest"]:
+    # Hex payloads (0-9, A-F, a-f) are accepted with OK (0x0000)
+    for text in [b"0Aa9", b"ABCDEF", b"0123456789", b"abcdef"]:
         data = struct.pack("<H", len(text)) + text
         status, body = exchange(raw_socket, request(command=0x0619, data=data))
         assert status == EndCode.OK
         assert body == data
 
-    # Non-alphanumeric payloads are rejected with REQUEST_DATA_ERROR (0xC05C)
-    for text in [b"a b", b"hello!", b"foo-bar", b"test@123", b"line\nbreak", b"\x00\x01"]:
+    # Non-hex payloads are rejected with REQUEST_DATA_ERROR (0xC05C)
+    for text in [b"xyz", b"OK", b"a b", b"foo!", b"test@123", b"line\nbreak", b"\x00\x01"]:
         data = struct.pack("<H", len(text)) + text
         status, _ = exchange(raw_socket, request(command=0x0619, data=data))
         assert status == EndCode.REQUEST_DATA_ERROR
@@ -56,9 +56,12 @@ def test_remote_stop_rejects_mode_0_and_accepts_mode_1(raw_socket, server):
 def test_client_pinned_echo_and_remote_stop(client, server):
     """Client-level verification of pinned policies.
 
-    unverified simulator policy, see issue #2
+    unverified simulator policy, see issue #2; unverified (case)
     """
-    assert client.echo_test("Echo123") == (7, "Echo123")
+    assert client.echo_test("0E1") == (3, "0E1")
+    assert client.echo_test("0Aa9") == (4, "0Aa9")
+    with pytest.raises(Exception):
+        client.echo_test("xyz")
     with pytest.raises(Exception):
         client.echo_test("hello world")
 

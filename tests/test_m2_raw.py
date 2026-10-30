@@ -73,7 +73,7 @@ def test_server_matches_manual_random_response(raw_socket, memory, kind, frame, 
 def test_payload_lengths_rejected_before_mutation(raw_socket, memory, command, subcommand, data):
     memory.write_words("D", 0, [7, 8])
     status, _ = exchange(raw_socket, request(command, subcommand, data))
-    assert status == 0xC061
+    assert status == 0xC057
     assert memory.read_words("D", 0, 2) == [7, 8]
 
 

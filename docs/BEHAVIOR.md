@@ -201,7 +201,7 @@ The pinned client sends/decodes random dwords as one eight-digit hex integer
 (high word first). The server defaults to swapped halves as described below.
 Q-class random bit write values use two hex characters (`00`/`01`), unlike batch
 bits; iQ-R uses four. Echo text and the CPU name remain literal ASCII, preserving text
-case;
+case (unverified (case));
 only numeric output is uppercased. The synthetic Q CPU code is `FFFF` in ASCII;
 the client returns it as a string without normalizing case (binary yields `ffff`).
 
@@ -241,7 +241,7 @@ Echo text and request passwords are length-delimited, with no unused trailing
 text area. Echo replies contain exactly the declared text; lock/unlock replies
 have empty data. Their request content is not trimmed: trailing pad-valued
 password characters remain significant, and echo validation remains
-alphanumeric. Numeric zero fill, reserved zeros, and bit-nibble padding are
+hexadecimal (0-9, A-F, a-f, unverified (case)). Numeric zero fill, reserved zeros, and bit-nibble padding are
 protocol fields and are not controlled by `text_pad`.
 
 ### Configurable ASCII dword word order
@@ -323,7 +323,7 @@ is copied. Data handlers retain their existing binary normalization path.
 After command/subcommand lookup, disabled authentication returns C059. A
 server-wide lock rejects gated commands with C200 before their payload is
 parsed. Otherwise, short/extra payloads and mismatched password lengths return
-C061; invalid fields, wrong Q password size or non-ASCII password bytes return
+C057; invalid fields, wrong Q password size or non-ASCII password bytes return
 C05C. A correctly formed but wrong password returns C201. State prerequisites
 are checked after field validation. Failed requests change no memory, state,
 reset count or lock flag. These error precedence choices are design
@@ -395,11 +395,11 @@ and behavior have not been verified; the password is not network authentication.
 | C201 | WRONG_PASSWORD | memory | unverified |
 | C202 | INVALID_STATE | design | unverified |
 
-C200/C201 meanings come from memory and **may be swapped**. Both remain
+C200, C201 and C202 are not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5. Both remain
 unverified; their implemented values are unchanged. Error metadata permits
 `source=manual|client|design|memory` and `status=verified|unverified`.
 
-The SD203 encoding, C200/C201 meanings, synthetic latch policy, transition and
+The SD203 encoding, C200/C201/C202 policies, synthetic latch policy, transition and
 reset policies, and the vendor lock comparison need authoritative verification.
 All M5 policy/byte-vector assertions are marked `pytest.mark.unverified`.
 
@@ -534,7 +534,7 @@ remain unverified.
 ## Unverified behavior
 
 Empty random lists are accepted as no-ops. Dwords over bit devices span 32
-packed points with 16-point head alignment. Malformed random lengths use C061,
+packed points with 16-point head alignment. Malformed random lengths use C057,
 invalid access uses C05C, and range overflow uses C056; these mappings await
 manual verification. ASCII dword order is configurable: `swapped` (low word
 first) is the default and `client` (high word first) preserves client mapping.

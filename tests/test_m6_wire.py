@@ -57,7 +57,7 @@ def test_opposite_wire_class_subcommand_is_rejected(endpoints, profile, frame, w
     with socket.create_connection(server.address, timeout=1) as connection:
         connection.sendall(packet(frame, wire, command, wrong, b""))
         assert receive(connection, frame, wire)[0] != 0
-        echo = b"0002OK" if wire == "ascii" else b"\x02\x00OK"
+        echo = b"00020A" if wire == "ascii" else b"\x02\x000A"
         connection.sendall(packet(frame, wire, 0x0619, data=echo))
         assert receive(connection, frame, wire) == (0, echo)
 

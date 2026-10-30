@@ -124,7 +124,7 @@ def test_random_overlap_and_mismatched_lists(endpoints, profile, transport):
         with pytest.raises(ValueError):
             client.randomwrite_bitunits(["M0"], [])
         client._send = original_send
-        assert client.echo_test("OK") == (2, "OK")
+        assert client.echo_test("0A") == (2, "0A")
 
 
 @pytest.mark.parametrize("profile", PROFILES)
@@ -149,7 +149,7 @@ def test_cross_encoding_one_socket_and_one_way_sd203(profile, frame, order):
             client.remote_stop()
             assert client.batchread_wordunits("SD203", 1) == [0]
             client.remote_reset()
-            assert client.echo_test("OK") == (2, "OK")
+            assert client.echo_test("0A") == (2, "0A")
 
 
 @pytest.mark.parametrize("profile,transport", CELLS)
@@ -160,7 +160,7 @@ def test_unicode_echo_case_width_and_reset_after_error(endpoints, profile, trans
     with connected_profile(server, frame, wire) as client:
         with pytest.raises(MCProtocolError):
             client.echo_test("é")  # str.isalnum accepts it; UTF-8 bytes do not form valid echo text.
-        assert client.echo_test("OK") == (2, "OK")
+        assert client.echo_test("0A") == (2, "0A")
         with pytest.raises(Exception):
             client.batchread_wordunits("d0", 1)  # client device names are case-sensitive
         client.batchwrite_bitunits("X0a", [1])
@@ -173,12 +173,12 @@ def test_unicode_echo_case_width_and_reset_after_error(endpoints, profile, trans
             client.remote_stop()
             connection.sendall(packet(frame, wire, 0x1006, 0, data))
             assert receive(connection, frame, wire) == (0, b"")
-            echo = b"0002OK" if wire == "ascii" else b"\x02\x00OK"
+            echo = b"00020A" if wire == "ascii" else b"\x02\x000A"
             connection.sendall(packet(frame, wire, 0x0619, data=echo))
             assert receive(connection, frame, wire) == (0, echo)
         client.remote_stop()
         client.remote_reset()
-        assert client.echo_test("OK") == (2, "OK")
+        assert client.echo_test("0A") == (2, "0A")
 
 
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
@@ -228,7 +228,7 @@ def test_invalid_4e_serial_never_sends(wire, invalid, monkeypatch):
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
 def test_raw_zero_route_and_zero_monitoring_timer_alias_target(frame, wire, server):
     from test_m1_server_raw import receive_exact
-    payload = b"0002OK" if wire == "ascii" else b"\x02\x00OK"
+    payload = b"00020A" if wire == "ascii" else b"\x02\x000A"
     encoded = packet(frame, wire, 0x0619, data=payload)
     route = b"00FF03FF00" if wire == "ascii" else b"\x00\xff\xff\x03\x00"
     zero_route = b"0" * 10 if wire == "ascii" else b"\x00" * 5
