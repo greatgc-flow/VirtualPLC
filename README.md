@@ -21,7 +21,11 @@ The third recipe needs the JSON files shown below. From a checkout, install
 with `python -m pip install -e .`. `python -m virtual_plc` is the equivalent
 entry point. For more startup details, run `virtual-plc guide run`.
 
-Install the client separately with `pip install pymcprotocol`:
+Install the tested upstream client with `pip install pymcprotocol==0.3.0`.
+This exact version is the repository's compatibility oracle; the separate
+[client compatibility matrix](docs/CLIENT_COMPATIBILITY.md) distinguishes it
+from our unreleased `greatgc-flow/pymcprotocol` fork and unverified real-PLC
+behavior:
 
 ```python
 from pymcprotocol import Type3E
@@ -166,15 +170,15 @@ for delivery semantics.
 
 ## Troubleshooting
 
-- Large reads: the client calls `recv(4096)` once. Split batches; the server's
+- Large reads: pinned upstream pymcprotocol 0.3.0 calls `recv(4096)` once. Split batches; the server's
   point limit is separate. A raw reader can follow response lengths.
 - CPU names: default Q returns `"VirtualPLC-Q\x00\x00\x00\x00"`. The client
   retains NULs; `--text-pad 0x20` returns `"VirtualPLC-Q"`. Non-UTF-8 fill
   such as 0xFF causes client decoding failure.
 - Reset requires STOP. On receive/status failure, the client waits about 1 s
   and reconnects. A normal reset keeps the connection open.
-- Truncated or closed binary replies can look like status/value 0 because
-  the client does not validate headers/lengths. This is not proof of success.
+- With pinned upstream pymcprotocol 0.3.0, truncated or closed binary replies
+  can look like status/value 0 because that client does not validate headers/lengths. This is not proof of success.
 - Idle timeout is disabled by default; explicit timeouts close idle or
   incomplete connections. Reconnect afterward.
 
