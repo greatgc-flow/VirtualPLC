@@ -5,7 +5,7 @@ from importlib.metadata import PackageNotFoundError, version
 try:
     __version__ = version("virtual_plc")
 except PackageNotFoundError:
-    __version__ = "0.4.0"  # Source-tree use without an installed distribution.
+    __version__ = "0.5.0"  # Source-tree use without an installed distribution.
 
 from .faults import FaultPlan
 from .memory import Memory
