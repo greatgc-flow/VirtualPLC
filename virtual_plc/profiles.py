@@ -51,6 +51,7 @@ class Profile:
     devices: dict
     latch_ranges: dict
     wire_class: str = "Q-class"
+    batch_max: dict = field(default_factory=dict)
 
     codes: dict = field(init=False, repr=False, compare=False)
 
@@ -99,16 +100,24 @@ IQR_DEVICES = (
 )
 
 
+def _batch_caps(name):
+    # Manual SH-080008 p.87/91/96 (Ethernet E71 column); QnA has half the E71 capacity.
+    word, bit_bin, bit_asc = (480, 3584, 1792) if name == "QnA" else (960, 7168, 3584)
+    return {("binary", "word"): word, ("ascii", "word"): word, ("binary", "bit"): bit_bin, ("ascii", "bit"): bit_asc}
+
+
 def _profile(name, code, wire_class):
     iqr = wire_class == "iQ-R"
     maximum = (1 << (8 * WIRE_CLASSES[wire_class].address_size)) - 1
     aliases = {"SS": "STS", "SC": "STC", "SN": "STN"} if iqr else {}
     devices = {row[0]: replace(Device(*row), maximum=maximum, ascii_name=aliases.get(row[0]))
                for row in Q_DEVICES + (IQR_DEVICES if iqr else ())}
-    return Profile(name, "VirtualPLC-" + name, code, devices, {"L": ((0, maximum),)}, wire_class)
+    return Profile(name, "VirtualPLC-" + name, code, devices, {"L": ((0, maximum),)}, wire_class, _batch_caps(name))
 
 
 PROFILES = {name: _profile(name, code, wire_class) for name, code, wire_class in (
     ("Q", 0xFFFF, "Q-class"), ("L", 0xFFFE, "Q-class"), ("QnA", 0xFFFD, "Q-class"),
     ("iQ-L", 0xFFFC, "Q-class"), ("iQ-R", 0xFFFB, "iQ-R"),
 )}
+
+BATCH_MAX = {(name, wire, unit): cap for name, profile in PROFILES.items() for (wire, unit), cap in profile.batch_max.items()}

@@ -16,6 +16,7 @@ CPU_STATES = {"STOP": 0, "RUN": 1, "PAUSE": 2}  # SD203 layout: design, unverifi
 class EndCode(IntEnum):
     OK = 0x0000
     POINTS_OUT_OF_RANGE = 0xC051
+    BIT_POINTS_OUT_OF_RANGE = 0xC052
     RANDOM_BIT_POINTS_OUT_OF_RANGE = 0xC053
     RANDOM_POINTS_OUT_OF_RANGE = 0xC054
     ADDRESS_OUT_OF_RANGE = 0xC056
@@ -29,7 +30,7 @@ class EndCode(IntEnum):
 
 # DESIGN §7 rows: no manual cross-check yet.
 ERROR_CODES = {
-    code.value: {"name": code.name, "source": "manual" if code in (EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE, EndCode.RANDOM_POINTS_OUT_OF_RANGE) else ("memory" if code in (EndCode.LOCKED, EndCode.WRONG_PASSWORD) else "design"),
+    code.value: {"name": code.name, "source": "manual" if code in (EndCode.POINTS_OUT_OF_RANGE, EndCode.BIT_POINTS_OUT_OF_RANGE, EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE, EndCode.RANDOM_POINTS_OUT_OF_RANGE) else ("memory" if code in (EndCode.LOCKED, EndCode.WRONG_PASSWORD) else "design"),
                  "status": "unverified"} for code in EndCode
 }
 
@@ -48,8 +49,11 @@ def batch(request, memory, max_points, control=None):
     points = reader.number(2)
     payload = request.data[reader.offset:]
     bit, write = request.subcommand == wire.bit_subcommand, request.command == 0x1401
-    if not 0 < points <= max_points:
-        raise CommandError(EndCode.POINTS_OUT_OF_RANGE)
+    cap = memory.profile.batch_max.get((request.wire, "bit" if bit else "word"), 1 << 16)
+    if max_points is not None:
+        cap = min(cap, max_points)
+    if not 0 < points <= cap:
+        raise CommandError(EndCode.BIT_POINTS_OUT_OF_RANGE if bit else EndCode.POINTS_OUT_OF_RANGE)
     expected = ((points + 1) // 2 if bit else 2 * points) if write else 0
     if len(payload) != expected:
         raise CommandError(EndCode.DATA_LENGTH_MISMATCH)

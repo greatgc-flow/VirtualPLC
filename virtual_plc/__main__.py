@@ -64,7 +64,7 @@ def build_parser():
     parser.add_argument("--profile", choices=PROFILES, default="Q", help="simulated CPU profile")
     parser.add_argument("--password", help="simulated lock password (not authentication)")
     parser.add_argument("--initial-state", choices=("RUN", "STOP", "PAUSE"), default="RUN", help="initial CPU state")
-    parser.add_argument("--max-points", type=int, default=4096, help="positive batch point limit")
+    parser.add_argument("--max-points", type=int, default=None, help="optional batch point cap below manual limit")
     parser.add_argument("--idle-timeout", type=float, default=None, help="seconds; default: no timeout")
     parser.add_argument("--ascii-dword-order", choices=("swapped", "client"), default="swapped",
                         help="ASCII dwords: low word first / client high word first")

@@ -25,7 +25,7 @@ pytestmark = pytest.mark.unverified
 def limit_servers():
     servers = {}
 
-    def get(profile, max_points=4096):
+    def get(profile, max_points=None):
         key = (profile, max_points)
         if key not in servers:
             server = Server(profile=profile, max_points=max_points, port=0)

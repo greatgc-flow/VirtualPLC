@@ -45,8 +45,16 @@ See the [canonical CLI reference](../README.md#cli-reference),
   framing raises ValueError.
 - `commands.ERROR_CODES[code]` has `name`, `source`, `status`; all current rows remain
   unverified.
-- Each request validates before mutation under one lock; `max_points` limits batch
-  points, not response bytes.
+- Each request validates before mutation under one lock. Batch read (`0x0401`) and batch
+  write (`0x1401`) point limits come from SH-080008 (p.87/91/96, Ethernet E71 column)
+  keyed on `(profile, wire, unit)` in `profiles.py`: `Q`, `L`, `iQ-L`, `iQ-R` allow word
+  `960`, bit binary `7168`, bit ASCII `3584`; `QnA` allows word `480`, bit binary `3584`,
+  bit ASCII `1792`. Zero or over-limit points return `C051` (`POINTS_OUT_OF_RANGE`) for
+  word units or `C052` (`BIT_POINTS_OUT_OF_RANGE`) for bit units (SH-081257 3.5;
+  manual-derived, code assignment unverified, real-PLC verification still open in #2).
+  `max_points` defaults to `None` and acts as an optional additional batch cap
+  (`min(manual_cap, max_points)` when set); direct `Memory` calls (`read_words`,
+  `write_words`, `read_bits`, `write_bits`) are not capped.
 - Random counts are uint8; total count zero or over-limit returns C053 (bits) or C054 (words/dwords) (manual-derived per SH-080008 p.98/105/108 and SH-081257 3.5; C053/C054 assignment unverified, not verified PLC behavior). Limits are keyed on the request wire class (`Wire` in `profiles.py`) and independent of `max_points`: read (0403) `words + dwords <= 192` (Q-class) / `96` (iQ-R); word/dword write (1402) `words*12 + dwords*14 <= 1920` (Q-class) / `960` (iQ-R); bit write (1402) `points <= 188` (Q-class) / `94` (iQ-R). A single zero count with the other nonzero is valid. Responses put words before dwords; dwords store low word first.
 - Duplicate/overlapping random writes apply in wire order. SS/SC/SN use STS/STC/STN
   client names.
@@ -303,9 +311,10 @@ header numbers or reserved fields close the connection; a structurally valid
 frame with a bad command payload gets an error response in the same transport.
 
 The 4096-byte restriction belongs to the client's single `recv(4096)`, not the
-server. Raw-socket tests read complete ASCII responses containing 4400 data
-characters. Use a length-framed raw reader for these sizes; a client roundtrip
-is not a reliable oracle for responses larger than its receive buffer.
+server. Raw-socket tests read complete ASCII batch responses up to the manual
+960-word cap (3840 data characters). Use a length-framed raw reader for large
+responses; a client roundtrip is not a reliable oracle for responses larger
+than its receive buffer.
 
 
 ## CPU control and locking
@@ -418,10 +427,11 @@ Q, L, QnA, iQ-L and iQ-R are selected explicitly by `Server(profile=...)` and
 `Memory(profile=...)`. A supplied Memory must have the same named profile as
 the Server; conflicting configuration raises ValueError. Profiles have their
 own device/range and identity tables. The pinned client gives Q/L/QnA/iQ-L the
-same supported common families and wire layout, so no additional capability
-differences or vendor capacities are invented for those names.
+same supported common families and wire layout. The only per-profile difference is
+the manual-derived batch caps (QnA is half the E71 capacity); no other capacities
+are invented for those names.
 
-### Verified client layouts
+### Verified client layouts (rows marked random-limit are manual-derived, SH-080008 p.98/105/108; code assignment unverified)
 
 Source: the installed pinned pymcprotocol 0.3.0 `type3e.py` and
 `mcprotocolconst.py`. All client branches listed in DESIGN were inspected:
@@ -468,16 +478,23 @@ profile always determines the capabilities and returned CPU identity.
 
 ### Synthetic identities and ranges
 
-| Profile | CPU name | CPU code (hex) |
-|---|---|---|
-| Q | VirtualPLC-Q | FFFF |
-| L | VirtualPLC-L | FFFE |
-| QnA | VirtualPLC-QnA | FFFD |
-| iQ-L | VirtualPLC-iQ-L | FFFC |
-| iQ-R | VirtualPLC-iQ-R | FFFB |
+| Profile | CPU name | CPU code (hex) | Batch word cap (bin / ASCII) | Batch bit cap (bin / ASCII) |
+|---|---|---|---|---|
+| Q | VirtualPLC-Q | FFFF | 960 / 960 | 7168 / 3584 |
+| L | VirtualPLC-L | FFFE | 960 / 960 | 7168 / 3584 |
+| QnA | VirtualPLC-QnA | FFFD | 480 / 480 | 3584 / 1792 |
+| iQ-L | VirtualPLC-iQ-L | FFFC | 960 / 960 | 7168 / 3584 |
+| iQ-R | VirtualPLC-iQ-R | FFFB | 960 / 960 | 7168 / 3584 |
 
 These are simulator identities, not actual Mitsubishi CPU models. Names are
-filled to 16 bytes with `text_pad` (NUL by default). Profile ranges are synthetic
+filled to 16 bytes with `text_pad` (NUL by default). Batch point caps (`Profile.batch_max`
+and `BATCH_MAX` in `profiles.py`, keyed by `(profile, wire, unit)`) are manual-derived
+from SH-080008 (p.87/91/96, Ethernet E71 column); `QnA` shares the `Q-class` wire but
+has lower batch caps. `batch()` rejects zero or over-limit points with `0xC051`
+(`POINTS_OUT_OF_RANGE`) for word units and `0xC052` (`BIT_POINTS_OUT_OF_RANGE`) for bit
+units (SH-081257 3.5; code assignment unverified, real-PLC verification still open in
+#2). `--max-points` defaults to `None`; when set, the effective batch limit is
+`min(manual_cap, max_points)`. Direct `Memory` calls are uncapped. Profile ranges are synthetic
 address-width
 ceilings, not vendor-verified capacities; custom Memory limits still override
 per-family ranges. Default latch retention covers the selected profile's entire L range.
@@ -544,8 +561,9 @@ remain unverified.
 
 ## Unverified behavior
 
-Empty random lists (total count 0) and over-limit random counts are rejected with
-C053 (bits) or C054 (words/dwords) (manual-derived; C053/C054 assignment unverified,
+Empty or over-limit batch counts are rejected with C051 (word units) or C052
+(bit units), and empty (total count 0) or over-limit random counts are rejected with
+C053 (bits) or C054 (words/dwords) (manual-derived; C051/C052/C053/C054 assignment unverified,
 not verified PLC behavior). Dwords over bit devices span 32
 packed points with 16-point head alignment. Malformed random lengths use C057,
 invalid access uses C05C, and range overflow uses C056; these mappings await

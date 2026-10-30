@@ -84,7 +84,7 @@ Exit 2 and "see: virtual-plc guide TOPIC": bad option, JSON file or plan -> read
 Client times out: wrong host/port, a fault plan that holds or drops replies, or --idle-timeout closed the socket
   (reconnect). A silent_hold fault ends only when the server stops.
 Large read fails: pymcprotocol reads once with recv(4096); keep batches under ~1000 words (ASCII is 4 chars/word).
-  --max-points is a separate server-side limit (points per request).
+  Batch caps follow manual E71 limits; --max-points is an optional lower cap.
 CPU name has NUL bytes: the default fill is 0x00 and the client keeps NULs -> --text-pad 0x20.
 Status 0 on a broken reply: the client never checks subheader or length, so a truncated or closed binary
   reply can look like success. It is not proof of success.
@@ -240,7 +240,7 @@ def _profiles(parser):
         size = str(wire.password_min) if wire.password_min == wire.password_max else f"{wire.password_min}-{wire.password_max}"
         lines.append(f"{', '.join(profile.name for profile in members)}: {wire_class} wire, password {size} chars, devices:")
         lines.append(textwrap.fill(" ".join(devices), 100, initial_indent="  ", subsequent_indent="  "))
-    lines.append("Client plctype must equal --profile for iQ-R; Q-class profiles differ only in CPU identity and code.")
+    lines.append("Client plctype must equal --profile for iQ-R; Q-class profiles share one wire class (QnA has lower batch caps).")
     return "\n".join(lines)
 
 

@@ -48,7 +48,6 @@ def server_factory(memory):
 
     def create(**options):
         options.setdefault("memory", memory)
-        options.setdefault("max_points", 4096)
         instance = Server("127.0.0.1", port=0, profile="Q", **options)
         servers.append(instance)
         instance.start()

@@ -53,17 +53,22 @@ def test_error_table_has_provenance():
     from virtual_plc.commands import ERROR_CODES
 
     expected = {
-        0x0000: "OK", 0xC051: "POINTS_OUT_OF_RANGE", 0xC056: "ADDRESS_OUT_OF_RANGE",
-        0xC059: "UNSUPPORTED_COMMAND", 0xC05C: "REQUEST_DATA_ERROR", 0xC057: "DATA_LENGTH_MISMATCH",
+        0x0000: ("OK", "design"), 0xC051: ("POINTS_OUT_OF_RANGE", "manual"),
+        0xC052: ("BIT_POINTS_OUT_OF_RANGE", "manual"),
+        0xC056: ("ADDRESS_OUT_OF_RANGE", "design"),
+        0xC059: ("UNSUPPORTED_COMMAND", "design"), 0xC05C: ("REQUEST_DATA_ERROR", "design"),
+        0xC057: ("DATA_LENGTH_MISMATCH", "design"),
     }
-    for code, name in expected.items():
-        assert ERROR_CODES[code] == {"name": name, "source": "design", "status": "unverified"}
+    for code, (name, source) in expected.items():
+        assert ERROR_CODES[code] == {"name": name, "source": source, "status": "unverified"}
 
 
 @pytest.mark.unverified
 @pytest.mark.parametrize("command, subcommand, data, expected", [
     (0x0401, 0, device_data(points=0), 0xC051),
-    (0x0401, 0, device_data(points=4097), 0xC051),
+    (0x0401, 0, device_data(points=961), 0xC051),
+    (0x0401, 1, device_data(code=0x90, points=0), 0xC052),
+    (0x0401, 1, device_data(code=0x90, points=7169), 0xC052),
     (0x0401, 0, device_data(head=8192), 0xC056),
     (0xFFFF, 0, b"", 0xC059),
     (0x1401, 0, device_data(points=2, payload=b"\x01\x00"), 0xC057),
@@ -71,7 +76,8 @@ def test_error_table_has_provenance():
     (0x1401, 1, device_data(code=0x90, points=2, payload=b"\x20"), 0xC05C),
     (0x1401, 1, device_data(code=0x90, points=2, payload=b"\x1f"), 0xC05C),
     (0x1401, 1, device_data(code=0x90, points=1, payload=b"\x11"), 0xC05C),
-], ids=["T6-zero", "T6-over-limit", "T5-range", "T7-unsupported", "short-write",
+], ids=["T6-zero-word", "T6-over-limit-word", "T6-zero-bit", "T6-over-limit-bit",
+        "T5-range", "T7-unsupported", "short-write",
         "long-write", "bad-high-nibble", "bad-low-nibble", "odd-padding"])
 def test_decoded_errors_preserve_memory_and_connection(raw_socket, memory, command, subcommand, data, expected):
     memory.write_words("D", 0, [0xBEEF, 0xCAFE])
@@ -203,22 +209,26 @@ def test_t13_concurrent_writers_never_expose_torn_vectors(server, memory, scenar
         assert len(reading.result(timeout=15)) == 60
 
 
-def test_t16_large_valid_response_exceeds_client_recv_limit(raw_socket, memory):
-    # 2050 words -> 4100 data bytes; server fixture explicitly permits 4096 points.
-    values = list(range(2050))
+def test_t16_batch_word_cap_and_reject_above_960(raw_socket, memory):
+    # Manual Q batch word cap is 960 words (1920 bytes); 961 is rejected with C051.
+    values = list(range(960))
     memory.write_words("D", 0, values)
-    status, data = exchange(raw_socket, request(data=device_data(points=len(values))))
+    status, data = exchange(raw_socket, request(data=device_data(points=960)))
     assert status == 0
-    assert len(data) == 4100
-    assert data == struct.pack("<2050H", *values)
+    assert len(data) == 1920
+    assert data == struct.pack("<960H", *values)
+    assert exchange(raw_socket, request(data=device_data(points=961)))[0] == 0xC051
 
 
 def test_valid_count_limit_and_last_address_are_inclusive(raw_socket, memory):
     memory.write_words("D", 8191, [0x1234])
     assert exchange(raw_socket, request(data=device_data(head=8191))) == (0, b"\x34\x12")
-    status, data = exchange(raw_socket, request(data=device_data(points=4096)))
+    status, data = exchange(raw_socket, request(data=device_data(points=960)))
     assert status == 0
-    assert data == b"\x00\x00" * 4096
+    assert data == b"\x00\x00" * 960
+    status, data = exchange(raw_socket, request(subcommand=1, data=device_data(code=0x90, points=7168)))
+    assert status == 0
+    assert data == b"\x00" * 3584
 
 
 def test_t18_m16_word_reads_m16_through_m31(raw_socket, memory):

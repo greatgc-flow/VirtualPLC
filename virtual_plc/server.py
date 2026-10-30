@@ -19,13 +19,13 @@ ACCEPT_POLL = 0.1  # seconds between stop checks of the accept loop
 
 class Server:
     def __init__(self, host="127.0.0.1", port=0, profile="Q", memory=None,
-                 response_hook=None, max_points=4096, idle_timeout=None,
+                 response_hook=None, max_points=None, idle_timeout=None,
                  initial_state="RUN", latch_ranges=None, password=None, fault_plan=None,
                  ascii_dword_order="swapped", text_pad=0x00, ascii_numbering="compat", verbose=False):
         if type(port) is not int or not 0 <= port <= 65535:
             raise ValueError("port must be an integer 0..65535")
-        if type(max_points) is not int or max_points < 1:
-            raise ValueError("max_points must be an integer >= 1")
+        if max_points is not None and (type(max_points) is not int or max_points < 1):
+            raise ValueError("max_points must be None or an integer >= 1")
         if idle_timeout is not None and (type(idle_timeout) not in (int, float)
                 or not math.isfinite(idle_timeout) or idle_timeout <= 0):
             raise ValueError("idle_timeout must be None or a finite number > 0")

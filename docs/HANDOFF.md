@@ -68,3 +68,6 @@ Trusted publisher fixed by the user; rerun (attempt 3) of run 41032569882 succee
 
 ## pymcprotocol fork merged (2026-10-30)
 User instructed the merge. PR #1 (hex ASCII numbers, error information, short replies) and PR #3 (random-access limits, framed receive, setaccessopt zeros, LSTC/LTN; re-opened because deleting #1's base branch closed #2) are merged into greatgc-flow/pymcprotocol main; 52 tests pass (the real-PLC test is deselected). cx never voted (quota exhausted until ~2026-11-04): record this deviation. Open: VirtualPLC #2, #5. Optionally bump the oracle pin in requirements-dev.txt only after a fork release exists.
+
+## Batch caps (2026-10-30, post-0.4.0, unreleased)
+Per-profile batch caps (Ethernet E71 column, SH-080008 p.87/91/96): word 960, bit 7168 binary / 3584 ASCII (QnA 480/3584/1792); over-limit -> C051 (word) / C052 (bit), assignment unverified; --max-points default is now None (optional extra cap). 6,320 tests pass. Not yet released (next version would be 0.5.0 given the CLI default change). Remaining in #2: real-PLC verification only.

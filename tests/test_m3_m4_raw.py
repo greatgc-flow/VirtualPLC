@@ -133,16 +133,20 @@ def test_invalid_ascii_payload_is_atomic_and_connection_survives(endpoint, frame
 
 
 @pytest.mark.parametrize("frame", ["3E", "4E"])
-def test_large_ascii_response_exceeds_client_recv_limit(endpoint, frame):
+def test_large_ascii_response_at_manual_cap_and_reject_above(endpoint, frame):
     server, memory = endpoint
-    values = list(range(1100))
+    values = list(range(960))
     memory.write_words("D", 0, values)
     with socket.create_connection(server.address, timeout=0.5) as connection:
-        connection.sendall(packet(frame, "ascii", data=b"D*000000044C"))
+        # 960 words (0x03C0) -> 3840 ASCII data characters (full 4E ASCII response is 3870 bytes).
+        connection.sendall(packet(frame, "ascii", data=b"D*00000003C0"))
         status, data = receive(connection, frame, "ascii")
         assert status == 0
-        assert len(data) == 4400
+        assert len(data) == 3840
         assert data == b"".join(f"{value:04X}".encode() for value in values)
+        # 961 words (0x03C1) exceeds the manual 960-word batch cap -> C051.
+        connection.sendall(packet(frame, "ascii", data=b"D*00000003C1"))
+        assert receive(connection, frame, "ascii")[0] == 0xC051
 
 
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
