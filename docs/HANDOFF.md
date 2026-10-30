@@ -1,6 +1,6 @@
 # Handoff (2026-10-23)
 
-State: virtual-plc 0.4.0 release in progress (tag v0.4.0), previous 0.3.0 on PyPI+GitHub.
+State: virtual-plc 0.4.0 released (PyPI + GitHub), main clean, CI green, 6,210 local tests pass.
 Design: docs/DESIGN.md. Unverified-vs-real-PLC backlog: issue #2.
 
 ## Open items
@@ -62,3 +62,6 @@ Tag v0.4.0 pushed; build job green, `publish` failed with PyPI `invalid-publishe
 
 ## pymcprotocol fork assessment (2026-10-30, ag.deepthink, read-only, claims not yet verified by tests)
 Full report: docs/manual/pymcprotocol-assessment-2026-10-30.md. Top items: (1) ASCII hex device numbers written back as decimal for X/Y/B/W (t3e:339-345); (2) parse error responses incl. error information into MCProtocolError; (3) empty/short reply treated as success; (4) client-side random-access limits; (5) framed receive; (6) setaccessopt zero values; (7) exception hygiene; (8) LSTC/LTN constants and unsigned word writes. Needs user scope decision before implementation (work happens in D:\Engram1\workspace\pymcprotocol, origin=greatgc-flow fork).
+
+## v0.4.0 published (2026-10-30)
+Trusted publisher fixed by the user; rerun (attempt 3) of run 41032569882 succeeded: PyPI shows 0.3.0 and 0.4.0, GitHub release has wheel+sdist. Open: #2 (batch caps, real-PLC verification), #5 (needs evidence); pymcprotocol PRs #1/#2 awaiting merge decision (cx quota exhausted until ~2026-11-04).
