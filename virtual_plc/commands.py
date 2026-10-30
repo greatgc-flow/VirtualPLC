@@ -211,7 +211,8 @@ def dispatch(request, memory, max_points, control=None):
         # Control uses the shared Reader directly; data handlers consume canonical binary.
         parsed = request if handler is control_request else normalize_request(
             request, memory.profile, ascii_dword_order=control.ascii_dword_order if control is not None else "swapped",
-            text_pad=control.text_pad if control is not None else 0)
+            text_pad=control.text_pad if control is not None else 0,
+            ascii_numbering=control.ascii_numbering if control is not None else "compat")
         return EndCode.OK, handler(parsed, memory, max_points, control)
     except CommandError as error:
         return error.args[0], b""

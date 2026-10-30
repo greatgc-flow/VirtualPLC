@@ -68,6 +68,8 @@ def build_parser():
     parser.add_argument("--idle-timeout", type=float, default=None, help="seconds; default: no timeout")
     parser.add_argument("--ascii-dword-order", choices=("swapped", "client"), default="swapped",
                         help="ASCII dwords: low word first / client high word first")
+    parser.add_argument("--ascii-numbering", choices=("compat", "manual"), default="compat",
+                        help="ASCII device numbers: decimal compat / hex manual for X/Y/B/W")
     parser.add_argument("--text-pad", type=text_pad, default=0x00, help="CPU name fill byte 0..255; 0x20 = space")
     parser.add_argument("--fault-plan", metavar="FILE", help="response fault JSON")
     parser.add_argument("--init", metavar="FILE", help="load memory JSON before listening")
@@ -92,7 +94,8 @@ def main(argv=None):
         topic = "memory"
         options = dict(profile=args.profile, password=args.password, initial_state=args.initial_state,
                        max_points=args.max_points, idle_timeout=args.idle_timeout, fault_plan=plan,
-                       ascii_dword_order=args.ascii_dword_order, text_pad=args.text_pad, verbose=args.verbose)
+                       ascii_dword_order=args.ascii_dword_order, text_pad=args.text_pad,
+                       ascii_numbering=args.ascii_numbering, verbose=args.verbose)
         if args.init or args.limit:
             options["memory"] = Memory(args.profile, dict(args.limit))
         if args.latch_range:
@@ -133,9 +136,9 @@ def main(argv=None):
             if hasattr(signal, name):
                 number = getattr(signal, name)
                 previous[number] = signal.signal(number, terminate)
-        print("listening on %s:%d (%s, %s) idle_timeout=%s text_pad=0x%02X ascii_dword_order=%s fault_plan=%s%s" %
+        print("listening on %s:%d (%s, %s) idle_timeout=%s text_pad=0x%02X ascii_dword_order=%s ascii_numbering=%s fault_plan=%s%s" %
               (*server.address, args.profile, args.initial_state, args.idle_timeout, args.text_pad,
-               args.ascii_dword_order, args.fault_plan, warning), file=sys.stderr, flush=True)
+               args.ascii_dword_order, args.ascii_numbering, args.fault_plan, warning), file=sys.stderr, flush=True)
         event = threading.Event()
         while not event.wait(0.5):
             pass

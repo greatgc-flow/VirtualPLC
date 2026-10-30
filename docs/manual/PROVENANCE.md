@@ -10,7 +10,7 @@ Extraction: `markitdown-gc[pdf]` (manual.md) and `pdftotext -layout` (m.txt). Th
 |---|---|---|
 | Remote STOP 1002 mode | Fixed value `0001H` (p.174) | verified; current `(1,)` correct |
 | Loopback 0619 data | Numerals 0-9 and characters A-F, 1-960 bytes (p.184) | applied: restricted to 0-9, A-F, a-f (case unverified) |
-| Device number notation | Decimal or hexadecimal by device type; X, Y, B, W (and others) are hexadecimal (p.68 device code list, device number field) | verified; ASCII `manual` numbering policy for X/Y/B/W remains unimplemented |
+| Device number notation | Decimal or hexadecimal by device type; X, Y, B, W (and others) are hexadecimal (p.68 device code list, device number field) | implemented as opt-in |
 | Batch read/write points | Word 1-960 (iQ-R) / 480 (Q/L via C24) per request, bit up to 7168 points, depending on target module | module-dependent; the 4096 default `max_points` is not a manual value |
 | Error code table | Not in SH-080008. See SH-081257 below. | see below |
 | Zero-point random ops, bad_end_code frame shape | Not located yet | unverified |

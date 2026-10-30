@@ -73,7 +73,7 @@ Client: pymcprotocol (python -m pip install pymcprotocol). Its plctype must matc
 iQ-R: start virtual-plc --profile iQ-R --port 5001 --initial-state STOP, then:
   c = Type3E(plctype="iQ-R"); c.connect("127.0.0.1", 5001); c.close()
 Hex-numbered devices (X Y B W SB SW DX DY ZR) take hex digits in the client: "X1F". Names are case-sensitive.
-ASCII frames carry device numbers as decimal text (pymcprotocol "compat" numbering); the client handles it.
+ASCII frames carry decimal text by default (compat); opt into manual hex with --ascii-numbering manual.
 setaccessopt(timer_sec=2) sets the PLC monitoring timer (ignored here) and a 3 s client socket timeout.
 """.strip("\n")
 
@@ -101,7 +101,7 @@ This is a simulator, not a PLC. These behaviors are synthetic or unverified; do 
 - CPU identities (VirtualPLC-<profile>), device ranges and the SD203 state codes are synthetic.
 - CPU-name fill defaults to NUL (--text-pad); the fill of a physical PLC is unverified.
 - ASCII frames send device numbers as decimal text even for hex devices (X Y B W SB SW DX DY ZR), as
-  pymcprotocol does ("compat"). The manual's hex policy is not implemented.
+  pymcprotocol does ("compat"). Opt into the manual's hex policy with --ascii-numbering manual.
 - ASCII dword word order: default swapped (low word first); --ascii-dword-order client keeps high first.
   The real order is unverified; round trips are symmetric but batch word views differ.
 - The lock is server-wide, survives disconnects and gates only run/stop/pause/latch clear/reset. It is

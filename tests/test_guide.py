@@ -197,6 +197,7 @@ def test_each_topic_through_cli(topic, parser, capsys):
     (["--idle-timeout", "nan"], "options"),
     (["--initial-state", "broken"], "options"),
     (["--ascii-dword-order", "broken"], "options"),
+    (["--ascii-numbering", "broken"], "options"),
     (["--limit", "NOPE:0-1"], "memory"),
     (["--latch-range", "NOPE:0-1"], "memory"),
 ])

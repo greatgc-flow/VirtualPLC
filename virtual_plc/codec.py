@@ -122,15 +122,18 @@ def encode_response(request, end_code=0, data=b"", *, ascii_dword_order="swapped
     return prefix + route + layout.number(len(body), 2) + body
 
 
-def read_device(reader, profile, *, text_pad=0):
+def read_device(reader, profile, *, text_pad=0, ascii_numbering="compat"):
     """Read a descriptor using only the selected profile, never guess its class."""
     wire = profile.wire
     if reader.wire == "ascii":
         device = profile.device_by_ascii(reader.take(wire.ascii_code_size).decode("latin-1"), text_pad=text_pad)
         digits = reader.take(wire.ascii_address_size)
-        if any(char not in b"0123456789" for char in digits):
-            raise ValueError("invalid compat decimal address")
-        head = int(digits, 10)
+        if device is None:
+            raise ValueError("unknown device")
+        valid = (b"0123456789abcdefABCDEF" if ascii_numbering == "manual" and device.base == 16 else b"0123456789")
+        if any(char not in valid for char in digits):
+            raise ValueError("invalid address digits")
+        head = int(digits, device.base if ascii_numbering == "manual" else 10)
     else:
         head = reader.number(wire.address_size)
         device = profile.device_by_code(reader.number(wire.code_size))
@@ -139,7 +142,7 @@ def read_device(reader, profile, *, text_pad=0):
     return device, head
 
 
-def normalize_request(request, profile, *, ascii_dword_order="swapped", text_pad=0):
+def normalize_request(request, profile, *, ascii_dword_order="swapped", text_pad=0, ascii_numbering="compat"):
     """Convert an ASCII command payload to the existing binary handler format.
 
     A payload error is returned by dispatch as an end code, not a framing close.
@@ -151,7 +154,7 @@ def normalize_request(request, profile, *, ascii_dword_order="swapped", text_pad
     wire = profile.wire
 
     def descriptor():
-        device, head = read_device(reader, profile, text_pad=text_pad)
+        device, head = read_device(reader, profile, text_pad=text_pad, ascii_numbering=ascii_numbering)
         return head.to_bytes(wire.address_size, "little") + device.code.to_bytes(wire.code_size, "little")
 
     command, subcommand = request.command, request.subcommand

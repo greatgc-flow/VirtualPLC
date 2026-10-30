@@ -103,7 +103,7 @@ def test_cli_configuration_and_stderr_banner(monkeypatch, capsys, host):
     cli.main(["--host", host, "--port", "0", "--profile", "iQ-R", "--password", "abcdef",
               "--initial-state", "STOP", "--max-points", "128", "--idle-timeout", "0.05"])
     assert seen == dict(profile="iQ-R", password="abcdef", initial_state="STOP", max_points=128,
-                        idle_timeout=0.05, fault_plan=None, ascii_dword_order="swapped", text_pad=0, verbose=False, stopped=True)
+                        idle_timeout=0.05, fault_plan=None, ascii_dword_order="swapped", text_pad=0, ascii_numbering="compat", verbose=False, stopped=True)
     output = capsys.readouterr()
     assert output.out == ""
     assert len(output.err.splitlines()) == 1
