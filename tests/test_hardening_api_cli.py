@@ -62,7 +62,7 @@ def test_memory_json_roundtrip_and_invalid_load_is_atomic():
 @pytest.mark.parametrize("verbose", [False, True])
 def test_verbose_requests_and_close_reasons(server_factory, caplog, verbose):
     with caplog.at_level(logging.INFO, logger="virtual_plc.server"):
-        server = server_factory(verbose=verbose, idle_timeout=0.02)
+        server = server_factory(verbose=verbose, idle_timeout=0.3)
         with socket.create_connection(server.address, timeout=1) as connection:
             assert exchange(connection, request(data=device_data()))[0] == 0
             assert connection.recv(1) == b""
