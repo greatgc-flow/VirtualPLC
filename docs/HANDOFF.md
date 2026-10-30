@@ -4,9 +4,8 @@ State: virtual-plc 0.3.0 released (PyPI + GitHub), main clean, CI green, 5,891 l
 Design: docs/DESIGN.md. Unverified-vs-real-PLC backlog: issue #2.
 
 ## Open items
-1. Register PyPI trusted publisher (project virtual-plc, owner greatgc-flow, repo VirtualPLC, workflow release.yml, env pypi) so tag pushes auto-publish. Until then release.yml fails at `publish` (harmless).
-2. User must revoke the PyPI token that was pasted in chat (never stored anywhere).
-3. Re-run Gemini (ag) review after quota reset (~2026-10-24 09:00; `--writable` required).
+1. (done 2026-10-30, user-confirmed) PyPI trusted publishers registered and chat-pasted token revoked; first tag push should verify auto-publish.
+3. Gemini review done 2026-10-30 (see below); triage pending peer consensus.
 4. oracle-watch.yml and the release publish path are unexercised on GitHub.
 5. Verify unverified behaviors against manuals (end codes C200/C201, ASCII hex numbering, dword order, etc.).
 6. Fork greatgc-flow/pymcprotocol (D:\Engram1\workspace\pymcprotocol; origin=fork, upstream=senrust): feature work not started.
@@ -28,3 +27,11 @@ Design: docs/DESIGN.md. Unverified-vs-real-PLC backlog: issue #2.
 - Existing `tests` workflow has a Windows-ARM job that queues for hours (runner unavailable); PR #9 had no checks run.
 - PyPI trusted publishers still to register by user: virtual-plc (VirtualPLC/release.yml/pypi) and markitdown-gc (markitdown/release.yml/pypi).
 - Git identity in repos: greatgc-flow <greatgc@gmail.com>.
+
+## Update 2026-10-30 (Gemini review, ag.effort via G pool; stream vplc-gemini-review)
+ag needs read-only-tools instruction (shell denied headless) plus `--writable`. Raw findings triaged by cc (verified only where noted):
+- Valid, low: server.py start() does not clear `_stopping` (restart unsupported); stop() leaks listener if acceptor never started; Server latch check uses isinstance (bool accepted) vs type() in Memory.
+- Wrong/unsupported: MAX_POINT is used (profiles.py:39, tests) so "dead code" is false; echo alnum check likely matches spec (echo data are 0-9/A-F chars), remote STOP mode (1,) likely spec-fixed 0001H. Verify vs manuals (issue #2) before changing.
+- Needs manual check: ASCII hex addressing for X/Y/B/W (item 5), bad_end_code frame shape (error frame should carry no data), 0xC061 vs 0xC05C on length mismatch, zero-point random ops, 960-word batch limit.
+- Simplification candidates (need consensus): guide.py (343 lines) and GuideParser in __main__.py.
+Next: peer ballot (cx/cc) on triage, then TDD fixes for confirmed items.
