@@ -255,3 +255,21 @@ Configuration errors are one line ending with a relevant guide topic. Argument
 errors use the option name; file loading uses the faults/memory stage, and
 constructor validation uses options (or memory for latch ranges). Diagnostics
 collapse embedded newlines. Unknown guide topics list available topics, exit 2.
+
+## 13. Unverified / deferred
+
+The following simulator policies await physical PLC verification or manual cross-check:
+
+- **ASCII hex addressing for X/Y/B/W**: current behavior accepts decimal digits only; real PLC numbering is unverified.
+- **0xC061 vs 0xC05C on length mismatch**: which end code a real PLC returns is unverified.
+- **Zero-point random ops**: current behavior is unverified against a real PLC.
+- **Batch point limit**: `max_points` default (4096) vs the documented 960-word protocol limit is unverified.
+- **bad_end_code frame shape**: injected error frames replace only the end-code field; real error frame layout is unverified.
+- **Echo (0x0619) payload**: alphanumeric only, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py.
+- **Remote STOP (0x1002) mode**: only mode 1 accepted, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py.
+
+### Restart semantics
+
+- Calling `stop()` then `start()` works and accepts new client connections cleanly (`_stopping` event is cleared on `start()`).
+- Port 0 rebinds a new ephemeral port on each `start()`.
+- Calling `start()` twice without an intermediate `stop()` is a safe no-op that preserves the existing listener and does not leak sockets.

@@ -68,6 +68,7 @@ class Server:
         self.locked = False
         self.reset_count = 0
         self.set_state(initial_state)
+        self._bind_address = (host, port)
         self.address = (host, port)
         self._hook = response_hook
         self._fault_plan = fault_plan
@@ -100,8 +101,8 @@ class Server:
         if self._listener is not None:
             return
         self._stopping.clear()
-        family = socket.AF_INET6 if ":" in self.address[0] else socket.AF_INET
-        self._listener = socket.create_server(self.address, family=family)
+        family = socket.AF_INET6 if ":" in self._bind_address[0] else socket.AF_INET
+        self._listener = socket.create_server(self._bind_address, family=family)
         self._listener.settimeout(ACCEPT_POLL)
         self.address = self._listener.getsockname()[:2]
         self._acceptor = threading.Thread(target=self._accept_loop, daemon=True)
