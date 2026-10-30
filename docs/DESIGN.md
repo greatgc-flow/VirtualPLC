@@ -268,6 +268,8 @@ The following simulator policies await physical PLC verification or manual cross
 - **Echo (0x0619) payload**: alphanumeric only, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py.
 - **Remote STOP (0x1002) mode**: only mode 1 accepted, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py.
 
+Manual cross-check results (SH-080008, see `docs/manual/PROVENANCE.md`): STOP mode `0001H` verified; echo data is 0-9/A-F only (current check is wider); X/Y/B/W numbers are hexadecimal; the end-code table is not in that manual.
+
 ### Restart semantics
 
 - Calling `stop()` then `start()` works and accepts new client connections cleanly (`_stopping` event is cleared on `start()`).
