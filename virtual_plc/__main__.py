@@ -1,7 +1,6 @@
 """Local simulator CLI: python -m virtual_plc."""
 
 import argparse
-import ipaddress
 import json
 import logging
 from pathlib import Path
@@ -11,7 +10,7 @@ import sys
 import threading
 
 from . import __version__, guide
-from .server import Server
+from .server import Server, is_loopback_host
 from .faults import FaultPlan
 from .memory import Memory
 from .profiles import PROFILES
@@ -39,12 +38,7 @@ def device_range(value):
 
 
 def local_host(host):
-    if host.lower() == "localhost":
-        return True
-    try:
-        return ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        return False
+    return is_loopback_host(host)
 
 
 class GuideParser(argparse.ArgumentParser):
@@ -59,7 +53,9 @@ class GuideParser(argparse.ArgumentParser):
 def build_parser():
     parser = GuideParser(prog="virtual-plc", description="Virtual Mitsubishi MC protocol PLC (not for industrial use)")
     parser.add_argument("--version", action="version", version=__version__, help="show installed version")
-    parser.add_argument("--host", default="127.0.0.1", help="bind address (local use only)")
+    parser.add_argument("--host", default="127.0.0.1", help="bind address (loopback by default)")
+    parser.add_argument("--allow-nonlocal", action="store_true", help="explicitly permit non-loopback binding (unsafe; requires --idle-timeout)")
+    parser.add_argument("--max-clients", type=int, default=64, help="maximum concurrent connections; default: 64")
     parser.add_argument("--port", type=int, default=5000, help="TCP port 0..65535; 0 chooses a free port")
     parser.add_argument("--profile", choices=PROFILES, default="Q", help="simulated CPU profile")
     parser.add_argument("--password", help="simulated lock password (not authentication)")
@@ -94,6 +90,7 @@ def main(argv=None):
         topic = "memory"
         options = dict(profile=args.profile, password=args.password, initial_state=args.initial_state,
                        max_points=args.max_points, idle_timeout=args.idle_timeout, fault_plan=plan,
+                       max_clients=args.max_clients, allow_nonlocal=args.allow_nonlocal,
                        ascii_dword_order=args.ascii_dword_order, text_pad=args.text_pad,
                        ascii_numbering=args.ascii_numbering, verbose=args.verbose)
         if args.init or args.limit:

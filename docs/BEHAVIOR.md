@@ -11,6 +11,13 @@ See the [canonical CLI reference](../README.md#cli-reference),
 
 - `.start()` binds/listens and starts workers before returning; `.address` is `(host,
   actual_port)`.
+- `Server(host=...)` permits only numeric loopback hosts or `localhost` by default.
+  `allow_nonlocal=True` explicitly permits an external listener **only** when
+  `idle_timeout` is a finite positive value; the CLI equivalent is
+  `--allow-nonlocal --idle-timeout N`. This is not network authentication.
+- `max_clients=64` limits concurrent accepted clients; an excess connection is
+  closed before creating a worker, without affecting existing clients.
+  Positive integer overrides are supported by `--max-clients N`.
 - `.stop()` synchronously closes clients/listener and joins workers; idempotent,
   including incomplete frames.
 - Accepted sockets use TCP_NODELAY; EOF, bad framing or `idle_timeout` closes only that

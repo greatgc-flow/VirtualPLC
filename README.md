@@ -48,9 +48,21 @@ finally:
     client.close()
 ```
 
-Use localhost only. Passwords simulate PLC locking; there is no network
-authentication. Never connect to real equipment or production networks.
-Non-local binds print a warning, not an access control.
+Local-only binding is enforced by default in the CLI **and Python API**.
+Passwords simulate PLC locking; there is no network authentication. Never
+connect to real equipment or production networks. If an isolated test network
+really needs a non-loopback listener, explicitly opt in and set an idle timeout:
+
+```text
+virtual-plc --host 0.0.0.0 --allow-nonlocal --idle-timeout 30 --max-clients 16
+```
+
+The non-local override is **not authentication**; use only on a trusted,
+isolated test network. `max_clients` defaults to 64; excess connections are
+closed without allocating workers. Embedded servers use
+`Server(host="0.0.0.0", allow_nonlocal=True, idle_timeout=30, max_clients=16)`.
+A non-loopback host without explicit permission (or without an idle timeout
+when permitted) raises a configuration error before listening.
 
 ## CLI reference
 
@@ -174,7 +186,9 @@ More fixes: `virtual-plc guide troubleshoot`. Protocol details:
 - CPU identities, ranges and SD203 state encoding are synthetic; SD203 mirrors
   state in one direction. CPU names default to NUL fill on both encodings;
   the client retains NULs. Physical fill remains unverified.
-- ASCII addresses use decimal text even for hex-base devices. Dword order
+- ASCII addresses default to decimal-text compatibility, including hex-base
+  devices; opt into manual hexadecimal addressing with `--ascii-numbering manual`.
+  Dword order
   defaults to low-word-first (`swapped`); `client` selects high-word-first.
   Physical order is unverified; roundtrips remain symmetric.
 - Locking is server-wide, survives disconnect and gates only CPU control.

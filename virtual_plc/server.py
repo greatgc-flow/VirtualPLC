@@ -1,6 +1,7 @@
 """TCP server and request lifecycle for local simulation."""
 
 import socket
+import ipaddress
 import logging
 import math
 import sys
@@ -17,11 +18,24 @@ LOG = logging.getLogger(__name__)
 ACCEPT_POLL = 0.1  # seconds between stop checks of the accept loop
 
 
+def is_loopback_host(host):
+    """Only literal loopback IPs or localhost are approved for default binds."""
+    if not isinstance(host, str):
+        return False
+    if host.casefold() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 class Server:
     def __init__(self, host="127.0.0.1", port=0, profile="Q", memory=None,
                  response_hook=None, max_points=None, idle_timeout=None,
                  initial_state="RUN", latch_ranges=None, password=None, fault_plan=None,
-                 ascii_dword_order="swapped", text_pad=0x00, ascii_numbering="compat", verbose=False):
+                 ascii_dword_order="swapped", text_pad=0x00, ascii_numbering="compat", verbose=False,
+                 allow_nonlocal=False, max_clients=64):
         if type(port) is not int or not 0 <= port <= 65535:
             raise ValueError("port must be an integer 0..65535")
         if max_points is not None and (type(max_points) is not int or max_points < 1):
@@ -29,6 +43,15 @@ class Server:
         if idle_timeout is not None and (type(idle_timeout) not in (int, float)
                 or not math.isfinite(idle_timeout) or idle_timeout <= 0):
             raise ValueError("idle_timeout must be None or a finite number > 0")
+        if type(allow_nonlocal) is not bool:
+            raise ValueError("allow_nonlocal must be a boolean")
+        if type(max_clients) is not int or max_clients < 1:
+            raise ValueError("max_clients must be a positive integer")
+        if not is_loopback_host(host):
+            if not allow_nonlocal:
+                raise ValueError("non-loopback host requires allow_nonlocal=True (CLI: --allow-nonlocal)")
+            if idle_timeout is None:
+                raise ValueError("non-loopback bind requires an explicit positive idle_timeout")
         self.verbose = verbose
         if isinstance(text_pad, str) and len(text_pad) == 1:
             text_pad = ord(text_pad)
@@ -77,6 +100,7 @@ class Server:
         self._fault_plan = fault_plan
         self._connection_number = 0
         self._max_points = max_points
+        self._max_clients = max_clients
         self._idle_timeout = idle_timeout
         self._request_lock = threading.Lock()
         self._clients_lock = threading.Lock()
@@ -144,8 +168,20 @@ class Server:
                 self._connection_number += 1
             worker = threading.Thread(target=self._serve, args=(connection, self._connection_number), daemon=True)
             with self._clients_lock:
-                self._clients[connection] = worker
-            worker.start()
+                rejected = self._stopping.is_set() or len(self._clients) >= self._max_clients
+                if not rejected:
+                    self._clients[connection] = worker
+            if rejected:
+                connection.close()
+                self._log("close: client limit reached or server stopping")
+                continue
+            try:
+                worker.start()
+            except RuntimeError:
+                with self._clients_lock:
+                    self._clients.pop(connection, None)
+                connection.close()
+                self._log("close: could not start client worker")
 
     def _serve(self, connection, connection_id):
         with connection:
@@ -157,7 +193,7 @@ class Server:
             finally:
                 self._log("close: %s", reason)
                 with self._clients_lock:
-                    del self._clients[connection]
+                    self._clients.pop(connection, None)
 
     def _serve_frames(self, connection, connection_id):
         buffer = bytearray()
