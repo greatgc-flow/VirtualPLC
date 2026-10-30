@@ -23,8 +23,8 @@ Design: docs/DESIGN.md. Unverified-vs-real-PLC backlog: issue #2.
 - Near limits: write handoff + print ONE-line continuation prompt. Never assume unverified facts; ask ambiguities in batches.
 
 ## Update 2026-10-23 (markitdown fork)
-- Fork greatgc-flow/markitdown (local D:\Engram1\workspace\markitdown, upstream=microsoft). Our PyPI dist is `markitdown-gc` (0.2.0, packages/markitdown). `markitdown-mcp`/`markitdown-ocr`/sample-plugin are upstream-owned; do not publish.
-- PR #9 (ci/release-workflow: tag-triggered release.yml + tests on push to main) is OPEN, mergeable; auto-mode blocked the merge. User merges via `! gh pr merge 9 -R greatgc-flow/markitdown --merge --delete-branch`. GitHub env `pypi` created.
+- Fork greatgc-flow/markitdown (upstream=microsoft; local clone D:\Engram1\workspace\markitdown deleted 2026-10-30, re-clone from origin when needed). Our PyPI dist is `markitdown-gc` (0.2.0, packages/markitdown). `markitdown-mcp`/`markitdown-ocr`/sample-plugin are upstream-owned; do not publish.
+- PR #9 (ci/release-workflow: tag-triggered release.yml + tests on push to main) MERGED 2026-10-23. GitHub env `pypi` created.
 - Existing `tests` workflow has a Windows-ARM job that queues for hours (runner unavailable); PR #9 had no checks run.
 - PyPI trusted publishers still to register by user: virtual-plc (VirtualPLC/release.yml/pypi) and markitdown-gc (markitdown/release.yml/pypi).
 - Git identity in repos: greatgc-flow <greatgc@gmail.com>.
