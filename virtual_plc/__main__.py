@@ -3,11 +3,13 @@
 import argparse
 import json
 import logging
+import os
 from pathlib import Path
 import re
 import signal
 import sys
 import threading
+import tempfile
 
 from . import __version__, guide
 from .server import Server, is_loopback_host
@@ -76,6 +78,22 @@ def build_parser():
                         help="inclusive device limit; repeatable; default profile ceiling")
     parser.add_argument("-v", "--verbose", action="store_true", help="log requests and connection close reasons")
     return parser
+
+
+def write_snapshot_atomic(path, snapshot):
+    """Write a complete JSON snapshot before replacing the target on the same filesystem."""
+    destination = Path(path)
+    content = json.dumps(snapshot, indent=2) + "\n"
+    fd, temporary = tempfile.mkstemp(prefix=f".{destination.name}.",
+                                      suffix=".tmp", dir=destination.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(content)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, destination)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
 
 
 def main(argv=None):
@@ -150,7 +168,7 @@ def main(argv=None):
             logger.setLevel(old_level)
         if args.dump_on_exit:
             try:
-                Path(args.dump_on_exit).write_text(json.dumps(server.memory.dump(), indent=2) + "\n", encoding="utf-8")
+                write_snapshot_atomic(args.dump_on_exit, server.memory.dump())
             except OSError as error:
                 print(f"cannot dump memory: {error}", file=sys.stderr)
                 exit_code = 1
