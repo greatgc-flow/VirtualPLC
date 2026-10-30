@@ -1,6 +1,6 @@
 # Handoff (2026-10-23)
 
-State: virtual-plc 0.5.0 release in progress (tag v0.5.0); 0.4.0 is on PyPI+GitHub.
+State: virtual-plc 0.5.0 released (PyPI + GitHub), main clean, CI green, 6,320 local tests pass.
 Design: docs/DESIGN.md. Unverified-vs-real-PLC backlog: issue #2.
 
 ## Open items
@@ -71,3 +71,6 @@ User instructed the merge. PR #1 (hex ASCII numbers, error information, short re
 
 ## Batch caps (2026-10-30, post-0.4.0, unreleased)
 Per-profile batch caps (Ethernet E71 column, SH-080008 p.87/91/96): word 960, bit 7168 binary / 3584 ASCII (QnA 480/3584/1792); over-limit -> C051 (word) / C052 (bit), assignment unverified; --max-points default is now None (optional extra cap). 6,320 tests pass. Not yet released (next version would be 0.5.0 given the CLI default change). Remaining in #2: real-PLC verification only.
+
+## v0.5.0 published (2026-10-30)
+Release run green (build, publish, github-release); PyPI shows 0.5.0 wheel+sdist. Includes per-profile batch caps (C051/C052), --max-points default None. Open: #2 (real-PLC verification of code/path assignments), #5 (needs evidence for locked-state end code). pymcprotocol fork main has the client fixes (hex ASCII numbers, error info, limits, framing); no fork release yet.
