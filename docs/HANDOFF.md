@@ -1,6 +1,6 @@
 # Handoff (2026-10-23)
 
-State: virtual-plc 0.3.0 released (PyPI + GitHub), main clean, CI green, 5,891 local tests pass.
+State: virtual-plc 0.4.0 release in progress (tag v0.4.0), previous 0.3.0 on PyPI+GitHub.
 Design: docs/DESIGN.md. Unverified-vs-real-PLC backlog: issue #2.
 
 ## Open items

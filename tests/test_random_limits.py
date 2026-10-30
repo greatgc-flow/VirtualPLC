@@ -217,8 +217,11 @@ IQR_WRITE_OVER_LIMIT = [
 ]
 
 
+Q_PROFILES = [name for name, p in PROFILES.items() if p.wire_class == "Q-class"]
+
+
 @pytest.mark.parametrize("profile,cases", [
-    ("Q", Q_WRITE_OVER_LIMIT), ("L", Q_WRITE_OVER_LIMIT[:3]),
+    *((name, Q_WRITE_OVER_LIMIT) for name in Q_PROFILES),
     ("iQ-R", IQR_WRITE_OVER_LIMIT),
 ])
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
@@ -252,13 +255,17 @@ def test_random_bit_write_in_limit_boundary_real_client(limit_servers, profile, 
         assert client.batchread_bitunits("M0", cap) == values
 
 
-@pytest.mark.parametrize("profile,cap", [("Q", 188), ("L", 188), ("QnA", 188), ("iQ-L", 188), ("iQ-R", 94)])
+@pytest.mark.parametrize("profile", ["Q", "L", "QnA", "iQ-L", "iQ-R"])
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
-@pytest.mark.parametrize("extra", [1, 67])  # cap+1 (189 / 95) and 255 (for Q: 188+67=255)
-def test_random_bit_write_over_limit_raw_frames(limit_servers, profile, cap, frame, wire, extra):
+@pytest.mark.parametrize("case", ["plus_one", "max_255"])
+def test_random_bit_write_over_limit_raw_frames(limit_servers, profile, frame, wire, case):
     server = limit_servers(profile)
-    sub = server.memory.profile.wire.bit_subcommand
-    count = min(255, cap + extra)
+    wire_spec = server.memory.profile.wire
+    cap = wire_spec.random_bit_max
+    sub = wire_spec.bit_subcommand
+    extra = 1 if case == "plus_one" else 255 - cap
+    count = cap + extra
+    assert count <= 255
     server.memory.write_bits("M", 0, [0, 1])
     payload = raw_random_bit_payload(profile, wire, [(i, 1) for i in range(count)])
     with socket.create_connection(server.address, timeout=1) as conn:
@@ -326,6 +333,16 @@ def test_check_order_zero_then_over_limit_then_length_and_device(limit_servers, 
 
         conn.sendall(packet("3E", "binary", 0x1402, b_sub, bytes([bit_cap])))
         assert receive(conn, "3E", "binary")[0] == EndCode.DATA_LENGTH_MISMATCH
+
+        # 4. In-limit request with bad device code (C05C); C056 is unreachable here (wire address width = device maximum)
+        conn.sendall(packet("3E", "binary", 0x0403, w_sub, bytes([1, 0]) + bad_dev))
+        assert receive(conn, "3E", "binary")[0] == EndCode.REQUEST_DATA_ERROR
+
+        conn.sendall(packet("3E", "binary", 0x1402, w_sub, bytes([1, 0]) + bad_dev + b"\x00\x00"))
+        assert receive(conn, "3E", "binary")[0] == EndCode.REQUEST_DATA_ERROR
+
+        conn.sendall(packet("3E", "binary", 0x1402, b_sub, bytes([1]) + bad_dev + b"\x00" * wire_spec.bit_value_size))
+        assert receive(conn, "3E", "binary")[0] == EndCode.REQUEST_DATA_ERROR
 
 
 @pytest.mark.parametrize("profile,read_cap,write_w,bit_cap", [

@@ -70,6 +70,7 @@ def batch(request, memory, max_points, control=None):
 def random_access(request, memory, max_points, control=None):
     """Random word/dword read/write or bit write; validate all entries first.
 
+    Limits are manual-derived per wire class (SH-080008 p.98/105/108) and --max-points is ignored here.
     Counts are uint8, so a purported 256-entry list cannot match its payload.
     Writes contain interleaved device/value entries, words before dwords.
     The server holds its request lock through validation and application.

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "virtual_plc"
-version = "0.3.0"
+version = "0.4.0"
 description = "Local Mitsubishi MC protocol PLC simulator with configurable response faults"
 readme = "README.md"
 license = "MIT"
