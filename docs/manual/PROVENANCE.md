@@ -12,5 +12,27 @@ Extraction: `markitdown-gc[pdf]` (manual.md) and `pdftotext -layout` (m.txt). Th
 | Loopback 0619 data | Numerals 0-9 and characters A-F, 1-960 bytes (p.184) | current alnum check is wider than the manual; narrowing to 0-9/A-F is a candidate (case sensitivity unconfirmed) |
 | Device number notation | Decimal or hexadecimal by device type; X, Y, B, W (and others) are hexadecimal (p.68 device code list, device number field) | verified; ASCII `manual` numbering policy for X/Y/B/W remains unimplemented |
 | Batch read/write points | Word 1-960 (iQ-R) / 480 (Q/L via C24) per request, bit up to 7168 points, depending on target module | module-dependent; the 4096 default `max_points` is not a manual value |
-| Error code table (C200, C201, C05C, C061...) | Not in SH-080008 (only example C051H, p.38 refs); table lives in the module user's manual | still unverified; need the Ethernet/serial module manual |
+| Error code table | Not in SH-080008. See SH-081257 below. | see below |
 | Zero-point random ops, bad_end_code frame shape | Not located yet | unverified |
+
+## Second source: MELSEC iQ-R Ethernet User's Manual (Application), SH-081257ENG rev AD
+URL: https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf (fetched 2026-10-30)
+SHA-256: 21039bce5832a420a138da52ffab1c8b7e5f19ee7d67e9c1033f3b0fbc6a7dbc
+Section: 3.5 List of Error Codes (p.458+). Extraction: `pdftotext -layout` (columns interleave; read rows carefully).
+
+| Code | Manual meaning | Simulator today |
+|---|---|---|
+| C050H | ASCII data that cannot be converted to binary | not used |
+| C051H | word read/write points out of range | POINTS_OUT_OF_RANGE (ok) |
+| C052H / C053H / C054H | bit points / random bit points / random word-dword points out of range | all mapped to C051 or C05C |
+| C056H | read/write exceeds largest address | ADDRESS_OUT_OF_RANGE (ok) |
+| C057H | request data length does not match number of data in text | **simulator uses C061** |
+| C058H | request data length after ASCII/binary conversion mismatch | not used |
+| C059H | command/subcommand incorrect or unsupported | UNSUPPORTED_COMMAND (ok) |
+| C05AH / C05BH | cannot read/write the specified device | not used |
+| C05CH | request data incorrect | REQUEST_DATA_ERROR (ok) |
+| C061H | request message with no-response command sent to another network | **simulator uses it as data-length mismatch (wrong)** |
+| C202H | remote password could not be unlocked on another station | not used |
+| C203H | error checking the remote password | simulator uses C200/C201 (memory provenance) |
+| C204H | lock request from a different device than the unlock requester | not used |
+| C200H / C201H | listed with SLMPSND dedicated-instruction failure (layout ambiguous) | simulator: LOCKED / WRONG_PASSWORD (unsupported by manual) |
