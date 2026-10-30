@@ -35,3 +35,8 @@ ag needs read-only-tools instruction (shell denied headless) plus `--writable`. 
 - Needs manual check: ASCII hex addressing for X/Y/B/W (item 5), bad_end_code frame shape (error frame should carry no data), 0xC061 vs 0xC05C on length mismatch, zero-point random ops, 960-word batch limit.
 - Simplification candidates (need consensus): guide.py (343 lines) and GuideParser in __main__.py.
 Next: peer ballot (cx/cc) on triage, then TDD fixes for confirmed items.
+
+## Update 2026-10-30 (ballot + fixes)
+Unanimous ballot (ag, cx, cc): fix 3 low-risk server items, defer MC-spec items to issue #2, keep guide.py. Implemented via ag.effort (stream vplc-impl-ag): Server restart/idempotent start/stop, shared `valid_span` (memory.py) for latch ranges, tests/test_server_lifecycle.py. 5,900 tests pass.
+Open follow-ups from ballot: pin echo-alnum and STOP mode (1,) with tests; list deferred unverified items in docs/DESIGN.md; document restart semantics (port 0 rebinds a new port).
+ag tip: first turn of a fresh ag session returns empty (shell denied); resend with "ONLY file read/edit tools" on the same stream. cx X-7D was 88% on 2026-10-30; avoid until reset.

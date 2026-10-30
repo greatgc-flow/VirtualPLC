@@ -9,6 +9,16 @@ class OutOfRange(ValueError):
     """Access outside the configured device range."""
 
 
+def valid_span(device, span):
+    return (
+        device is not None
+        and isinstance(span, (tuple, list))
+        and len(span) == 2
+        and all(type(value) is int for value in span)
+        and device.minimum <= span[0] <= span[1] <= device.maximum
+    )
+
+
 class Memory:
     """Unsigned point storage per device family; bit devices hold one bit per point."""
 
@@ -17,8 +27,7 @@ class Memory:
         self._limits = {name: (spec.minimum, spec.maximum) for name, spec in self.profile.devices.items()}
         for name, span in (limits or {}).items():
             spec = self.profile.devices.get(name)
-            if (spec is None or not isinstance(span, (tuple, list)) or len(span) != 2 or any(type(value) is not int for value in span)
-                    or not spec.minimum <= span[0] <= span[1] <= spec.maximum):
+            if not valid_span(spec, span):
                 raise ValueError("invalid memory limit")
             self._limits[name] = tuple(span)
         self._cells = {name: {} for name in self.profile.devices}

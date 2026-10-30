@@ -9,7 +9,7 @@ import threading
 from . import faults
 from .codec import decode_request, encode_response, frame_size
 from .commands import CPU_STATES, dispatch
-from .memory import Memory
+from .memory import Memory, valid_span
 from .profiles import PROFILES
 
 LOG = logging.getLogger(__name__)
@@ -57,9 +57,11 @@ class Server:
             device = self.memory.profile.devices.get(name)
             if device is None:
                 raise ValueError("unknown latch device")
-            spans = tuple(tuple(span) for span in spans)
-            if any(len(span) != 2 or not all(isinstance(point, int) for point in span)
-                   or not device.minimum <= span[0] <= span[1] <= device.maximum for span in spans):
+            try:
+                spans = tuple(tuple(span) for span in spans)
+            except TypeError:
+                raise ValueError("invalid latch range")
+            if any(not valid_span(device, span) for span in spans):
                 raise ValueError("invalid latch range")
             self.latch_ranges[name] = spans
         self.password = password
@@ -95,6 +97,9 @@ class Server:
             LOG.info(message, *args)
 
     def start(self):
+        if self._listener is not None:
+            return
+        self._stopping.clear()
         family = socket.AF_INET6 if ":" in self.address[0] else socket.AF_INET
         self._listener = socket.create_server(self.address, family=family)
         self._listener.settimeout(ACCEPT_POLL)
@@ -105,10 +110,12 @@ class Server:
     def stop(self):
         """Close the listener and every client, then join all workers."""
         self._stopping.set()
-        if self._acceptor is None:
-            return
-        self._acceptor.join()
-        self._listener.close()
+        if self._listener is not None:
+            self._listener.close()
+        if self._acceptor is not None:
+            self._acceptor.join()
+            self._acceptor = None
+        self._listener = None
         with self._clients_lock:
             clients = list(self._clients.items())
         for connection, worker in clients:
