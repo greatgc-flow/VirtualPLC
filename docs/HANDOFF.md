@@ -59,3 +59,6 @@ Random-access upper bounds (read 192/96, write weighted 1920/960, bit 188/94) en
 
 ## Release v0.4.0 (2026-10-30)
 Tag v0.4.0 pushed; build job green, `publish` failed with PyPI `invalid-publisher` (no matching trusted publisher for repo greatgc-flow/VirtualPLC, workflow release.yml, environment pypi). github-release skipped. After the user fixes the PyPI publisher: `gh run rerun 41032569882 --failed -R greatgc-flow/VirtualPLC` (skip-existing is on, so reruns are safe), then verify PyPI shows 0.4.0 and the GitHub release has assets.
+
+## pymcprotocol fork assessment (2026-10-30, ag.deepthink, read-only, claims not yet verified by tests)
+Full report: docs/manual/pymcprotocol-assessment-2026-10-30.md. Top items: (1) ASCII hex device numbers written back as decimal for X/Y/B/W (t3e:339-345); (2) parse error responses incl. error information into MCProtocolError; (3) empty/short reply treated as success; (4) client-side random-access limits; (5) framed receive; (6) setaccessopt zero values; (7) exception hygiene; (8) LSTC/LTN constants and unsigned word writes. Needs user scope decision before implementation (work happens in D:\Engram1\workspace\pymcprotocol, origin=greatgc-flow fork).
