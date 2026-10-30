@@ -24,6 +24,9 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
+      - name: Widen Windows ephemeral port range (suite opens thousands of short connections)
+        if: runner.os == 'Windows'
+        run: netsh int ipv4 set dynamicport tcp start=10000 num=55000
       - run: python -m pip install -e . -r requirements-dev.txt
       - run: python -m pytest -q
   build:
