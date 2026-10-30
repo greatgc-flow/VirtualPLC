@@ -26,6 +26,7 @@ def test_named_profile_metadata_matches_client_wire_class(profile):
     assert (wire.address_size, wire.code_size, wire.ascii_code_size, wire.ascii_address_size) == ((4, 2, 4, 8) if iqr else (3, 1, 2, 6))
     assert (wire.word_subcommand, wire.bit_subcommand, wire.bit_value_size) == ((2, 3, 2) if iqr else (0, 1, 1))
     assert (wire.password_min, wire.password_max) == ((6, 32) if iqr else (4, 4))
+    assert (wire.random_read_max, wire.random_write_weight_max, wire.random_bit_max) == ((96, 960, 94) if iqr else (192, 1920, 188))
     assert set(spec.devices) == {d.name for d in devices_for(profile)}
     for device in devices_for(profile):
         actual = spec.devices[device.name]

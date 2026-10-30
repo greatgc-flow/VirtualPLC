@@ -87,33 +87,66 @@ def test_routes_echo_alias_memory_and_state(endpoints, profile, transport):
 
 
 @pytest.mark.parametrize("profile,transport", CELLS)
-@pytest.mark.parametrize("count", [0, 1, 255])
-def test_random_count_extrema_and_bit_boundaries(endpoints, profile, transport, count):
+@pytest.mark.parametrize("kind", ["zero", "one", "max", "over"])
+def test_random_count_extrema_and_bit_boundaries(endpoints, profile, transport, kind):
+    from pymcprotocol.mcprotocolerror import MCProtocolError
     frame, wire = transport
-    with connected_profile(endpoints(profile), frame, wire) as client:
-        words = [f"D{32+i}" for i in range(count)]
-        dwords = [f"D{1024+2*i}" for i in range(count)]
-        word_values = ([-32768, 32767, -1] * 85)[:count]
-        dword_values = ([-2147483648, 2147483647, -1] * 85)[:count]
-        if count == 0:
-            from pymcprotocol.mcprotocolerror import MCProtocolError
+    server = endpoints(profile)
+    wire_spec = server.memory.profile.wire
+    with connected_profile(server, frame, wire) as client:
+        if kind == "zero":
             with pytest.raises(MCProtocolError) as err:
-                client.randomwrite(words, word_values, dwords, dword_values)
+                client.randomwrite([], [], [], [])
             assert err.value.errorcode == "0xC054"
             with pytest.raises(MCProtocolError) as err:
-                client.randomread(words, dwords)
+                client.randomread([], [])
             assert err.value.errorcode == "0xC054"
-            bits = []
             with pytest.raises(MCProtocolError) as err:
-                client.randomwrite_bitunits(bits, [])
+                client.randomwrite_bitunits([], [])
             assert err.value.errorcode == "0xC053"
-        else:
+        elif kind in ("one", "max"):
+            # For 'max', test exact weighted mixed write boundary (e.g. Q: 90w+60dw=1920, iQ-R: 45w+30dw=960),
+            # exact read boundary (Q: 192, iQ-R: 96), and exact bit write boundary (Q: 188, iQ-R: 94).
+            if kind == "one":
+                w_cnt, dw_cnt = 1, 1
+                r_w_cnt, r_dw_cnt = 1, 1
+                bit_cnt = 1
+            else:
+                w_cnt = 45 if profile == "iQ-R" else 90
+                dw_cnt = 30 if profile == "iQ-R" else 60
+                assert w_cnt * 12 + dw_cnt * 14 == wire_spec.random_write_weight_max
+                r_w_cnt = wire_spec.random_read_max - dw_cnt
+                r_dw_cnt = dw_cnt
+                assert r_w_cnt + r_dw_cnt == wire_spec.random_read_max
+                bit_cnt = wire_spec.random_bit_max
+            words = [f"D{32+i}" for i in range(w_cnt)]
+            dwords = [f"D{1024+2*i}" for i in range(dw_cnt)]
+            word_values = ([-32768, 32767, -1] * 85)[:w_cnt]
+            dword_values = ([-2147483648, 2147483647, -1] * 85)[:dw_cnt]
             client.randomwrite(words, word_values, dwords, dword_values)
             assert client.randomread(words, dwords) == (word_values, dword_values)
-            bits = [f"M{i}" for i in range(count)]
-            values = [i % 2 for i in range(count)]
+            if kind == "max":
+                read_words = [f"D{32+i}" for i in range(r_w_cnt)]
+                res_w, res_dw = client.randomread(read_words, dwords)
+                assert len(res_w) == r_w_cnt and res_w[:w_cnt] == word_values and res_dw == dword_values
+            bits = [f"M{i}" for i in range(bit_cnt)]
+            values = [i % 2 for i in range(bit_cnt)]
             client.randomwrite_bitunits(bits, values)
-            assert client.batchread_bitunits("M0", count) == values
+            assert client.batchread_bitunits("M0", bit_cnt) == values
+        else:
+            # max+1 rejection (and 255 count rejection)
+            w_over = (wire_spec.random_write_weight_max // 12) + 1
+            with pytest.raises(MCProtocolError) as err:
+                client.randomwrite([f"D{32+i}" for i in range(w_over)], [1] * w_over, [], [])
+            assert err.value.errorcode == "0xC054"
+            r_over = wire_spec.random_read_max + 1
+            with pytest.raises(MCProtocolError) as err:
+                client.randomread([f"D{32+i}" for i in range(r_over)], [])
+            assert err.value.errorcode == "0xC054"
+            b_over = wire_spec.random_bit_max + 1
+            with pytest.raises(MCProtocolError) as err:
+                client.randomwrite_bitunits([f"M{i}" for i in range(b_over)], [1] * b_over)
+            assert err.value.errorcode == "0xC053"
 
 
 

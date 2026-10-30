@@ -87,12 +87,18 @@ policy](BEHAVIOR.md#native-dword-stride-policy-unverified).
   address/value entries (4+2 bytes), then dword address/value entries (4+4 bytes).
 - Q-class random bit write (1402/0001): uint8 count, then address(4) + value(1) entries;
   values must be 0 or 1, not packed nibbles.
-- Zero random counts (total count == 0) are rejected with RANDOM_POINTS_OUT_OF_RANGE
-  (0xC054) for words/dwords or RANDOM_BIT_POINTS_OUT_OF_RANGE (0xC053) for bits per manual
-  SH-081257 3.5 (source: manual, status: unverified). A single zero count with the other
-  nonzero is valid. Count 256 has no wire representation; raw tests send wrapped/widened
-  counts with 256 entries and require rejection. See [random access
-  behavior](BEHAVIOR.md).
+- Zero and over-limit random counts are rejected with RANDOM_POINTS_OUT_OF_RANGE
+  (0xC054) for words/dwords or RANDOM_BIT_POINTS_OUT_OF_RANGE (0xC053) for bits per
+  manuals SH-080008 (p.98/105/108) and SH-081257 3.5 (manual-derived; C053/C054
+  assignment unverified, not verified PLC behavior). Keyed on the request wire class
+  (`Wire` in `profiles.py`: Q-class subcommands 0000/0001 vs iQ-R 0002/0003), limits are:
+  random read (0x0403) `words + dwords <= 192` (Q-class) / `96` (iQ-R); random word/dword
+  write (0x1402) `words*12 + dwords*14 <= 1920` (Q-class) / `960` (iQ-R); random bit write
+  (0x1402 bit subcommand) `points <= 188` (Q-class) / `94` (iQ-R), independent of
+  `--max-points`. Check order: zero total, then over-limit, then payload length/format
+  checks. A single zero count with the other nonzero is valid. Count 256 has no wire
+  representation; raw tests send wrapped/widened counts with 256 entries and require
+  rejection. See [random access behavior](BEHAVIOR.md).
 - The same codec is parameterized by frame (3E/4E) and wire (binary/ASCII).
   Request headers auto-detect the transport on every request, including mixed
   requests on a single connection. This does not autodetect address numbering.
@@ -119,7 +125,7 @@ policy.
 |---|---|---|---|
 | M0 | Scaffold, migration, pinned oracle, test generator skeleton, `pytest` green | `pytest` runs; old assets archived | Complete |
 | M1 | Transport + error table + 3E binary Q: batch word/bit R/W for D,M,X,Y,B,W,R,ZR,SM,SD; echo (0619) and cputype (0101); response-transform hook seam; basic disconnect/timeout tests | Real client round-trips every M1 cell; manual-derived vectors pass | Complete |
-| M2 | Random read/write (+bit random write, mixed word/dword) | boundary counts 0/1/255 via client; malformed 256-entry attempts via raw socket (client rejects 256 separately) | Complete |
+| M2 | Random read/write (+bit random write, mixed word/dword) | boundary counts (0, 1, manual maxima, max+1 rejection) via client and raw socket; malformed 256-entry attempts via raw socket (client rejects 256 separately) | Complete |
 | M2b | Timers/counters, SB, SW, DX, DY, L, F, V | per-device base/range table complete | Complete with synthetic ranges; vendor limits unverified |
 | M3 | 3E ASCII (incl. ascii overflow policy, uppercase out/lowercase in) | cross product generated | Complete (compat numbering) |
 | M4 | 4E (serial echo, reserved zeros) | All implemented commands across all four transports | Complete |
@@ -264,13 +270,13 @@ The following simulator policies await physical PLC verification or manual cross
 
 - **ASCII hex addressing for X/Y/B/W**: default behavior (`compat`) accepts decimal digits only; `manual` opt-in policy accepts hex digits for base-16 devices; real PLC numbering is unverified.
 - **0xC057 vs 0xC05C on length mismatch**: which end code a real PLC returns is unverified.
-- **Zero-point random ops**: total count 0 rejected with C053 (random bit points) or C054 (random word/dword points) per manual SH-081257 3.5 (applied; source: manual, status: unverified for path-to-code assignment); weighted upper bounds and 960/1920 cap remain deferred; manual batch limits (word 960 / bit 7168 on E71/iQ-R, 480/3584 on C24) recorded as reference only.
+- **Random-access point limits (zero and upper bounds)**: total count 0 and over-limit counts rejected with C053 (random bit points) or C054 (random word/dword points) per SH-080008 (p.98/105/108) and SH-081257 3.5 (applied; manual-derived, C053/C054 assignment unverified, not verified PLC behavior). Limits keyed on request wire class (`Wire` in `profiles.py`, independent of `max_points`): read 0x0403 `words + dwords <= 192` (Q-class) / `96` (iQ-R); word/dword write 0x1402 `words*12 + dwords*14 <= 1920` (Q-class) / `960` (iQ-R); bit write 0x1402 `points <= 188` (Q-class) / `94` (iQ-R). Manual batch limits (word 960 / bit 7168 on E71/iQ-R, 480/3584 on C24) recorded as reference only.
 - **Batch point limit**: `max_points` default (4096) vs the documented 960-word protocol limit is unverified.
 - **Error information and bad_end_code frame shape**: abnormal responses (and `bad_end_code` with code != 0) append error information per SH-080008 5.2/5.3 (route, command, subcommand; response data dropped; length field = end code + error info; manual-derived). Other-station routing and real-PLC no-error-info cases remain unverified.
 - **Echo (0x0619) payload**: 0-9, A-F, a-f only, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py; unverified (case).
 - **Remote STOP (0x1002) mode**: only mode 1 accepted, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py.
 
-Manual cross-check results (SH-080008, see `docs/manual/PROVENANCE.md`): STOP mode `0001H` verified; echo data is 0-9/A-F only (simulator accepts a-f, unverified (case)); X/Y/B/W numbers are hexadecimal; error information in abnormal responses per 5.2/5.3 applied (manual-derived; other-station routing and real-PLC no-error-info unverified); zero-point random access total count 0 mapped to C053 (bits) and C054 (words/dwords) per SH-081257 3.5; C057 is the documented length mismatch code in SH-081257 3.5; C200/C201/C202 are not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5.
+Manual cross-check results (SH-080008, see `docs/manual/PROVENANCE.md`): STOP mode `0001H` verified; echo data is 0-9/A-F only (simulator accepts a-f, unverified (case)); X/Y/B/W numbers are hexadecimal; error information in abnormal responses per 5.2/5.3 applied (manual-derived; other-station routing and real-PLC no-error-info unverified); random-access zero and upper point limits (SH-080008 p.98/105/108) mapped to C053 (bits) and C054 (words/dwords) per SH-081257 3.5 (manual-derived; C053/C054 assignment unverified); C057 is the documented length mismatch code in SH-081257 3.5; C200/C201/C202 are not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5.
 
 ### Restart semantics
 

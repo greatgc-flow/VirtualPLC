@@ -14,7 +14,7 @@ Extraction: `markitdown-gc[pdf]` (manual.md) and `pdftotext -layout` (m.txt). Th
 | Batch read/write points | Word 1-960 (iQ-R) / 480 (Q/L via C24) per request, bit up to 7168 points, depending on target module | module-dependent; the 4096 default `max_points` is not a manual value; manual batch limits word 960 / bit 7168 on E71/iQ-R, 480/3584 on C24 as reference only |
 | Error code table | Not in SH-080008. See SH-081257 below. | see below |
 | Error information in abnormal response and bad_end_code frame shape | Abnormal response carries access route, command, subcommand after end code with response data dropped and length updated (5.2 p.92, 5.3 p.102) | applied (manual-derived; other-station routing and real-PLC no-error-info unverified) |
-| Zero-point random ops | Total count 0 rejected: C053 (random bit points out of range), C054 (random word/dword points out of range) per SH-081257 3.5 | applied (source: manual, status: unverified for path-to-code assignment; weighted upper bounds and 960/1920 cap remain deferred) |
+| Random-access point limits (zero and upper bounds) | Read 0403: `words + dwords <= 192` (Q-class 0000) / `96` (iQ-R 0002) (p.98). Word/dword write 1402: `words*12 + dwords*14 <= 1920` (Q-class 0000) / `960` (iQ-R 0002) (p.105). Bit write 1402: `points <= 188` (Q-class 0001) / `94` (iQ-R 0003) (p.108). Zero or over-limit rejected: C053 (random bit points out of range), C054 (random word/dword points out of range) per SH-081257 3.5 | applied: keyed on request wire class (`Wire` in `profiles.py`), independent of `--max-points`; check order: zero total -> over-limit -> length/format (manual-derived; C053/C054 assignment unverified, not verified PLC behavior) |
 
 ## Second source: MELSEC iQ-R Ethernet User's Manual (Application), SH-081257ENG rev AD
 URL: https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf (fetched 2026-10-30)
@@ -25,7 +25,7 @@ Section: 3.5 List of Error Codes (p.458+). Extraction: `pdftotext -layout` (colu
 |---|---|---|
 | C050H | ASCII data that cannot be converted to binary | not used |
 | C051H | word read/write points out of range | POINTS_OUT_OF_RANGE (ok) |
-| C052H / C053H / C054H | bit points / random bit points / random word-dword points out of range | applied: C053 for random bit zero points, C054 for random word/dword zero points; C052 not used |
+| C052H / C053H / C054H | bit points / random bit points / random word-dword points out of range | applied: C053 for random bit zero/over-limit points, C054 for random word/dword zero/over-limit points (manual-derived; C053/C054 assignment unverified, not verified PLC behavior); C052 not used |
 | C056H | read/write exceeds largest address | ADDRESS_OUT_OF_RANGE (ok) |
 | C057H | request data length does not match number of data in text | applied: DATA_LENGTH_MISMATCH (0xC057) |
 | C058H | request data length after ASCII/binary conversion mismatch | not used |
@@ -37,3 +37,5 @@ Section: 3.5 List of Error Codes (p.458+). Extraction: `pdftotext -layout` (colu
 | C203H | error checking the remote password | documented remote-password error code; simulator uses C200/C201 (remap tracked in issue #5) |
 | C204H | lock request from a different device than the unlock requester | documented remote-password lock code (remap tracked in issue #5) |
 | C200H / C201H | listed with SLMPSND dedicated-instruction failure (layout ambiguous) | simulator: LOCKED / WRONG_PASSWORD (not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5) |
+
+Note (review 2026-10-30): random-access limits are keyed by wire class; L, QnA and iQ-L profiles inherit the Q-class (192/1920/188) or iQ-R (96/960/94) values and are not individually manual-verified. `source: manual` for C053/C054 means the code list is from SH-081257; the path-to-code assignment is design (unverified).

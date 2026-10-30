@@ -6,17 +6,32 @@ import pymcprotocol
 import pytest
 
 
-@pytest.mark.parametrize("word_count,dword_count", list(product((0, 1, 255), repeat=2)))
+@pytest.mark.parametrize("word_count,dword_count", [
+    (0, 0),
+    (1, 0), (0, 1), (1, 1),
+    (160, 0),    # Q word-only write max (160*12 = 1920)
+    (0, 137),    # Q dword-only write max (137*14 = 1918 <= 1920)
+    (90, 60),    # Q mixed exact weighted boundary (90*12 + 60*14 = 1920)
+    (161, 0),    # Q word-only write max+1 (1932 > 1920)
+    (0, 138),    # Q dword-only write max+1 (1932 > 1920)
+    (90, 61),    # Q mixed write max+1 (1934 > 1920)
+    (255, 0), (0, 255), (255, 255),
+])
 def test_mixed_random_count_boundaries(client, memory, word_count, dword_count):
     words = [f"D{32 + i}" for i in range(word_count)]
     dwords = [f"D{1024 + 2 * i}" for i in range(dword_count)]
     word_values = ([0, -1, 32767, -32768] * 64)[:word_count]
     dword_values = ([0x12345678, -1, 2147483647, -2147483648] * 64)[:dword_count]
-    if word_count == dword_count == 0:
-        # Manual SH-080008 8.3: total access points must be >= 1 (C054, unverified assignment).
+    weight = word_count * 12 + dword_count * 14
+    if word_count == dword_count == 0 or weight > 1920:
+        # Manual SH-080008 p.98/105 & SH-081257 3.5: total points >= 1 and weight <= 1920 (C054, unverified assignment).
         with pytest.raises(pymcprotocol.mcprotocolerror.MCProtocolError) as err:
             client.randomwrite(words, word_values, dwords, dword_values)
         assert err.value.errorcode == "0xC054"
+        if word_count == dword_count == 0 or word_count + dword_count > 192:
+            with pytest.raises(pymcprotocol.mcprotocolerror.MCProtocolError) as err:
+                client.randomread(words, dwords)
+            assert err.value.errorcode == "0xC054"
         return
     client.randomwrite(words, word_values, dwords, dword_values)
     assert client.randomread(words, dwords) == (word_values, dword_values)
@@ -28,12 +43,32 @@ def test_mixed_random_count_boundaries(client, memory, word_count, dword_count):
         ]
 
 
-@pytest.mark.parametrize("count", [0, 1, 255])
+@pytest.mark.parametrize("word_count,dword_count", [
+    (192, 0), (0, 192), (96, 96),        # Q random read max (words + dwords == 192)
+    (193, 0), (0, 193), (96, 97),        # Q random read max+1 (193 > 192)
+])
+def test_random_read_count_boundaries(client, memory, word_count, dword_count):
+    words = [f"D{32 + i}" for i in range(word_count)]
+    dwords = [f"D{1024 + 2 * i}" for i in range(dword_count)]
+    if word_count + dword_count > 192:
+        with pytest.raises(pymcprotocol.mcprotocolerror.MCProtocolError) as err:
+            client.randomread(words, dwords)
+        assert err.value.errorcode == "0xC054"
+        return
+    memory.write_words("D", 32, [i + 1 for i in range(word_count)] if word_count else [0])
+    if dword_count:
+        memory.write_words("D", 1024, [0x5678, 0x1234] * dword_count)
+    res_w, res_dw = client.randomread(words, dwords)
+    assert res_w == [i + 1 for i in range(word_count)]
+    assert res_dw == [0x12345678] * dword_count
+
+
+@pytest.mark.parametrize("count", [0, 1, 188, 189, 255])
 def test_random_bit_count_boundaries(client, memory, count):
     values = [i % 2 for i in range(count)]
-    if count == 0:
+    if count == 0 or count > 188:
         with pytest.raises(pymcprotocol.mcprotocolerror.MCProtocolError) as err:
-            client.randomwrite_bitunits([], [])
+            client.randomwrite_bitunits([f"M{i}" for i in range(count)], values)
         assert err.value.errorcode == "0xC053"
         return
     client.randomwrite_bitunits([f"M{i}" for i in range(count)], values)

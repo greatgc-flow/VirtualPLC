@@ -82,11 +82,18 @@ def random_access(request, memory, max_points, control=None):
     if len(data) < count_size:
         raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
     groups = ((data[0], wire.bit_value_size),) if bit else ((data[0], 2), (data[1], 4))
+    total = sum(count for count, _ in groups)
+    if total == 0:
+        if len(data) != count_size:
+            raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
+        raise CommandError(EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE if bit else EndCode.RANDOM_POINTS_OUT_OF_RANGE)
+    if bit and total > wire.random_bit_max:
+        raise CommandError(EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE)
+    if not bit and ((data[0] * 12 + data[1] * 14 > wire.random_write_weight_max) if write else (total > wire.random_read_max)):
+        raise CommandError(EndCode.RANDOM_POINTS_OUT_OF_RANGE)
     expected = count_size + sum(count * (wire.descriptor_size + (width if write else 0)) for count, width in groups)
     if len(data) != expected:
         raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
-    if sum(count for count, _ in groups) == 0:
-        raise CommandError(EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE if bit else EndCode.RANDOM_POINTS_OUT_OF_RANGE)
     entries = []
     offset = count_size
     try:

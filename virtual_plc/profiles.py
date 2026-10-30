@@ -17,6 +17,9 @@ class Wire:
     bit_subcommand: int
     password_min: int
     password_max: int
+    random_read_max: int
+    random_write_weight_max: int
+    random_bit_max: int
 
     @property
     def descriptor_size(self):
@@ -24,8 +27,8 @@ class Wire:
 
 
 WIRE_CLASSES = {
-    "Q-class": Wire(3, 1, 2, 6, 1, 0, 1, 4, 4),
-    "iQ-R": Wire(4, 2, 4, 8, 2, 2, 3, 6, 32),
+    "Q-class": Wire(3, 1, 2, 6, 1, 0, 1, 4, 4, 192, 1920, 188),
+    "iQ-R": Wire(4, 2, 4, 8, 2, 2, 3, 6, 32, 96, 960, 94),
 }
 
 

@@ -47,7 +47,7 @@ See the [canonical CLI reference](../README.md#cli-reference),
   unverified.
 - Each request validates before mutation under one lock; `max_points` limits batch
   points, not response bytes.
-- Random counts are uint8; total count zero returns C053 (bits) or C054 (words/dwords). A single zero count with the other nonzero is valid. Responses put words before dwords; dwords store low word first.
+- Random counts are uint8; total count zero or over-limit returns C053 (bits) or C054 (words/dwords) (manual-derived per SH-080008 p.98/105/108 and SH-081257 3.5; C053/C054 assignment unverified, not verified PLC behavior). Limits are keyed on the request wire class (`Wire` in `profiles.py`) and independent of `max_points`: read (0403) `words + dwords <= 192` (Q-class) / `96` (iQ-R); word/dword write (1402) `words*12 + dwords*14 <= 1920` (Q-class) / `960` (iQ-R); bit write (1402) `points <= 188` (Q-class) / `94` (iQ-R). A single zero count with the other nonzero is valid. Responses put words before dwords; dwords store low word first.
 - Duplicate/overlapping random writes apply in wire order. SS/SC/SN use STS/STC/STN
   client names.
 - `Profile.wire` selects widths/subcommands; ASCII compat addresses use 6 (Q-class) / 8
@@ -112,11 +112,20 @@ The existing server lock covers the whole request, including reads. Writes
 then apply in wire order (word section first), so later duplicate or overlapping
 entries overwrite earlier ones.
 
-The client rejects 256 before sending because a count field is only one byte.
-A valid raw count of 256 does not exist. Tests instead send 256 entries with
-wrapped or widened count fields and require an error with no mutation. The
-batch `max_points` option does not alter random commands' uint8 count fields.
-The 255-word plus 255-dword response is below the client's 4096-byte recv limit.
+Random-access point limits (manual-derived per SH-080008 p.98/105/108; C053/C054
+assignment unverified, not verified PLC behavior) are keyed on the request wire
+class (`Wire` in `profiles.py`: Q-class subcommands 0000/0001 vs iQ-R 0002/0003)
+and are independent of `--max-points` (which applies to batch only):
+- Random read (`0x0403`): `words + dwords <= 192` (Q-class) / `96` (iQ-R).
+- Random word/dword write (`0x1402` word subcommand): `words*12 + dwords*14 <= 1920` (Q-class) / `960` (iQ-R).
+- Random bit write (`0x1402` bit subcommand): `points <= 188` (Q-class) / `94` (iQ-R).
+
+Check order in `random_access`: zero total count (`0xC053` for bit, `0xC054` for
+word/dword), then over-limit (`0xC053` for bit, `0xC054` for word/dword), then
+payload length/format and device range checks. The client rejects 256 before
+sending because a count field is only one byte. A valid raw count of 256 does
+not exist. Tests send over-limit and 256-entry frames and require rejection with
+no mutation.
 
 ### Q device table
 
@@ -429,6 +438,9 @@ used in some of these branches. Type4E inherits the same command encoding.
 | Random bit-write value | 1 byte / 2 hex characters | 2 bytes / 4 hex characters |
 | ASCII password length | Exactly 4 | 6–32 |
 | Default synthetic point range | 0..0xFFFFFF | 0..0xFFFFFFFF |
+| Random read max (`words + dwords`) | 192 | 96 |
+| Random word/dword write max (`words*12 + dwords*14`) | 1920 | 960 |
+| Random bit write max (`points`) | 188 | 94 |
 
 All numeric binary fields remain little-endian. ASCII retains compat decimal
 numbering, uppercase numeric output and lowercase-hex tolerance. Eight-digit
@@ -532,7 +544,9 @@ remain unverified.
 
 ## Unverified behavior
 
-Empty random lists are accepted as no-ops. Dwords over bit devices span 32
+Empty random lists (total count 0) and over-limit random counts are rejected with
+C053 (bits) or C054 (words/dwords) (manual-derived; C053/C054 assignment unverified,
+not verified PLC behavior). Dwords over bit devices span 32
 packed points with 16-point head alignment. Malformed random lengths use C057,
 invalid access uses C05C, and range overflow uses C056; these mappings await
 manual verification. ASCII dword order is configurable: `swapped` (low word
