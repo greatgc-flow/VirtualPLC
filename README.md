@@ -131,7 +131,11 @@ Save seed.json (decimal address keys, unsigned native point values):
 ```
 
 `--init` loads before listening; `--dump-on-exit` saves the same schema after
-graceful shutdown. Dumps preserve explicit zeros and include SD203. Loads
+graceful shutdown. The snapshot is written to a same-directory temporary file,
+flushed and atomically replaced on successful completion. A failed write leaves
+an existing snapshot untouched; abrupt process or OS termination may still
+prevent saving the latest state. Dumps preserve explicit zeros and include
+SD203. Loads
 validate the complete snapshot before overlaying data. See
 `virtual-plc guide memory` for bounds, retention and device names.
 
