@@ -61,6 +61,7 @@ Optional model: --ethernet-model qj71e71 | --profile iQ-R --ethernet-model rj71e
 Set --ethernet-config FILE for overrides; --show-effective-ethernet prints JSON without listening.
 Multi-port: virtual-plc --listen tcp:5000 --listen tcp:5001 --listen udp:5000 (one shared PLC).
 1E batch mode: virtual-plc --slmp-1e --listen tcp:5000 --listen udp:5000 (not full FX5 hardware).
+Physical switch edge: --slmp-1e --slmp-1e-run-switch STOP --initial-state STOP; 13H ACK succeeds yet CPU stays STOP.
 --listen replaces --port. UDP accepts one exact MC frame/datagram; no TCP fault plan with UDP.
 -v logs requests/close reasons (no payloads/passwords). TCP idle timeout defaults to none.
 """.strip("\n")
@@ -125,8 +126,9 @@ This is a simulator, not a PLC. These behaviors are synthetic or unverified; do 
   owner persists across disconnects; local Server.reset_1e_remote_control() releases
   it while keeping STOP; UDP remote control denied. Local
   Server.get_1e_remote_control_status() reports owned/connected/orphaned safely.
-  CPU hardware RUN/STOP selector is not simulated: vendor 13H RUN can return
-  success with physical switch STOP while CPU remains STOP. Simulator only.
+  Optional --slmp-1e-run-switch STOP --initial-state STOP simulates the documented
+  physical STOP selector: authorized 13H RUN acknowledges, releases ownership,
+  but CPU stays STOP. Default RUN behavior is unchanged. Simulator only.
   Unlike batches, 15 replies F3 and 16 raw length+data. No mixed 1E/3E/4E.
   Synthetic Q memory, not vendor FX5 CPU/ENET certification.
   Every network/PC/station route aliases one memory.

@@ -150,8 +150,12 @@ parity. Physical oracle, hardware variant and PyPI release remain HOLD.
 Mitsubishi JY997D56001-K, printed page 132 (PDF zero-index page
 133), states that an authorized remote RUN command can **return normally
 without moving the accessed CPU to RUN** when its physical selector is
-STOP. VirtualPLC has only a synthetic CPU state: it does not model the
-selector or that special successful-but-still-STOP response.
+STOP. PR #28 introduces an explicit static simulator switch via
+`slmp_1e_run_switch="STOP"` with `initial_state="STOP"`. Authorized 13H
+returns 93 00/9300 while SD203 and state remain STOP, but STOP owner
+information clears. This is an **opt-in simulator model** of one documented
+condition; no verified physical-device behavior or dynamic selector changes
+are implied. Omitted/default switch remains RUN as before.
 
 Local `Server.get_1e_remote_control_status()` exposes
 `cpu_state`, `owned`, `owner_connected`, `orphaned` and

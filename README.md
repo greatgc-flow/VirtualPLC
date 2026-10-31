@@ -150,6 +150,22 @@ virtual-plc --slmp-1e --listen tcp:5000 --listen udp:5000
 # with Server(slmp_1e=True, listeners=[("tcp", 0), ("udp", 0)]) as plc: ...
 ```
 
+For the vendor-documented physical RUN/STOP switch edge case, an optional
+**static simulator switch** can be selected:
+
+```powershell
+virtual-plc --slmp-1e --slmp-1e-run-switch STOP --initial-state STOP --port 5000
+# Python: Server(slmp_1e=True, slmp_1e_run_switch="STOP", initial_state="STOP")
+```
+
+An authorized 13H remote RUN still acknowledges success but **CPU stays STOP**
+when this optional selector is STOP. The original STOP owner is released by
+that successful RUN, after which another TCP client may control the PLC.
+This explicitly models Mitsubishi JY997D56001-K printed p.132; the static
+switch is not a full CPU hardware model or physical-device verification.
+Omit the option to retain the original default RUN transition. STOP requires
+`--initial-state STOP` to prevent contradictory simulator initial state.
+
 This opt-in mode is **1E-only** on all of that process's listeners.
 It supports batch bit/word read/write `00H`–`03H`, random writes `04H` (up to 80 individual bits) and `05H` (up to 10 word or aligned bit-group items), remote `13H` RUN / `14H` STOP, and diagnostics `15H` / `16H` in binary and ASCII.
 Batch responses have the normal 1E subheader/status, but diagnostics have

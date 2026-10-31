@@ -77,7 +77,9 @@ def build_parser():
                         help="repeatable tcp:PORT or udp:PORT; shares one PLC state, overrides default --port")
     parser.add_argument("--profile", choices=PROFILES, default="Q", help="simulated CPU profile (inferred from --ethernet-model unless explicitly specified)")
     parser.add_argument("--ethernet-model", choices=tuple(model_catalog()), help="optional GX Works CPU/module Ethernet model (legacy defaults unchanged)")
-    parser.add_argument("--slmp-1e", action="store_true", help="opt-in 1E batch frame server (Q synthetic memory; not an FX5 hardware preset)")
+    parser.add_argument("--slmp-1e", action="store_true", help="opt-in 1E frame server (Q synthetic memory; not an FX5 hardware preset)")
+    parser.add_argument("--slmp-1e-run-switch", choices=("RUN", "STOP"), default=None,
+                        help="optional 1E simulated physical RUN/STOP selector; STOP also requires --initial-state STOP")
     parser.add_argument("--ethernet-config", metavar="FILE", help="JSON Ethernet timer/policy overrides (requires --ethernet-model)")
     parser.add_argument("--show-effective-ethernet", action="store_true", help="print model defaults/overrides and fidelity as JSON without binding")
     parser.add_argument("--password", help="simulated lock password (not authentication)")
@@ -126,6 +128,8 @@ def main(argv=None):
         parser.error("--port cannot be combined with --listen")
     if (args.ethernet_config or args.show_effective_ethernet) and not args.ethernet_model:
         parser.error("--ethernet-model is required for ethernet configuration/inspection", "ethernet")
+    if args.slmp_1e_run_switch is not None and not args.slmp_1e:
+        parser.error("--slmp-1e-run-switch requires --slmp-1e")
     if args.slmp_1e and (args.profile != "Q" or args.ethernet_model or args.fault_plan):
         parser.error("--slmp-1e requires the synthetic Q profile, no --ethernet-model or --fault-plan")
     if args.ethernet_model:
@@ -149,6 +153,8 @@ def main(argv=None):
                        ascii_numbering=args.ascii_numbering, verbose=args.verbose)
         if args.slmp_1e:
             options["slmp_1e"] = True
+        if args.slmp_1e_run_switch is not None:
+            options["slmp_1e_run_switch"] = args.slmp_1e_run_switch
         if args.listen:
             options["listeners"] = args.listen
         if args.ethernet_model:

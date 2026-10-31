@@ -8,6 +8,14 @@ features of
 profile: **Q series**.
 Not for industrial use. Binds 127.0.0.1 by default.
 
+**Physical RUN/STOP selector (opt-in simulator behavior):**
+The separate 1E mode supports `slmp_1e_run_switch="STOP"` only together
+with `initial_state="STOP"`. On authorized 13H remote RUN, owner information
+clears and the wire response is successful, but CPU state and SD203 remain STOP.
+This small static switch models the official JY997D56001-K p.132 condition,
+without changing default mode or pretending to implement physical switch
+transitions, firmware behavior or complete FX5 hardware parity.
+
 **SLMP 1E (opt-in):** `virtual_plc/one_e.py` owns the independently
 bounded, command-aware 1E parser/response codec with 00..03 batch, 04/05 transactional random writes, TCP owner-checked 13/14 remote RUN/STOP, and 15/16 diagnostics. The latter use
 **raw identity or length+data replies**, not the batch 8X/00 status layout. `Server(slmp_1e=True)` selects **1E-only** framing, reuses
