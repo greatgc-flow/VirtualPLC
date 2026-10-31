@@ -138,6 +138,17 @@ SIGBREAK needs a shared console; forced termination bypasses Python handlers.
 
 Every topic accepts `--json`. Unknown topics list the choices and exit 2.
 
+## GX Works2/3 Ethernet parameters (research)
+
+Factory Ethernet timers, port defaults, open settings and RUN-time write policy
+belong to the **specific CPU/interface module**, not to GX Works2 or GX Works3
+as an editor. See the [model/parameter comparison](docs/research/GXWORKS_ETHERNET_PARAMETERS_20261031.md)
+and [implementation plan #14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
+Those defaults are research/reference data **not yet emulated**: `--idle-timeout`
+is a simulator socket guard, not a GX Works module response-monitor timer.
+Separate PLCs run in separate processes; one process's multiple listeners
+share its PLC state.
+
 ## Profiles, frames and encodings
 
 Commands support 3E/4E and binary/ASCII on all profiles. Q, L, QnA and iQ-L
