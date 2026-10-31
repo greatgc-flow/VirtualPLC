@@ -126,8 +126,9 @@ This is a simulator, not a PLC. These behaviors are synthetic or unverified; do 
   owner persists across disconnects; local Server.reset_1e_remote_control() releases
   it while keeping STOP; UDP remote control denied. Local
   Server.get_1e_remote_control_status() reports owned/connected/orphaned safely.
-  CPU hardware RUN/STOP selector is not simulated: vendor 13H RUN can return
-  success with physical switch STOP while CPU remains STOP. Simulator only.
+  Optional --slmp-1e-run-switch STOP --initial-state STOP simulates the documented
+  physical STOP selector: authorized 13H RUN acknowledges, releases ownership,
+  but CPU stays STOP. Default RUN behavior is unchanged. Simulator only.
   Unlike batches, 15 replies F3 and 16 raw length+data. No mixed 1E/3E/4E.
   Synthetic Q memory, not vendor FX5 CPU/ENET certification.
   Every network/PC/station route aliases one memory.
