@@ -8,7 +8,8 @@ Published PyPI v0.5.0 predates the 2026-10-31 multi-TCP/UDP and GX Works
 Ethernet model changes. One independent PLC runs in **one OS process**; all
 listeners of that process share its state. The currently implemented model
 keys are `qj71e71` (Q), `lj71e71` (L) and `rj71en71` (iQ-R).
-Review [Ethernet settings](ETHERNET_MODEL_SETTINGS.md), the
+Review [Ethernet settings](ETHERNET_MODEL_SETTINGS.md),
+[FX5 1E/3E protocol gates](research/FX5_SLMP_FRAME_SCOPE_20261031.md), and
 [manufacturer research matrix](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md),
 [remaining hardware gaps](research/ETHERNET_HARDWARE_NEXT_20261031.md) and
 [issue #14](https://github.com/greatgc-flow/VirtualPLC/issues/14) for
@@ -18,7 +19,11 @@ without promoting these interfaces to runnable profiles. CLI model selection
 infers the wire profile; explicit JSON overrides are tracked even if equal to
 the factory default. Review changes against
 [VerySimpleGuide](https://github.com/greatgc-flow/VerySimpleGuide). Vendor TCP/IP timers are *reference-only*;
-physical PLC equivalence is not claimed.
+physical PLC equivalence is not claimed. The source checkout also supports
+opt-in `--ascii-numbering fx5-octal` for X/Y octal on the generic 3E/4E
+simulator. The FX5-specific 1E frame adapter is **not implemented**;
+[issue #22](https://github.com/greatgc-flow/VirtualPLC/issues/22) tracks the
+separate command/response implementation gates. Do not mark hardware parity.
 
 ---
 

@@ -285,7 +285,14 @@ the previous client-visible CPU name. Vendor CPU-name fill remains unverified.
 Incoming ASCII device identifiers are fixed-width text with canonical `*`
 suffix fill in the pinned client's constants. The parser accepts that format
 and the configured `text_pad` in unused suffix positions, with unchanged field
-widths and decimal address parsing. Canonical identifiers take precedence;
+widths and default decimal address parsing. `--ascii-numbering manual`
+uses the device's declared base (including X/Y hexadecimal).
+`--ascii-numbering fx5-octal` uses **octal X/Y only**, preserving W/B
+hexadecimal and D decimal; 8/9 and A–F in X/Y addresses are rejected.
+This is a 3E/4E *generic parser* option, not support for FX5-specific 1E
+frames or a runnable FX5 hardware model. See
+[FX5 SLMP frame scope](research/FX5_SLMP_FRAME_SCOPE_20261031.md).
+Canonical identifiers take precedence;
 ambiguous alternate prefixes are rejected rather than guessed. Fill bytes are
 matched literally, including non-ASCII values, without changing device names.
 Binary device codes are numeric and have no text fill.

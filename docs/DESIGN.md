@@ -100,7 +100,7 @@ policy](BEHAVIOR.md#native-dword-stride-policy-unverified).
 | D2 | Five named profiles (Q, L, QnA, iQ-L, iQ-R) mapped to two wire classes (`Q-class`, `iQ-R`). Same wire class != same capabilities; ranges, CPU names and batch point caps (QnA vs Q/L/iQ-L/iQ-R) are per profile. Addressed requests using the opposite wire class's subcommands return an error in either direction. Q-class names and non-addressed packets are indistinguishable on the wire; see BEHAVIOR. |
 | D3 | Layout `virtual_plc/{server,codec,commands,memory,profiles,faults,__main__}.py`; tables in Python. stdlib + pytest only. One lock per request; validate whole request before any mutation; each response fully written via `sendall`/checked send loop; `TCP_NODELAY`; tests bind port 0. M7 explicitly injects response faults after dispatch. |
 | D4 | Tests generated from tables over **applicable** combinations only (explicit exclusions with reasons). Oracles: (i) real pymcprotocol 0.3.0 = *client-compat*; (ii) hand-authored expected bytes in test code, independent of `codec.py`/tables/client = *manual-derived* (never "manual-correct", never "capture"). Oracle pin = PyPI 0.3.0 wheel hash (verify checkout matches). |
-| D5 | Numbering policy is explicit (`compat` default = decimal text as client sends; opt-in `manual` policy parses hex digits for base-16 devices via `ascii_numbering="manual"` / `--ascii-numbering manual`). Never autodetect. ASCII dword order is a separate endpoint option: `swapped` (default, low word first) or `client` (high word first); physical PLC ordering remains unverified. All manual claims from memory are marked `unverified`. |
+| D5 | Numbering policy is explicit (`compat` default = decimal text as client sends; `manual` parses declared device bases including hex X/Y/W/B; `fx5-octal` parses **X/Y octal only**, other devices retain declared bases). Never autodetect. FX5 JY997D56001-K p.67 confirms the OCT/HEX distinction, but FX5 full hardware parity and 1E are still unsupported. ASCII dword order is separate: `swapped` (default) or `client` (high first); physical ordering remains unverified. |
 | D6 | Milestones below. 4096 is a *client receive limit*, documented separately from server limits; large valid responses tested with a raw-socket client. |
 | D7a | Timers/counters (TS/TC/TN, CS/CC/CN, SS/SC/SN): independent storage, no timer execution. Own milestone step. |
 | D7b | SM/SD writable by default; no read-only ranges are currently enforced. |
@@ -238,7 +238,11 @@ per-range RO; vendor verification of M5 lock/reset/state-code policies; real-PLC
 unaligned bit-head word reads; bit-device
 dword views; vendor verification of ASCII dword word order (configurable: default
 `swapped`, optional `client`; low-word-first PLC behavior remains suspected/unverified).
-ASCII overwidth requests are rejected; manual numbering is implemented as an opt-in policy (`ascii_numbering="manual"`). Client 0.3.0
+ASCII overwidth requests are rejected; `manual` (device-base) and
+`fx5-octal` (X/Y only) numbering are opt-in policies. See
+[FX5 1E/3E frame distinction and limits](research/FX5_SLMP_FRAME_SCOPE_20261031.md).
+1E is a separately tracked future command-aware frame adapter (#22), not an
+extension of the 3E length header. Client 0.3.0
 is pinned and checked by the oracle test.
 
 

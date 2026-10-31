@@ -85,8 +85,8 @@ def build_parser():
     parser.add_argument("--idle-timeout", type=float, default=None, help="seconds; default: no timeout")
     parser.add_argument("--ascii-dword-order", choices=("swapped", "client"), default="swapped",
                         help="ASCII dwords: low word first / client high word first")
-    parser.add_argument("--ascii-numbering", choices=("compat", "manual"), default="compat",
-                        help="ASCII device numbers: decimal compat / hex manual for X/Y/B/W")
+    parser.add_argument("--ascii-numbering", choices=("compat", "manual", "fx5-octal"), default="compat",
+                        help="ASCII addresses: decimal compat, hex manual, or FX5 X/Y octal (others use device base)")
     parser.add_argument("--text-pad", type=text_pad, default=0x00, help="CPU name fill byte 0..255; 0x20 = space")
     parser.add_argument("--fault-plan", metavar="FILE", help="response fault JSON")
     parser.add_argument("--init", metavar="FILE", help="load memory JSON before listening")

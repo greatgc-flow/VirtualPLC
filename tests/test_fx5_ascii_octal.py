@@ -88,3 +88,14 @@ def test_fx5_octal_is_not_a_hardware_compatibility_claim():
     from virtual_plc.ethernet import reference_catalog, model_catalog
     assert "fx5_enet" not in model_catalog()
     assert reference_catalog()["fx5_enet"]["implementation"] == "research_only"
+
+
+def test_fx5_reference_frame_facts_do_not_enable_unsupported_1e():
+    from virtual_plc.ethernet import reference_catalog, model_catalog
+    refs = reference_catalog()
+    assert refs["fx5_enet"]["reference"]["slmp_server_frames"] == ["1E", "3E"]
+    assert refs["fx5_enet"]["reference"]["connection_limit"] == 32
+    assert refs["fx5_enet"]["reference"]["ascii_xy_numbering_choices"] == ["octal", "hexadecimal"]
+    assert refs["fx5_enet"]["protocol_source"]["manual"] == "JY997D56001-K (FX5 SLMP)"
+    assert refs["fx5_cpu_builtin"]["reference"]["slmp_server_frames"] == ["1E", "3E"]
+    assert set(refs).isdisjoint(model_catalog())
