@@ -37,6 +37,14 @@ storage ranges and alignment before one atomic commit. Duplicate destinations
 are applied in request order (last value wins); invalid later records never
 partially mutate memory.
 
+The optional `Server(slmp_1e=True, slmp_1e_run_switch="STOP", initial_state="STOP")`
+(or CLI `--slmp-1e --slmp-1e-run-switch STOP --initial-state STOP`) models
+Mitsubishi manual p.132: authorized 13H remote RUN returns normal success,
+clears the owner but CPU remains STOP because the simulated physical selector
+is STOP. Omitted/default RUN switch preserves existing RUN transitions.
+The selector is startup-static, deliberately not an unverified dynamic physical
+PLC control or an FX5 hardware preset.
+
 Remote 14H STOP owns one unique TCP connection ID across all listener ports.
 Another TCP connection cannot RUN or STOP until the same owner has sent 13H
 RUN. On socket disconnect/idle timeout, ownership remains orphaned and CPU
