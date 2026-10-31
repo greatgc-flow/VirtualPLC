@@ -13,6 +13,8 @@ Equivalent entry point: python -m virtual_plc guide
 Rules:
 - Use localhost; never connect to equipment or production networks.
 - Client plctype and server profile must agree for iQ-R.
+- CLI --ethernet-model infers its matching wire profile; explicit --profile conflicts are rejected.
+- Ethernet guide JSON exposes separate runnable models and research-only FX5/RnCPU facts; no invented defaults.
 - CPU names have NUL fill by default; --text-pad 0x20 gives space fill.
 - Seed direct Memory before start; snapshot after stop; use clients for live writes.
 - Faults happen after execution; faulted writes are not rolled back.

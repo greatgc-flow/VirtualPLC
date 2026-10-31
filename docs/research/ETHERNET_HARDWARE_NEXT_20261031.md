@@ -2,6 +2,12 @@
 
 Research extension: 2026-10-31 (KST). Linked from [the primary GX Works2/3 Ethernet matrix](GXWORKS_ETHERNET_PARAMETERS_20261031.md) and [runtime model guide](../ETHERNET_MODEL_SETTINGS.md). Tracks [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
 
+The machine-readable `virtual-plc guide ethernet --json` has separate
+`models` (runnable) and `reference_only_models` (unimplemented, sourced
+facts + explicit unknowns). Both are projected from `virtual_plc/ethernet.py`;
+this document explains evidence and open gates without making a future model
+executable.
+
 **One independent PLC = one OS process.** Multiple TCP/UDP listeners inside that process share one simulated CPU and memory; multiple independent PLCs use separate processes. These notes apply to the *specific hardware interface*, not to every PLC configured by the same GX Works version.
 
 ## 1. Evidence and engineering decisions

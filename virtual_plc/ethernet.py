@@ -122,6 +122,8 @@ class EthernetSettings:
 
         self.model = model
         self.profile = spec["profile"]
+        # Preserve explicit intent even when an override equals the default.
+        self._configured = frozenset(set(timers) | (set(overrides) & set(_POLICY_DEFAULTS)))
         self.values = MappingProxyType(values)
 
     def report(self):
@@ -132,7 +134,7 @@ class EthernetSettings:
             low, high, step = _timer_bound(self.model, spec, name)
             parameters[name] = {
                 "value": self.values[name], "default": factory,
-                "overridden": self.values[name] != factory,
+                "overridden": name in self._configured,
                 "unit": "count" if name == "alive_retries" else "ms",
                 "min": low, "max": high, "step": step,
                 "effect": "reference_only",
@@ -141,7 +143,7 @@ class EthernetSettings:
         for name, factory in _POLICY_DEFAULTS.items():
             parameters[name] = {
                 "value": self.values[name], "default": factory,
-                "overridden": self.values[name] != factory,
+                "overridden": name in self._configured,
                 "unit": "enum" if name == "communication_data_code" else "boolean",
                 "choices": ["binary", "ascii"] if name == "communication_data_code"
                            else [False, True],
@@ -171,3 +173,72 @@ class EthernetSettings:
 def model_catalog():
     """The SSOT for guide --json, CLI introspection and docs references."""
     return {model: EthernetSettings(model).report() for model in _MODELS}
+
+
+# Reference-only hardware facts. Unsupported models never enter _MODELS, and
+# unknown module timers must never be borrowed from Q/L or RJ71EN71.
+_REFERENCE_HARDWARE = {
+    "fx5_cpu_builtin": {
+        "implementation": "research_only",
+        "source": {
+            "manual": "Mitsubishi FAQ #22320 (FX5 built-in Ethernet)",
+            "page": "FAQ #22320, updated 2023-07-04",
+            "url": "https://fa-faq.mitsubishielectric.com/faq/show/22320",
+        },
+        "reference": {
+            "connection_limit": 8,
+            "connection_limit_scope": "SLMP/MELSOFT/MODBUS-TCP/socket/predefined-protocol combined; documented exclusions apply",
+        },
+        "unverified": [
+            "tcp_ulp_ms", "tcp_resend_ms", "response_monitor_ms",
+            "model/firmware-specific SLMP default host port", "RUN-write behavior",
+        ],
+    },
+    "fx5_enet": {
+        "implementation": "research_only",
+        "source": {
+            "manual": "SH-082026ENG-H (FX5-ENET)",
+            "page": "70, 79",
+            "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082026eng/sh082026engh.pdf",
+        },
+        "reference": {
+            "communication_data_code_default": "binary",
+            "communication_data_code_choices": ["binary", "ascii_x_y_octal", "ascii_x_y_hexadecimal"],
+            "opening_method_default": "do_not_open_by_program",
+            "default_slmp_host_port": "blank",
+            "vendor_port_ranges": [[1, 5548], [5570, 65534]],
+            "vendor_reserved_port_range": [5549, 5569],
+            "alive_start_ms": 600000,
+            "alive_interval_ms": 10000,
+            "alive_retries": 3,
+        },
+        "unverified": [
+            "tcp_ulp_ms", "tcp_zero_window_ms", "tcp_resend_ms",
+            "tcp_end_ms", "ip_assembly_ms", "response_monitor_ms",
+            "RUN-write behavior", "MC device and frame compatibility",
+        ],
+    },
+    "rncpu_builtin": {
+        "implementation": "research_only",
+        "source": {
+            "manual": "SH-081257ENG-AD (iQ-R built-in Ethernet, system ports)",
+            "page": "Appendix 10",
+            "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf",
+        },
+        "reference": {
+            "auto_open_udp": 5005,
+            "melsoft_udp": 5006,
+            "melsoft_tcp": 5007,
+        },
+        "unverified": [
+            "tcp_ulp_ms", "tcp_resend_ms", "response_monitor_ms",
+            "per-CPU/firmware editable timer ranges", "RUN-write behavior",
+            "MC service parity and MELSOFT handshake",
+        ],
+    },
+}
+
+
+def reference_catalog():
+    """Read-only discovery; these hardware IDs are NOT runnable models."""
+    return deepcopy(_REFERENCE_HARDWARE)

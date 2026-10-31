@@ -12,7 +12,7 @@ import threading
 import tempfile
 
 from . import __version__, guide
-from .ethernet import model_catalog
+from .ethernet import EthernetSettings, model_catalog
 from .server import Server, is_loopback_host
 from .faults import FaultPlan
 from .memory import Memory
@@ -75,7 +75,7 @@ def build_parser():
     parser.add_argument("--port", type=int, default=5000, help="legacy single TCP port 0..65535; 0 chooses a free port")
     parser.add_argument("--listen", action="append", type=listener_spec, default=[], metavar="PROTO:PORT",
                         help="repeatable tcp:PORT or udp:PORT; shares one PLC state, overrides default --port")
-    parser.add_argument("--profile", choices=PROFILES, default="Q", help="simulated CPU profile")
+    parser.add_argument("--profile", choices=PROFILES, default="Q", help="simulated CPU profile (inferred from --ethernet-model unless explicitly specified)")
     parser.add_argument("--ethernet-model", choices=tuple(model_catalog()), help="optional GX Works CPU/module Ethernet model (legacy defaults unchanged)")
     parser.add_argument("--ethernet-config", metavar="FILE", help="JSON Ethernet timer/policy overrides (requires --ethernet-model)")
     parser.add_argument("--show-effective-ethernet", action="store_true", help="print model defaults/overrides and fidelity as JSON without binding")
@@ -125,11 +125,20 @@ def main(argv=None):
         parser.error("--port cannot be combined with --listen")
     if (args.ethernet_config or args.show_effective_ethernet) and not args.ethernet_model:
         parser.error("--ethernet-model is required for ethernet configuration/inspection", "ethernet")
+    if args.ethernet_model:
+        required_profile = EthernetSettings(args.ethernet_model).profile
+        specified_profile = any(value == "--profile" or value.startswith("--profile=") for value in argv)
+        if specified_profile and args.profile != required_profile:
+            parser.error("--profile conflicts with the selected ethernet hardware model", "ethernet")
+        if not specified_profile:
+            args.profile = required_profile
     topic = "faults"
     try:
         plan = FaultPlan.from_file(args.fault_plan) if args.fault_plan else None
         topic = "memory"
         overrides = json.loads(Path(args.ethernet_config).read_text(encoding="utf-8")) if args.ethernet_config else None
+        if args.ethernet_config and not isinstance(overrides, dict):
+            parser.error("ethernet configuration root must be a JSON object", "ethernet")
         options = dict(profile=args.profile, password=args.password, initial_state=args.initial_state,
                        max_points=args.max_points, idle_timeout=args.idle_timeout, fault_plan=plan,
                        max_clients=args.max_clients, allow_nonlocal=args.allow_nonlocal,

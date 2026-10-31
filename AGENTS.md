@@ -20,6 +20,11 @@ This file is for agents developing this repository. For product usage, run
 - `virtual_plc/profiles.py` and command dispatch tables own profile/device/command data.
 - `virtual_plc/ethernet.py` alone owns opt-in hardware-model Ethernet factory values,
   validation, source/fidelity metadata; guide ethernet JSON derives from it.
+- The `models` registry is runnable; `reference_only_models` contains verified
+  FX5/RnCPU facts and explicit unknowns, never copied Q/L/R timer defaults.
+- Prefer [VerySimpleGuide](https://github.com/greatgc-flow/VerySimpleGuide)
+  constraints: preserve explicit vs inherited values, infer unambiguous CLI
+  defaults, avoid unnecessary new commands/frameworks, and require evidence.
 - `virtual_plc/guide.py` owns compact English usage prose; tables are generated.
 - README marked `guide:run` recipes must match guide run (test-enforced).
 - README is the human entry point; docs/BEHAVIOR.md and docs/FAULTS.md explain semantics.
