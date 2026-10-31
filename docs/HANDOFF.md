@@ -1,3 +1,17 @@
+## 2026-11-01 RnCPU CPU built-in remote opening safety preflight (PR #34)
+
+Mitsubishi official CPU manual SH-082488ENG-E printed p.3 warns that
+`Open by Program` can close the line on remote STOP and block a
+subsequent external remote RUN. Appendix 8 pp.684–685 maps CPU built-in
+`Opening Method` to A031H; `Timer Settings for Data Communication`
+is A038H (not proof of matching RJ71EN71 timer defaults).
+`inspect_reference_rncpu_remote_opening(None | "open_by_program" |
+"do_not_open_by_program")` is offline/reference-only and keeps missing
+configuration UNKNOWN. TDD and CI: [PR #34](https://github.com/greatgc-flow/VirtualPLC/pull/34);
+[research/validation](research/RNCPU_REMOTE_OPENING_SAFETY_20261101.md).
+No real CPU connection, automated RUN/STOP, socket changes or PyPI release.
+Check current exact PR/main CI before assuming gate completion.
+
 # Handoff (historical baseline 2026-10-23)
 
 ## 2026-11-01 RnCPU built-in service connection reference (PR #33)

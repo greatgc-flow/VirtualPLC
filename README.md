@@ -425,3 +425,14 @@ See [DESIGN](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/DESIGN.md
 [BEHAVIOR](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md)
 and [FAULTS](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/FAULTS.md).
 Licensed under [MIT](https://github.com/greatgc-flow/VirtualPLC/blob/main/LICENSE).
+
+### RnCPU built-in Ethernet remote RUN/STOP setting check (source checkout)
+
+The reference-only, **offline** `inspect_reference_rncpu_remote_opening()`
+helper reports `UNKNOWN` when the CPU `Opening Method` is not supplied.
+For `open_by_program`, it reports the documented remote-STOP/reconnect risk.
+For `do_not_open_by_program`, it reports the vendor recommendation
+**without** guaranteeing physical remote RUN success. No simulator listener,
+remote control or PyPI release is changed. See
+[the manufacturer-scoped RnCPU opening guide](docs/research/RNCPU_REMOTE_OPENING_SAFETY_20261101.md)
+and `virtual-plc guide ethernet --json` for source-backed metadata.

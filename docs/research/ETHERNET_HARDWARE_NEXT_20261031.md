@@ -115,3 +115,13 @@ Separate L and Q hardware models remain distinct even when numeric timer default
 - **Physical PLC verification**: remains OPEN under [#2](https://github.com/greatgc-flow/VirtualPLC/issues/2) and [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14); tests against the pinned `pymcprotocol==0.3.0` client are **client compatibility**, not physical PLC certification.
 
 This is a source-and-gap matrix, not a claim that all models listed here are selectable by `--ethernet-model`.
+
+### 2026-11-01 CPU-built-in remote RUN/STOP opening-method guard
+
+[Official RnCPU preflight](RNCPU_REMOTE_OPENING_SAFETY_20261101.md):
+Mitsubishi CPU manual SH-082488ENG-E p.3 explicitly warns against
+`Open by Program` for external remote RUN/STOP (STOP may close the
+line and prevent later remote RUN). Appendix 8 pp.684–685 identifies
+Opening Method (A031H) and a *separate* CPU timer setting (A038H).
+Reference-only strict offline inspector; CPU-specific factory opening
+method / timer values remain UNKNOWN. No RJ71EN71 inheritance.

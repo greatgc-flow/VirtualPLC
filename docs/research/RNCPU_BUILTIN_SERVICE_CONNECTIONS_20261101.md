@@ -76,3 +76,14 @@ keys remain qj71e71, lj71e71 and rj71en71.
 
 No real PLC connection, auto-OPEN, PyPI release, or hardware
 compatibility certification is performed in this change.
+
+## 4. Independent remote RUN/STOP opening-method preflight
+
+Do not conflate the service-specific auto-open/GOT connection FAQ matrix
+above with the **remote RUN/STOP opening method**. Mitsubishi
+SH-082488ENG-E p.3 and Appendix 8 pp.684–685 separately document the
+CPU built-in Opening Method (A031H), including the remote STOP
+reconnect hazard when configured Open by Program. See
+[the isolated remote opening-method preflight](RNCPU_REMOTE_OPENING_SAFETY_20261101.md)
+and PR #34. No factory opening default is inferred; no real PLC
+is contacted and no runtime control is enabled.
