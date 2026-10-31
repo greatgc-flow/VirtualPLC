@@ -232,7 +232,9 @@ def _remote_control(frame, command, wire, control, requester):
         control._remote_stop_owner = requester
         control._remote_stop_owner_connected = True
     else:
-        control.set_state("RUN")
+        # Manual p.132: remote 13H may ACK normally while the physical
+        # RUN/STOP selector is STOP; do not synthesize a CPU RUN transition.
+        control.set_state("RUN" if control.slmp_1e_run_switch == "RUN" else "STOP")
         control._remote_stop_owner = None
         control._remote_stop_owner_connected = False
     return _response(command, wire)
