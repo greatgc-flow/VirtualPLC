@@ -88,7 +88,7 @@ TROUBLESHOOT = """
 Symptom -> cause -> fix
 "cannot listen on H:P" (exit 1): port busy or denied -> choose another --port, or --port 0 and read the banner.
 UDP timeout: each datagram must contain exactly one full frame (max 8192 bytes); invalid requests get no response.
-1E: --slmp-1e supports batch 00..03 plus type 15 and loopback 16; not mixed with 3E/4E.
+1E: --slmp-1e supports batch 00..03, random 04/05, TCP owner-bound RUN/STOP 13/14, type 15 and loopback 16; not mixed with 3E/4E.
 Exit 2 and "see: virtual-plc guide TOPIC": bad option, JSON file or plan -> read that topic; nothing was bound.
 Client times out: wrong host/port, a fault plan that holds or drops replies, or --idle-timeout closed the socket
   (reconnect). A silent_hold fault ends only when the server stops.
@@ -120,9 +120,12 @@ This is a simulator, not a PLC. These behaviors are synthetic or unverified; do 
 - iQ-R native dword devices (LTN LSTN LCN LZ) use one 32-bit point per address; word access streams the
   low/high halves. The stride is unverified.
 - Timers and counters hold plain values; no PLC logic executes. The monitoring timer is parsed and ignored.
-- Optional --slmp-1e uses bounded 1E framing: batch 00..03, model-code 15 and
-  loopback 16. Unlike batches, 15 replies only F3 and 16 replies raw length+data;
-  synthetic Q memory, not vendor FX5 CPU/ENET certification. No mixed 1E/3E/4E.
+- Optional --slmp-1e uses bounded 1E framing: batch 00..03, atomic random 04/05,
+  TCP-owner-only remote RUN/STOP 13/14, model-code 15 and loopback 16. The STOP
+  owner persists across disconnects; local Server.reset_1e_remote_control() releases
+  it while keeping STOP; UDP remote control denied. These are simulator safety rules.
+  Unlike batches, 15 replies F3 and 16 raw length+data. No mixed 1E/3E/4E.
+  Synthetic Q memory, not vendor FX5 CPU/ENET certification.
   Every network/PC/station route aliases one memory.
 - Error codes are design values. Z devices are unsupported.
 - Faults act after execution: a faulted write or reset has already happened.
