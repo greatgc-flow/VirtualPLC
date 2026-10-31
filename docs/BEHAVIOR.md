@@ -4,7 +4,7 @@ This reference describes simulator policy and compatibility with pymcprotocol
 0.3.0. Vendor ranges, identities and error meanings remain unverified.
 See [design](DESIGN.md), [fault injection](FAULTS.md), and [usage/safety](../README.md).
 
-## SLMP 1E batch transport (opt-in)
+## SLMP 1E transport (opt-in)
 
 `Server(slmp_1e=True)` or `virtual-plc --slmp-1e` selects a **separate
 1E-only request/response parser** on all TCP/UDP listeners of the same
@@ -16,7 +16,13 @@ settings raise `ValueError` before any port is bound.
 Commands `00H` (bit read, max 256, encoded count 00H=256), `01H`
 (word/group read, max 64 D words / 32 aligned groups of 16 bits),
 `02H` (bit write, max 160), and `03H` (word/group write, max 64 D
-words / 10 aligned bit groups) are supported in binary and ASCII.
+words / 10 aligned bit groups), plus diagnostic `15H` (type code)
+and `16H` (loopback, 1–254 bytes) are supported in binary and ASCII.
+**Unlike batch responses**, `15H` replies with only model code `F3H`
+(binary) or `F3` (ASCII); `16H` echoes only the original byte count
+and data (binary length byte; ASCII two-character hexadecimal length).
+Neither uses the batch subheader/status. The type code is a manual-sourced,
+synthetic module identity; no actual FX5 hardware identity is implied.
 First-slice device validation is restricted to M (0..7679),
 X/Y (0..255) and D (0..7999) synthetic points. Invalid PC numbers,
 monitoring timers, reserved fields, framing and data widths do not

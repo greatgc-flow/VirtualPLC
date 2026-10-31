@@ -1,6 +1,6 @@
-"""Opt-in MELSEC iQ-F SLMP 1E batch adapter; not an FX5 hardware profile.
+"""Opt-in MELSEC iQ-F SLMP 1E adapter; not an FX5 hardware profile.
 
-JY997D56001-K pp.41-49, 119-127, 137-138. 1E has no generic
+JY997D56001-K pp.41-49, 119-127, 134-138. 1E has no generic
 data-length header: the first command byte determines a bounded request size.
 This module does not alter the existing 3E/4E codec or PLC memory ownership.
 """
@@ -20,20 +20,23 @@ ERROR = {
     "address": 0xC056, "device": 0xC05B,
     "request": 0xC05C, "bit_data": 0xC060,
 }
-MAX_1E_REQUEST = 512
+# ASCII 16H maximum: 8 header + 2 length + 254 encoded bytes (508).
+MAX_1E_REQUEST = 518
 
 
 def _command_and_wire(buffer):
     if not buffer:
         return None
     first = buffer[0]
-    if first == 0x30:  # ASCII 00, 01, 02, 03; requires both bytes
+    if first in (0x30, 0x31):  # ASCII 00..03, 15, 16
         if len(buffer) < 2:
             return None
-        if buffer[1] not in (0x30, 0x31, 0x32, 0x33):
-            raise ValueError("unsupported or malformed 1E ASCII subheader")
-        return buffer[1] - 0x30, "ascii"
-    if first in (0, 1, 2, 3):
+        if first == 0x30 and buffer[1] in (0x30, 0x31, 0x32, 0x33):
+            return buffer[1] - 0x30, "ascii"
+        if first == 0x31 and buffer[1] in (0x35, 0x36):
+            return 0x10 + buffer[1] - 0x30, "ascii"
+        raise ValueError("unsupported or malformed 1E ASCII subheader")
+    if first in (0, 1, 2, 3, 0x15, 0x16):
         return first, "binary"
     raise ValueError("unknown 1E subheader (3E/4E not accepted)")
 
@@ -54,6 +57,23 @@ def frame_size_1e(buffer):
     if item is None:
         return None
     command, wire = item
+    if command in (0x15, 0x16):
+        header = 8 if wire == "ascii" else 4
+        if len(buffer) < header:
+            return None
+        if command == 0x15:
+            return header
+        count_width = 2 if wire == "ascii" else 1
+        if len(buffer) < header + count_width:
+            return None
+        count = (_hex_number(buffer[header:header + 2])
+                 if wire == "ascii" else buffer[header])
+        if not 1 <= count <= 254:
+            raise ValueError("1E loopback length must be 1..254")
+        result = header + count_width + count * (2 if wire == "ascii" else 1)
+        if result > MAX_1E_REQUEST:
+            raise ValueError("1E loopback size exceeds bounded maximum")
+        return result
     header = 24 if wire == "ascii" else 12
     if len(buffer) < header:
         return None
@@ -120,11 +140,32 @@ def _word_to_bits(word):
 
 
 def dispatch_1e(frame, memory, max_points=None):
-    """Return a complete 1E answer for a validly framed request.
+    """Return 1E answer; diagnostic 15/16 replies lack the batch status prefix.
 
     Caller MUST hold Server._request_lock when invoking this function.
     No physical PLC, external module connection or firmware parity is implied.
     """
+    layout = _command_and_wire(frame)
+    if layout is None:
+        raise ValueError("short 1E request")
+    command, wire = layout
+    if command in (0x15, 0x16):
+        if frame_size_1e(frame) != len(frame):
+            raise ValueError("1E diagnostic frame length mismatch")
+        if wire == "ascii":
+            if frame[2:4].upper() != b"FF" or _hex_number(frame[4:8]) != 0:
+                raise ValueError("1E PC number or monitoring timer invalid")
+            if command == 0x15:
+                return b"F3"  # manual p.134: ASCII model code only, no 1E prefix
+            encoded = frame[10:]
+            if any(c not in b"0123456789ABCDEFabcdef" for c in encoded):
+                raise ValueError("1E ASCII loopback requires encoded hexadecimal characters")
+            return frame[8:]  # exact 2-character length plus transmission data
+        if frame[1] != 0xFF or frame[2:4] != b"\x00\x00":
+            raise ValueError("1E PC number or monitoring timer invalid")
+        if command == 0x15:
+            return b"\xF3"  # manual p.134: binary model code only, no 1E prefix
+        return frame[4:]  # exact 1-byte length and the transmitted bytes
     command, wire, name, head, points, data = _parse(frame)
     device = DEVICES.get(name)
     if device is None:
