@@ -14,14 +14,17 @@ import textwrap
 from . import __version__
 from .codec import FRAMES, WIRES
 from .commands import COMMAND_NAMES, supported_commands
+from .ethernet import model_catalog
 from .faults import ACTION_FIELDS
 from .profiles import PROFILES
 from .server import Server
 
-TOPICS = ("run", "options", "client", "profiles", "embed", "faults", "memory", "troubleshoot", "divergences")
+TOPICS = ("run", "options", "client", "profiles", "ethernet", "embed", "faults", "memory", "troubleshoot", "divergences")
 
 # Option -> topic named by error messages; every other option points to `options`.
-OPTION_TOPICS = {"--profile": "profiles", "--fault-plan": "faults", "--init": "memory",
+OPTION_TOPICS = {"--profile": "profiles", "--ethernet-model": "ethernet",
+                 "--ethernet-config": "ethernet", "--show-effective-ethernet": "ethernet",
+                 "--fault-plan": "faults", "--init": "memory",
                  "--dump-on-exit": "memory", "--limit": "memory", "--latch-range": "memory"}
 
 # Mirrored verbatim in the README quickstart (a test fails on drift).
@@ -54,6 +57,8 @@ Banner: "listening on HOST:PORT (...)". With --port 0 parse the real port from i
 Stop: Ctrl+C or SIGTERM exits 0 and writes --dump-on-exit; Windows SIGBREAK needs a shared console.
 Exit codes: 0 clean stop, 1 cannot bind, 2 bad configuration (message ends "see: virtual-plc guide TOPIC").
 Default 127.0.0.1 TCP. Nonlocal bind needs --allow-nonlocal --idle-timeout N; no authentication.
+Optional model: --ethernet-model qj71e71 | --profile iQ-R --ethernet-model rj71en71.
+Set --ethernet-config FILE for overrides; --show-effective-ethernet prints JSON without listening.
 Multi-port: virtual-plc --listen tcp:5000 --listen tcp:5001 --listen udp:5000 (one shared PLC).
 --listen replaces --port. UDP accepts one exact MC frame/datagram; no TCP fault plan with UDP.
 -v logs requests/close reasons (no payloads/passwords). TCP idle timeout defaults to none.
@@ -312,7 +317,29 @@ def _memory(parser):
     return "\n".join([MEMORY_HEAD, *(f"  {kind}: {' '.join(names)}" for kind, names in kinds.items()), MEMORY_TAIL])
 
 
-GENERATED = {None: _overview, "options": _options, "profiles": _profiles, "embed": _embed,
+def _ethernet(parser):
+    """Compact ASCII guidance generated from the model parameter registry."""
+    lines = [
+        "Ethernet hardware model mode (opt-in; legacy behavior unchanged without it).",
+        "  virtual-plc --ethernet-model qj71e71 --show-effective-ethernet",
+        "  virtual-plc --profile iQ-R --ethernet-model rj71en71 --ethernet-config FILE",
+        "JSON keys: timers, communication_data_code, allow_write_during_run.",
+        "  Example: {\"timers\":{\"tcp_ulp_ms\":35000,\"response_monitor_ms\":35000}}",
+        "Timer values: integer milliseconds or count; exact model bounds and step enforced.",
+        "reference_only = stored/validated; not applied to host TCP stack.",
+        "simulated = applied to MC responses; physical parity remains unverified.",
+        "Wrong data-code mode: TCP closes, UDP drops. RUN write denied: code 0055.",
+        "Vendor MELSOFT ports are not auto-opened; use --listen explicitly.",
+        "One independent PLC per process; all listeners share its state.",
+    ]
+    for model, spec in model_catalog().items():
+        lines.append(f"{model} ({spec['editor']}, profile {spec['profile']}):")
+        for key, field in spec["parameters"].items():
+            lines.append(f"  {key}: {field['default']} {field['unit']} [{field['effect']}]")
+    return "\n".join(lines)
+
+
+GENERATED = {None: _overview, "options": _options, "profiles": _profiles, "ethernet": _ethernet, "embed": _embed,
              "faults": _faults, "memory": _memory}
 
 
@@ -328,6 +355,8 @@ def data(parser, topic=None):
         document["options"] = _option_rows(parser)
     elif topic == "profiles":
         document.update(_profile_data())
+    elif topic == "ethernet":
+        document["models"] = model_catalog()
     else:
         document["text"] = render(parser, topic)
     return document

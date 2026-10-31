@@ -8,12 +8,17 @@ features of
 profile: **Q series**.
 Not for industrial use. Binds 127.0.0.1 by default.
 
-**GX Works2 / GX Works3 Ethernet compatibility (research only):**
-[official-manual, model-scoped timer/port/open-setting matrix](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md)
-tracks CPU/module-specific defaults, units and limits, and what this simulator
-can actually emulate. The research does not silently change the legacy Q
-profile or socket `idle_timeout`; implementation and overrides are
-tracked in [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
+**GX Works2 / GX Works3 hardware-specific Ethernet mode (opt-in):**
+[usage/config/effective-settings guide](ETHERNET_MODEL_SETTINGS.md) and
+[official-manual timer/port/open-setting research](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md).
+The single source of truth for the implemented model defaults, ranges, sources
+and fidelity is `virtual_plc/ethernet.py`, exposed through
+`virtual-plc guide ethernet --json` and `--show-effective-ethernet`.
+Initially the supported model keys are `qj71e71` (Q) and `rj71en71` (iQ-R).
+Only model-selected binary/ASCII wire mode and RUN-write policy are simulated;
+OS network-stack and manufacturer timers are reference-only. Legacy Q mode and
+socket `idle_timeout` are not modified. The broader fidelity backlog remains
+in [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
 **One independent PLC per OS process**; multiple listeners within that
 process share one PLC state.
 

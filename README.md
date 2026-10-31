@@ -138,16 +138,32 @@ SIGBREAK needs a shared console; forced termination bypasses Python handlers.
 
 Every topic accepts `--json`. Unknown topics list the choices and exit 2.
 
-## GX Works2/3 Ethernet parameters (research)
+## GX Works2/3 model-specific Ethernet settings (opt-in)
 
-Factory Ethernet timers, port defaults, open settings and RUN-time write policy
-belong to the **specific CPU/interface module**, not to GX Works2 or GX Works3
-as an editor. See the [model/parameter comparison](docs/research/GXWORKS_ETHERNET_PARAMETERS_20261031.md)
-and [implementation plan #14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
-Those defaults are research/reference data **not yet emulated**: `--idle-timeout`
-is a simulator socket guard, not a GX Works module response-monitor timer.
-Separate PLCs run in separate processes; one process's multiple listeners
-share its PLC state.
+GX Works2/3 is an editor, **not** the hardware identity. This source checkout
+supports `qj71e71` (Q / GX Works2) and `rj71en71` (iQ-R / GX Works3).
+Factory defaults, validated JSON overrides and a nonbinding effective-settings
+inspection are in the [Ethernet settings guide](docs/ETHERNET_MODEL_SETTINGS.md).
+The [official-manual research matrix](docs/research/GXWORKS_ETHERNET_PARAMETERS_20261031.md)
+documents model boundaries and unresolved physical fidelity.
+
+```powershell
+# Inspect defaults and configurable ranges without listening:
+virtual-plc --ethernet-model qj71e71 --show-effective-ethernet
+virtual-plc --profile iQ-R --ethernet-model rj71en71 --show-effective-ethernet
+
+# Load optional JSON changes, share PLC state across explicit TCP/UDP ports:
+virtual-plc --ethernet-model qj71e71 --ethernet-config ethernet.json --listen tcp:5000 --listen udp:5000
+virtual-plc guide ethernet --json
+```
+
+Selecting a model simulates its binary/ASCII data-code setting and RUN-time
+MC write permission. **Only those settings change runtime behavior**; module
+TCP/IP retransmit, response monitoring and alive timers are explicitly marked
+`reference_only`, not substituted for `--idle-timeout`. Legacy `--port 5000`
+and Q behavior remain unchanged without a model selection. Independent PLCs
+run in **separate OS processes**; all listeners within one process share the
+same PLC state. The feature is currently in source; published v0.5.0 predates it.
 
 ## Profiles, frames and encodings
 

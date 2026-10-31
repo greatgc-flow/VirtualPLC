@@ -18,6 +18,18 @@ See the [canonical CLI reference](../README.md#cli-reference),
 - `max_clients=64` limits concurrent accepted clients; an excess connection is
   closed before creating a worker, without affecting existing clients.
   Positive integer overrides are supported by `--max-clients N`.
+- Opt-in `ethernet_model="qj71e71"` (profile Q) or `"rj71en71"`
+  (profile iQ-R) selects vendor-manual-derived Ethernet factory settings.
+  `ethernet_overrides` accepts validated `timers` (integer ms or count),
+  `communication_data_code` (`binary`/`ascii`) and
+  `allow_write_during_run` (boolean). See [the model settings contract](ETHERNET_MODEL_SETTINGS.md).
+  Model selection limits wire encoding to one configured code (wrong TCP code
+  closes, wrong UDP code drops) and blocks MC writes 1401/1402 during RUN by
+  default with end code `0055` (manual-derived, hardware unverified); STOP
+  or explicit opt-in enables writes. With no model, legacy behavior is unchanged.
+  `server.ethernet.report()` provides exact effective/default/source/fidelity
+  data; all module timers are **reference-only** and do not modify OS TCP timers
+  or simulator `idle_timeout`.
 - `Server(listeners=[("tcp", 5000), ("udp", 5000)])` opens multiple sockets
   for one PLC state and per-request lock. When omitted, `port` remains the
   legacy single TCP endpoint. Explicit listeners require `port=0`, and

@@ -12,6 +12,7 @@ import threading
 import tempfile
 
 from . import __version__, guide
+from .ethernet import model_catalog
 from .server import Server, is_loopback_host
 from .faults import FaultPlan
 from .memory import Memory
@@ -75,6 +76,9 @@ def build_parser():
     parser.add_argument("--listen", action="append", type=listener_spec, default=[], metavar="PROTO:PORT",
                         help="repeatable tcp:PORT or udp:PORT; shares one PLC state, overrides default --port")
     parser.add_argument("--profile", choices=PROFILES, default="Q", help="simulated CPU profile")
+    parser.add_argument("--ethernet-model", choices=tuple(model_catalog()), help="optional GX Works CPU/module Ethernet model (legacy defaults unchanged)")
+    parser.add_argument("--ethernet-config", metavar="FILE", help="JSON Ethernet timer/policy overrides (requires --ethernet-model)")
+    parser.add_argument("--show-effective-ethernet", action="store_true", help="print model defaults/overrides and fidelity as JSON without binding")
     parser.add_argument("--password", help="simulated lock password (not authentication)")
     parser.add_argument("--initial-state", choices=("RUN", "STOP", "PAUSE"), default="RUN", help="initial CPU state")
     parser.add_argument("--max-points", type=int, default=None, help="optional batch point cap below manual limit")
@@ -119,10 +123,13 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.listen and any(argument == "--port" or argument.startswith("--port=") for argument in argv):
         parser.error("--port cannot be combined with --listen")
+    if (args.ethernet_config or args.show_effective_ethernet) and not args.ethernet_model:
+        parser.error("--ethernet-model is required for ethernet configuration/inspection", "ethernet")
     topic = "faults"
     try:
         plan = FaultPlan.from_file(args.fault_plan) if args.fault_plan else None
         topic = "memory"
+        overrides = json.loads(Path(args.ethernet_config).read_text(encoding="utf-8")) if args.ethernet_config else None
         options = dict(profile=args.profile, password=args.password, initial_state=args.initial_state,
                        max_points=args.max_points, idle_timeout=args.idle_timeout, fault_plan=plan,
                        max_clients=args.max_clients, allow_nonlocal=args.allow_nonlocal,
@@ -130,6 +137,9 @@ def main(argv=None):
                        ascii_numbering=args.ascii_numbering, verbose=args.verbose)
         if args.listen:
             options["listeners"] = args.listen
+        if args.ethernet_model:
+            options["ethernet_model"] = args.ethernet_model
+            options["ethernet_overrides"] = overrides
         if args.init or args.limit:
             options["memory"] = Memory(args.profile, dict(args.limit))
         if args.latch_range:
@@ -141,12 +151,16 @@ def main(argv=None):
         try:
             server = Server(args.host, 0 if args.listen else args.port, **options)
         except ValueError as error:
-            parser.error(str(error), "memory" if "latch" in str(error) else topic)
+            hint = "ethernet" if "ethernet" in str(error) or "profile" in str(error) else ("memory" if "latch" in str(error) else topic)
+            parser.error(str(error), hint)
+        if args.show_effective_ethernet:
+            print(json.dumps(server.ethernet.report(), indent=2))
+            return 0
         topic = "memory"
         if args.init:
             options["memory"].load(json.loads(Path(args.init).read_text(encoding="utf-8")))
     except (OSError, ValueError) as error:
-        parser.error(str(error), topic)
+        parser.error(str(error), "ethernet" if args.ethernet_config else topic)
     try:
         server.start()
     except (OSError, OverflowError) as error:
