@@ -50,6 +50,26 @@ disconnect semantics and foreign-owner error codes are not verified hardware
 facts. The deliberate fail-closed policy must not be called vendor parity. See [official-manual comparison and test vectors](research/FX5_SLMP_FRAME_SCOPE_20261031.md). All listeners share one
 request lock and one Memory; separate PLCs require separate OS processes.
 
+### 1E remote STOP diagnostics (embedded API)
+
+`Server.get_1e_remote_control_status()` is a request-lock-protected,
+side-effect-free snapshot, valid only with `slmp_1e=True`:
+
+```python
+with Server(slmp_1e=True) as plc:
+    status = plc.get_1e_remote_control_status()
+    # {"cpu_state": "RUN", "owned": False, "owner_connected": False,
+    #  "orphaned": False, "owner_connection_id": None}
+```
+
+`owner_connected` changes when the owner worker detects EOF/timeout and
+finishes; the peer socket may have closed slightly earlier. A disconnected
+STOP still has `owned=True`, `orphaned=True` and remains STOP until local
+reset. The reset intentionally does not RUN. The owner ID is an in-process
+monotonic TCP-accept ID, not a security credential. No extra network
+control plane or unauthenticated remote override is exposed. `Memory.write_atomic`
+treats `[]` as a no-op and rejects `None` with `ValueError`.
+
 ## Public API
 
 See the [canonical CLI reference](../README.md#cli-reference),
