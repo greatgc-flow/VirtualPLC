@@ -194,6 +194,13 @@ features](docs/research/FX5_SLMP_FRAME_SCOPE_20261031.md) ·
 Each independent PLC still runs as its own OS process; TCP/UDP
 listeners of one process share its CPU/memory.
 
+## Offline physical-oracle preparation (source checkout)
+
+For separately and manually captured read-only 1E 15H model and 16H loopback
+responses, use `python -m virtual_plc.oracle plan`, `template`, and
+`compare FILE --report REPORT.json`. This offline utility **never contacts
+a PLC** and never certifies real hardware. See [offline oracle procedure](docs/PHYSICAL_ORACLE.md).
+
 ## GX Works2/3 model-specific Ethernet settings (opt-in)
 
 GX Works2/3 is an editor, **not** the hardware identity. This source checkout

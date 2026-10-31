@@ -145,6 +145,14 @@ error code nor the fail-closed recovery policy claims real FX5 firmware
 parity. Physical oracle, hardware variant and PyPI release remain HOLD.
 
 
+### Offline read-only manual vectors (no network or PLC access)
+
+The separate [offline oracle guide](../PHYSICAL_ORACLE.md) and
+`virtual_plc/oracle.py` expose a 15H/16H binary/ASCII manual plan,
+unfilled observation template and redacted comparison report. These
+manufacturer pp.134–136 examples may be compared against separately
+collected responses; a match never certifies full real-hardware parity.
+
 ### Physical RUN/STOP selector switch: confirmed hardware gap
 
 Mitsubishi JY997D56001-K, printed page 132 (PDF zero-index page
