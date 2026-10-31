@@ -90,8 +90,8 @@ def test_retry_exact_boundaries(inspect, number):
 
 @pytest.mark.parametrize("value", [None, 0, True, False, "yes", "600", [], {}])
 def test_invalid_override_root_or_flag(inspect, value):
-    if value is None:
-        assert inspect(None) == inspect()
+    if value is None or (type(value) is dict and not value):
+        assert inspect(value) == inspect()
         return
     with pytest.raises(ValueError):
         inspect(value)

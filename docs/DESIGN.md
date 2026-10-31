@@ -45,6 +45,15 @@ sessions and the FX5U/UC 16 targets for *simple CPU communication* are
 separate scoped counts with independent official sources. See
 [FX5 scope matrix](research/FX5_SLMP_PORT_SCOPE_20261031.md).
 
+**FX5-ENET alive-check timer range (reference only):**
+`inspect_reference_fx5_enet_alive_timers(overrides=None)` performs pure
+metadata validation for the FX5-ENET expansion module's documented
+existence-check settings (start, interval, retry), with an explicit
+Change/Set Timer Value flag. The SSOT is `virtual_plc/ethernet.py`;
+seconds/milliseconds are different allowed units with documented bounds,
+not host TCP retransmission/idle timeouts. No server configuration changes.
+See [manufacturer comparison](research/FX5_ENET_ALIVE_REFERENCE_20261101.md).
+
 **GX Works2 / GX Works3 hardware-specific Ethernet mode (opt-in):**
 [usage/config/effective-settings guide](ETHERNET_MODEL_SETTINGS.md) and
 [official-manual timer/port/open-setting research](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md).

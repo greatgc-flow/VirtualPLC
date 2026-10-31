@@ -185,6 +185,18 @@ _FX5_SLMP_PORT_REFERENCE = {
     "vendor_reserved_port_range": [5549, 5569],
 }
 
+# Model-specific FX5-ENET existence/alive-check parameters:
+# official SH-082026ENG-H printed p.70 (PDF p.71).
+# Timer selection is s OR ms; no additional 100-ms step is established
+# by this manual page. Values are only reference data, not host socket knobs.
+_FX5_ENET_ALIVE_TIMER_REFERENCE = {
+    "start": {"default": 600, "unit": "s",
+              "bounds": {"s": [1, 16383], "ms": [100, 16383000]}},
+    "interval": {"default": 10, "unit": "s",
+                 "bounds": {"s": [1, 16383], "ms": [100, 16383000]}},
+    "retry": {"default": 3, "unit": "count", "bounds": [1, 32767]},
+}
+
 # Reference-only hardware facts. Unsupported models never enter _MODELS, and
 # unknown module timers must never be borrowed from Q/L or RJ71EN71.
 _REFERENCE_HARDWARE = {
@@ -239,9 +251,9 @@ _REFERENCE_HARDWARE = {
             "opening_method_default": "do_not_open_by_program",
             "default_slmp_host_port": "blank",
             **deepcopy(_FX5_SLMP_PORT_REFERENCE),
-            "alive_start_ms": 600000,
-            "alive_interval_ms": 10000,
-            "alive_retries": 3,
+            "alive_start_ms": _FX5_ENET_ALIVE_TIMER_REFERENCE["start"]["default"] * 1000,
+            "alive_interval_ms": _FX5_ENET_ALIVE_TIMER_REFERENCE["interval"]["default"] * 1000,
+            "alive_retries": _FX5_ENET_ALIVE_TIMER_REFERENCE["retry"]["default"],
             "slmp_server_frames": ["1E", "3E"],
             "connection_limit": 32,
             "ascii_xy_numbering_choices": ["octal", "hexadecimal"],
@@ -256,6 +268,12 @@ _REFERENCE_HARDWARE = {
             "page": "79",
             "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082026eng/sh082026engh.pdf",
         },
+        "alive_timer_source": {
+            "manual": "SH-082026ENG-H (FX5-ENET)",
+            "page": "70",
+            "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082026eng/sh082026engh.pdf",
+        },
+        "alive_timer_reference": deepcopy(_FX5_ENET_ALIVE_TIMER_REFERENCE),
         "unverified": [
             "tcp_ulp_ms", "tcp_zero_window_ms", "tcp_resend_ms",
             "tcp_end_ms", "ip_assembly_ms", "response_monitor_ms",
@@ -330,4 +348,68 @@ def inspect_reference_slmp_port(model, port):
                  "Port 0 is solely VirtualPLC ephemeral binding; "
                  "1..1023 and 61440..65534 are permitted but not recommended. "
                  "Does not inspect firmware or host operating-system port conflicts."),
+    }
+
+
+def inspect_reference_fx5_enet_alive_timers(overrides=None):
+    """Validate *reference-only* FX5-ENET existence-check timer settings.
+
+    Does not configure Server, host TCP timers or real Mitsubishi equipment.
+    Source: SH-082026ENG-H printed p.70. "Change/Set Timer Value" defaults
+    to No; explicit values require the caller to set the flag True.
+    """
+    allowed = {"change_set_timer_value", "start", "interval", "retry"}
+    if overrides is None:
+        overrides = {}
+    if type(overrides) is not dict or set(overrides) - allowed:
+        raise ValueError("FX5-ENET alive timer overrides must be a supported object")
+    change = overrides.get("change_set_timer_value", False)
+    if type(change) is not bool:
+        raise ValueError("change_set_timer_value requires a boolean")
+    if not change and any(name in overrides for name in ("start", "interval", "retry")):
+        raise ValueError("explicit alive timers require change_set_timer_value=True")
+
+    reference = _REFERENCE_HARDWARE["fx5_enet"]["alive_timer_reference"]
+    parameters = {}
+    for name in ("start", "interval", "retry"):
+        spec = reference[name]
+        overridden = name in overrides
+        if name == "retry":
+            value = overrides[name] if overridden else spec["default"]
+            low, high = spec["bounds"]
+            if type(value) is not int or not low <= value <= high:
+                raise ValueError("retry must be an integer 1..32767")
+            parameters[name] = {
+                "value": value, "unit": "count",
+                "default": spec["default"], "overridden": overridden,
+                "min": low, "max": high,
+            }
+            continue
+
+        option = overrides[name] if overridden else {
+            "value": spec["default"], "unit": spec["unit"],
+        }
+        if type(option) is not dict or set(option) != {"value", "unit"}:
+            raise ValueError("{} requires a value and a unit (s or ms)".format(name))
+        value = option["value"]
+        unit = option["unit"]
+        if type(unit) is not str or unit not in spec["bounds"]:
+            raise ValueError("{} unit must be s or ms".format(name))
+        low, high = spec["bounds"][unit]
+        if type(value) is not int or not low <= value <= high:
+            raise ValueError("{} {} must be an integer {}..{}".format(name, unit, low, high))
+        parameters[name] = {
+            "value": value, "unit": unit,
+            "milliseconds": value * 1000 if unit == "s" else value,
+            "default_milliseconds": spec["default"] * 1000,
+            "overridden": overridden, "min": low, "max": high,
+        }
+    return {
+        "model": "fx5_enet",
+        "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
+        "source": deepcopy(_REFERENCE_HARDWARE["fx5_enet"]["alive_timer_source"]),
+        "change_set_timer_value": change,
+        "physical_hardware_certified": False,
+        "simulator_network_affected": False,
+        "parameters": parameters,
     }

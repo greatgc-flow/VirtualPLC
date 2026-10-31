@@ -211,6 +211,15 @@ enables an FX5 hardware profile. The CPU's 8 aggregate Ethernet connections
 must not be confused with 16 simple-CPU-communication targets on FX5U/UC.
 See [FX5 connection/port scope](docs/research/FX5_SLMP_PORT_SCOPE_20261031.md).
 
+## FX5-ENET existence-check settings (offline reference)
+
+`inspect_reference_fx5_enet_alive_timers(overrides=None)` checks the FX5-ENET
+alive-check start/interval/retry ranges as documented in Mitsubishi
+SH-082026ENG-H p.70. It never changes network sockets or vendor hardware:
+`start=600s`, `interval=10s`, `retry=3` by default, with optional explicit
+`change_set_timer_value=True`. See
+[FX5-ENET source matrix](docs/research/FX5_ENET_ALIVE_REFERENCE_20261101.md).
+
 ## GX Works2/3 model-specific Ethernet settings (opt-in)
 
 GX Works2/3 is an editor, **not** the hardware identity. This source checkout
