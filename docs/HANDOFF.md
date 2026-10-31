@@ -1,3 +1,17 @@
+## 2026-11-01 R04CPU built-in A038H timers, independent manual scope (PR #35)
+
+Official SH-081257ENG-AD **R04CPU CPU built-in** parameter screen
+pp.329-330 directly refers to timer table pp.396-397; separate CPU
+SH-082488ENG-E p.685 identifies the CPU A038H parameter group.
+New offline-only `inspect_reference_rncpu_data_timers("R04CPU", overrides)`
+validates documented nine reference defaults, seconds/milliseconds
+ranges, 100ms increments, Change/Set Timer Value flag, and printed
+timer inequalities without borrowing RJ71EN71 source/default policy.
+Other RnCPU models/firmware and physical timing remain UNKNOWN.
+See [research](research/RNCPU_R04CPU_A038H_DATA_TIMER_REFERENCE_20261101.md)
+and [PR #35](https://github.com/greatgc-flow/VirtualPLC/pull/35).
+No actual PLC/port/OS timer changes or PyPI release. Verify exact CI.
+
 ## 2026-11-01 RnCPU CPU built-in remote opening safety preflight (PR #34)
 
 Mitsubishi official CPU manual SH-082488ENG-E printed p.3 warns that

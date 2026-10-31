@@ -434,3 +434,19 @@ choice, and has no physical-hardware side effects. The related
 [RnCPU documentation](research/RNCPU_REMOTE_OPENING_SAFETY_20261101.md)
 and issue #14 define the pending CPU/firmware/timer oracle gates.
 Do not share RJ71EN71 network-module defaults without direct evidence.
+
+### 2026-11-01 R04CPU built-in A038H reference validator
+
+`inspect_reference_rncpu_data_timers("R04CPU", overrides)` uses a
+**separate, CPU-built-in-only** metadata table inside
+`_REFERENCE_HARDWARE["rncpu_builtin"]["data_timer_reference"]`.
+SH-081257ENG-AD pp.329–330 R04CPU Application Settings explicitly
+points to shared timer table pp.396–397, and CPU manual
+SH-082488ENG-E p.685 identifies parameter A038H.
+The nine values are R04CPU GX Works3 **documented GUI defaults**,
+not a runtime claim or a copied RJ71EN71 module preset.
+`Change/Set Timer Value` defaults to No; overrides require Yes.
+Validation is pure/strict: numeric unit conversion, bounds, step,
+equality and five-field `>=` chain, copies, model rejection, and
+no socket operations. Other RnCPU CPU/firmware variants remain UNKNOWN.
+See [R04CPU timer reference](research/RNCPU_R04CPU_A038H_DATA_TIMER_REFERENCE_20261101.md).
