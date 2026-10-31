@@ -160,6 +160,16 @@ extended errors. In this bounded initial slice, supported simulated
 devices are M/X/Y (bits) and D (words); bit devices also support aligned
 16-point word access. Random writes validate the full list before a single atomic storage commit. TCP remote STOP is owned by the requesting connection: only that same live connection can RUN until explicit local `Server.reset_1e_remote_control()`. A disconnect **does not** release ownership (CPU remains STOP); UDP remote RUN/STOP receives a simulated `C05F` unsupported-policy error because it has no verifiable TCP session. The local reset releases ownership but deliberately keeps the simulator STOP. These are **simulator safety policies**, not verified FX5 error codes or physical reset timing. Invalid frames are closed/dropped rather than interpreted as 3E. Legacy default 3E/4E behavior is unchanged.
 
+To inspect whether a remote STOP is still owned or orphaned without changing
+CPU state, embedded users can call
+`Server.get_1e_remote_control_status()`. It returns a local read-only
+snapshot with `cpu_state`, `owned`, `owner_connected`, `orphaned` and
+`owner_connection_id`. A disconnected owner is **not** released; only the
+original connected client can RUN, or the local operator can use
+`reset_1e_remote_control()`, which clears ownership while leaving STOP.
+Connection IDs are local monotonic numbers, not authentication; socket-close
+detection is asynchronous. The CLI has no network-accessible recovery command.
+
 **Not FX5-ENET hardware parity:** 1E mode uses synthetic Q memory,
 cannot be combined with `--ethernet-model` or a 3E fault plan, does not
 implement full vendor device/firmware behavior or socket timers, and does not open system/MELSOFT ports. [1E packet contract and unsupported
