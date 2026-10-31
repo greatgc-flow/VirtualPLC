@@ -125,3 +125,16 @@ def test_model_reference_checks_do_not_change_legacy_port_zero_or_max_clients(in
         assert plc.address[1] > 0
         assert plc.ethernet is None
     assert set(model_catalog()) == {"qj71e71", "lj71e71", "rj71en71"}
+
+
+def test_offline_reference_inspection_never_creates_sockets(inspect, monkeypatch):
+    import socket
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("reference-only preflight must never touch sockets")
+
+    monkeypatch.setattr(socket, "socket", forbidden)
+    monkeypatch.setattr(socket, "create_server", forbidden)
+    for model in ("fx5_cpu_builtin", "fx5_enet"):
+        for port in (0, 5000, 5550, 65534):
+            assert inspect(model, port)["simulator_bind_affected"] is False
