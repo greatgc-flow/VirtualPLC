@@ -44,6 +44,14 @@ in [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
 process share one PLC state.
 
 
+**1E owner observability:** the local-only `Server.get_1e_remote_control_status()`
+reads CPU state and STOP ownership under the shared request lock. Accepted
+TCP IDs remain monotonic across listeners. The remote STOP owner gets an
+`owner_connected` marker until its worker detects connection closure, at
+which point the marker changes to orphaned without releasing ownership.
+Reset and owner RUN clear both the ID and marker. This avoids adding another
+network protocol, CLI recovery flag, or concurrent lock hierarchy.
+
 ## Optional multi-listener transport extension
 
 `Server(listeners=[("tcp", 5000), ("udp", 5000)])` optionally binds
