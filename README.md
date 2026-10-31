@@ -211,6 +211,17 @@ enables an FX5 hardware profile. The CPU's 8 aggregate Ethernet connections
 must not be confused with 16 simple-CPU-communication targets on FX5U/UC.
 See [FX5 connection/port scope](docs/research/FX5_SLMP_PORT_SCOPE_20261031.md).
 
+## RnCPU built-in service connection settings (reference only)
+
+Mitsubishi documents **service-specific** RnCPU built-in Ethernet rules:
+a simple-CPU-communication **peer** uses auto-open UDP with no extra
+opening setting; connecting several **GOTs** requires per-GOT
+GX Works3 external-device configuration for TCP, but no opening setting
+for GOT UDP. These are not interchangeable SLMP server rules.
+Use `virtual-plc guide ethernet --json` for read-only metadata; no
+service is automatically opened by VirtualPLC. See
+[RnCPU service connection scope](docs/research/RNCPU_BUILTIN_SERVICE_CONNECTIONS_20261101.md).
+
 ## FX5 CPU firmware compatibility (offline reference only)
 
 Mitsubishi's simple CPU communication firmware gate differs by CPU:
