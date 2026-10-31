@@ -6,8 +6,8 @@ Client: pip install pymcprotocol
   from pymcprotocol import Type3E
   c = Type3E(plctype="Q"); c.connect("127.0.0.1", 5000); c.close()
 Start here: virtual-plc guide
-Topics: run options client profiles embed faults memory troubleshoot divergences
-Machine-readable: virtual-plc guide options --json; virtual-plc guide profiles --json
+Topics: run options client profiles ethernet embed faults memory troubleshoot divergences
+Machine-readable: virtual-plc guide options --json; virtual-plc guide profiles --json; virtual-plc guide ethernet --json
 Equivalent entry point: python -m virtual_plc guide
 
 Rules:

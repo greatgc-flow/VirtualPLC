@@ -10,6 +10,7 @@ import threading
 from . import faults
 from .codec import decode_request, encode_response, frame_size
 from .commands import CPU_STATES, dispatch
+from .ethernet import EthernetSettings
 from .memory import Memory, valid_span
 from .profiles import PROFILES
 
@@ -36,7 +37,8 @@ class Server:
                  response_hook=None, max_points=None, idle_timeout=None,
                  initial_state="RUN", latch_ranges=None, password=None, fault_plan=None,
                  ascii_dword_order="swapped", text_pad=0x00, ascii_numbering="compat", verbose=False,
-                 allow_nonlocal=False, max_clients=64, listeners=None):
+                 allow_nonlocal=False, max_clients=64, listeners=None,
+                 ethernet_model=None, ethernet_overrides=None):
         if type(port) is not int or not 0 <= port <= 65535:
             raise ValueError("port must be an integer 0..65535")
         if max_points is not None and (type(max_points) is not int or max_points < 1):
@@ -94,6 +96,12 @@ class Server:
             raise ValueError("initial_state must be RUN, STOP or PAUSE")
         if profile not in PROFILES:
             raise ValueError("unknown profile")
+        if ethernet_model is None and ethernet_overrides is not None:
+            raise ValueError("ethernet_model required for ethernet_overrides")
+        self.ethernet = (EthernetSettings(ethernet_model, ethernet_overrides)
+                         if ethernet_model is not None else None)
+        if self.ethernet is not None and self.ethernet.profile != profile:
+            raise ValueError("ethernet_model profile does not match selected PLC profile")
         wire = PROFILES[profile].wire
         if password is not None and (not isinstance(password, str) or not wire.password_min <= len(password) <= wire.password_max
                                      or not password.isascii()):
@@ -240,6 +248,9 @@ class Server:
                     self._log("UDP drop: incomplete or concatenated frame")
                     continue
                 request = decode_request(packet)
+                if self.ethernet is not None and request.wire != self.ethernet.values["communication_data_code"]:
+                    self._log("UDP drop: communication data code mismatch")
+                    continue
                 with self._request_lock:
                     end_code, data = dispatch(request, self.memory, self._max_points, self)
                 self._log("UDP %s %s command=%04X sub=%04X end=%04X",
@@ -322,6 +333,8 @@ class Server:
                 except ValueError:
                     return "malformed framing"
                 del buffer[:size]
+                if self.ethernet is not None and request.wire != self.ethernet.values["communication_data_code"]:
+                    return "communication data code mismatch"
                 with self._request_lock:
                     end_code, data = dispatch(request, self.memory, self._max_points, self)
                     action = None

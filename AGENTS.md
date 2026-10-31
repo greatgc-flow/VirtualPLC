@@ -18,6 +18,8 @@ This file is for agents developing this repository. For product usage, run
 
 - `virtual_plc/__main__.py:build_parser` owns CLI flags, defaults and help.
 - `virtual_plc/profiles.py` and command dispatch tables own profile/device/command data.
+- `virtual_plc/ethernet.py` alone owns opt-in hardware-model Ethernet factory values,
+  validation, source/fidelity metadata; guide ethernet JSON derives from it.
 - `virtual_plc/guide.py` owns compact English usage prose; tables are generated.
 - README marked `guide:run` recipes must match guide run (test-enforced).
 - README is the human entry point; docs/BEHAVIOR.md and docs/FAULTS.md explain semantics.

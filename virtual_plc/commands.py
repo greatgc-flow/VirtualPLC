@@ -15,6 +15,7 @@ CPU_STATES = {"STOP": 0, "RUN": 1, "PAUSE": 2}  # SD203 layout: design, unverifi
 
 class EndCode(IntEnum):
     OK = 0x0000
+    RUN_WRITE_DISABLED = 0x0055  # Q/R manuals: SLMP/MC write denied while CPU RUN
     POINTS_OUT_OF_RANGE = 0xC051
     BIT_POINTS_OUT_OF_RANGE = 0xC052
     RANDOM_BIT_POINTS_OUT_OF_RANGE = 0xC053
@@ -30,7 +31,7 @@ class EndCode(IntEnum):
 
 # DESIGN §7 rows: no manual cross-check yet.
 ERROR_CODES = {
-    code.value: {"name": code.name, "source": "manual" if code in (EndCode.POINTS_OUT_OF_RANGE, EndCode.BIT_POINTS_OUT_OF_RANGE, EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE, EndCode.RANDOM_POINTS_OUT_OF_RANGE) else ("memory" if code in (EndCode.LOCKED, EndCode.WRONG_PASSWORD) else "design"),
+    code.value: {"name": code.name, "source": "manual" if code in (EndCode.RUN_WRITE_DISABLED, EndCode.POINTS_OUT_OF_RANGE, EndCode.BIT_POINTS_OUT_OF_RANGE, EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE, EndCode.RANDOM_POINTS_OUT_OF_RANGE) else ("memory" if code in (EndCode.LOCKED, EndCode.WRONG_PASSWORD) else "design"),
                  "status": "unverified"} for code in EndCode
 }
 
@@ -224,6 +225,11 @@ def dispatch(request, memory, max_points, control=None):
     try:
         if handler is None:
             raise CommandError(EndCode.UNSUPPORTED_COMMAND)
+        ethernet = getattr(control, "ethernet", None)
+        if (ethernet is not None and request.command in (0x1401, 0x1402)
+                and control.state == "RUN"
+                and not ethernet.values["allow_write_during_run"]):
+            raise CommandError(EndCode.RUN_WRITE_DISABLED)
         # Control uses the shared Reader directly; data handlers consume canonical binary.
         parsed = request if handler is control_request else normalize_request(
             request, memory.profile, ascii_dword_order=control.ascii_dword_order if control is not None else "swapped",
