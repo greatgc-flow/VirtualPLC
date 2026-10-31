@@ -370,6 +370,23 @@ _REFERENCE_HARDWARE = {
                 },
             },
         },
+        # This CPU *built-in* Ethernet setting does not apply to RJ71EN71.
+        # Manufacturer recommends a remote-control choice, not a universal
+        # factory default. A031H denotes the CPU parameter group.
+        "remote_opening_reference": {
+            "recommended_opening_method": "do_not_open_by_program",
+            "factory_default": None,
+            "parameter_id": "A031H",
+            "gxworks3_path": [
+                "Module Parameter", "Basic Settings",
+                "Own Node Settings", "Opening Method",
+            ],
+            "source": {
+                "manual": "SH-082488ENG-E",
+                "page": "3, 684-685",
+                "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh082488eng/sh082488enge.pdf",
+            },
+        },
         "unverified": [
             "tcp_ulp_ms", "tcp_resend_ms", "response_monitor_ms",
             "per-CPU/firmware editable timer ranges", "RUN-write behavior",
@@ -550,4 +567,58 @@ def inspect_reference_fx5_simple_cpu_communication(model, firmware_version=None)
             "Unknown firmware is not evidence that FX5U/FX5UC lack support.",
             "No firmware data was read from physical equipment.",
         ],
+    }
+
+
+def inspect_reference_rncpu_remote_opening(opening_method=None):
+    """Check RnCPU CPU-built-in remote control opening choice offline.
+
+    SH-082488ENG-E p.3: with Open by Program, remote STOP closes
+    the line and an external device cannot issue remote RUN on it.
+    Appendix 8 pp.684-685: Opening Method is parameter A031H.
+    No hardware reads, network binds or runtime service enablement.
+    """
+    spec = _REFERENCE_HARDWARE["rncpu_builtin"]["remote_opening_reference"]
+    if opening_method is not None and (
+        type(opening_method) is not str or
+        opening_method not in ("open_by_program", "do_not_open_by_program")
+    ):
+        raise ValueError(
+            "opening_method must be open_by_program, "
+            "do_not_open_by_program, or omitted (UNKNOWN)"
+        )
+    if opening_method is None:
+        risk = "UNKNOWN"
+        explanation = (
+            "Opening Method not supplied; no factory value or firmware "
+            "behavior can be inferred."
+        )
+    elif opening_method == "open_by_program":
+        risk = "DOCUMENTED_REMOTE_RUN_RECONNECT_FAILURE"
+        explanation = (
+            "Mitsubishi warns remote STOP can close the communication "
+            "line with Open by Program, so an external device cannot "
+            "subsequently issue remote RUN over that closed line."
+        )
+    else:
+        risk = "NO_SPECIFIC_OPENING_METHOD_RISK_DOCUMENTED"
+        explanation = (
+            "Do Not Open by Program is the documented manufacturer "
+            "recommendation for remote RUN/STOP. This does not guarantee "
+            "remote RUN after STOP; other conditions remain unverified."
+        )
+    return {
+        "model": "rncpu_builtin",
+        "opening_method": opening_method,
+        "reconnect_risk_status": risk,
+        "recommended_opening_method": spec["recommended_opening_method"],
+        "factory_default": spec["factory_default"],
+        "parameter_id": spec["parameter_id"],
+        "gxworks3_path": deepcopy(spec["gxworks3_path"]),
+        "source": deepcopy(spec["source"]),
+        "explanation": explanation,
+        "remote_run_after_stop_guaranteed": False,
+        "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
+        "physical_hardware_certified": False,
+        "simulator_network_affected": False,
     }
