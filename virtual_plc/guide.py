@@ -88,7 +88,7 @@ TROUBLESHOOT = """
 Symptom -> cause -> fix
 "cannot listen on H:P" (exit 1): port busy or denied -> choose another --port, or --port 0 and read the banner.
 UDP timeout: each datagram must contain exactly one full frame (max 8192 bytes); invalid requests get no response.
-1E: use --slmp-1e; batch subheaders 00/01/02/03 only; not mixed with 3E/4E on a listener.
+1E: --slmp-1e supports batch 00..03 plus type 15 and loopback 16; not mixed with 3E/4E.
 Exit 2 and "see: virtual-plc guide TOPIC": bad option, JSON file or plan -> read that topic; nothing was bound.
 Client times out: wrong host/port, a fault plan that holds or drops replies, or --idle-timeout closed the socket
   (reconnect). A silent_hold fault ends only when the server stops.
@@ -120,8 +120,9 @@ This is a simulator, not a PLC. These behaviors are synthetic or unverified; do 
 - iQ-R native dword devices (LTN LSTN LCN LZ) use one 32-bit point per address; word access streams the
   low/high halves. The stride is unverified.
 - Timers and counters hold plain values; no PLC logic executes. The monitoring timer is parsed and ignored.
-- Optional --slmp-1e uses separate bounded command-aware framing for 00..03 only;
-  synthetic Q memory, not vendor FX5 CPU/ENET certification. No mixed 1E and 3E/4E.
+- Optional --slmp-1e uses bounded 1E framing: batch 00..03, model-code 15 and
+  loopback 16. Unlike batches, 15 replies only F3 and 16 replies raw length+data;
+  synthetic Q memory, not vendor FX5 CPU/ENET certification. No mixed 1E/3E/4E.
   Every network/PC/station route aliases one memory.
 - Error codes are design values. Z devices are unsupported.
 - Faults act after execution: a faulted write or reset has already happened.

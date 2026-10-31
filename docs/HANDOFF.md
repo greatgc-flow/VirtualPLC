@@ -22,10 +22,11 @@ the factory default. Review changes against
 physical PLC equivalence is not claimed. The source checkout also supports
 opt-in `--ascii-numbering fx5-octal` for X/Y octal on the generic 3E/4E
 simulator. The new explicit `--slmp-1e` mode implements a bounded
-**1E 00..03 batch-only** binary/ASCII adapter using synthetic Q memory;
+**1E 00..03 batch plus 15H/16H diagnostics** binary/ASCII adapter
+using synthetic Q memory;
 this is **not** a complete FX5-ENET/RnCPU hardware profile. See
 [issue #22](https://github.com/greatgc-flow/VirtualPLC/issues/22)
-for remaining remote operations, unsupported devices, firmware-specific
+for remaining random-write/remote operations, unsupported devices, firmware-specific
 policies and physical PLC acceptance. Do not mark hardware parity.
 
 ---

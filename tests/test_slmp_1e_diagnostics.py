@@ -80,9 +80,13 @@ def test_1e_loopback_boundaries_and_no_plc_mutation(wire, size):
 
 @pytest.mark.parametrize("payload", [
     bytes.fromhex("16 FF 00 00 00"),              # count 0
+    bytes.fromhex("16 FF 00 00 FF"),              # count 255 exceeds max 254
+    bytes.fromhex("14 FF 00 00"),                 # remote STOP not yet implemented
     bytes.fromhex("16 00 00 00 01 41"),           # PC != FF
     bytes.fromhex("15 FF 01 00"),                 # timer != 0
     b"16FF000000",                              # ASCII count 0
+    b"16FF0000FF",                              # ASCII count 255 invalid
+    b"13FF0000",                                # remote RUN not yet implemented
     b"16FF000001ZZ",                            # malformed hex encoded ASCII
     b"15FE0000",                                # ASCII PC != FF
     bytes.fromhex("50 00 00 FF FF 03 00"),      # 3E remains rejected

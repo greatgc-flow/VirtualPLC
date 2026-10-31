@@ -138,7 +138,7 @@ SIGBREAK needs a shared console; forced termination bypasses Python handlers.
 
 Every topic accepts `--json`. Unknown topics list the choices and exit 2.
 
-## MELSEC iQ-F SLMP 1E batch mode (opt-in; source checkout)
+## MELSEC iQ-F SLMP 1E mode (opt-in; source checkout)
 
 For client testing of the **separate 1E** request/response format, use:
 
@@ -151,8 +151,12 @@ virtual-plc --slmp-1e --listen tcp:5000 --listen udp:5000
 ```
 
 This opt-in mode is **1E-only** on all of that process's listeners.
-It supports batch bit/word read/write commands `00H`–`03H` in binary and
-ASCII, with manual 1E headers, per-command framing and special `5BH`
+It supports batch bit/word read/write commands `00H`–`03H` and
+diagnostics `15H` (model code) and `16H` (loopback) in binary and ASCII.
+Batch responses have the normal 1E subheader/status, but diagnostics have
+**different** reply layouts: `15H` returns only `F3H` (ASCII: `F3`),
+and `16H` returns the original length plus data, without a batch status.
+Loopback length is 1–254 bytes. Batch errors use special `5BH`
 extended errors. In this bounded initial slice, supported simulated
 devices are M/X/Y (bits) and D (words); bit devices also support aligned
 16-point word access. Invalid frames are closed/dropped rather than
@@ -160,7 +164,7 @@ interpreted as 3E. Legacy default 3E/4E behavior is unchanged.
 
 **Not FX5-ENET hardware parity:** 1E mode uses synthetic Q memory,
 cannot be combined with `--ethernet-model` or a 3E fault plan, does not
-implement remaining 1E remote operations or vendor socket timers, and
+implement remaining 1E random-write/remote operations or vendor socket timers, and
 does not open system/MELSOFT ports. [1E packet contract and unsupported
 features](docs/research/FX5_SLMP_FRAME_SCOPE_20261031.md) ·
 [1E implementation issue #22](https://github.com/greatgc-flow/VirtualPLC/issues/22).
