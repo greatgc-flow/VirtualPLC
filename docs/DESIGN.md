@@ -418,3 +418,19 @@ Manual cross-check results (SH-080008, see `docs/manual/PROVENANCE.md`): STOP mo
 - Calling `stop()` then `start()` works and accepts new client connections cleanly (`_stopping` event is cleared on `start()`).
 - Port 0 rebinds a new ephemeral port on each `start()`.
 - Calling `start()` twice without an intermediate `stop()` is a safe no-op that preserves the existing listener and does not leak sockets.
+
+### 2026-11-01 RnCPU built-in remote opening-method risk, CPU-specific
+
+An isolated `inspect_reference_rncpu_remote_opening` helper reads
+`_REFERENCE_HARDWARE["rncpu_builtin"]["remote_opening_reference"]`
+without mutating runtime models/listeners. Official CPU manual
+SH-082488ENG-E p.3 says `Open by Program` can close a remote STOP
+connection so remote RUN cannot recover on that line. Its Appendix 8
+pp.684-685 identifies the CPU-built-in `Opening Method` parameter A031H
+and separately `Timer Settings for Data Communication` A038H.
+The preflight rejects invalid values, leaves omitted factory
+configuration UNKNOWN, never certifies recovery for a recommended
+choice, and has no physical-hardware side effects. The related
+[RnCPU documentation](research/RNCPU_REMOTE_OPENING_SAFETY_20261101.md)
+and issue #14 define the pending CPU/firmware/timer oracle gates.
+Do not share RJ71EN71 network-module defaults without direct evidence.
