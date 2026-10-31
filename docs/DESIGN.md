@@ -464,3 +464,20 @@ a GUI default, refuses invalid types and other CPU families, and
 never equates setting slots with simultaneous client sockets.
 See [scope/edge cases](research/RNCPU_R04CPU_EXTERNAL_DEVICE_PORTS_20261101.md).
 No changes to max_clients, runtime ports, protocol or PyPI.
+
+### 2026-11-01 R04CPU built-in external-device multi-entry static lint
+
+`inspect_reference_rncpu_external_device_batch(entries=None,
+model="R04CPU", report_slot_gaps=True)` is a small, pure offline
+function, composed of the existing independently sourced **per-row**
+`inspect_reference_rncpu_external_device`. It adds stable,
+separately documented developer-side diagnostics: invalid own-port
+(per-row vendor classification), duplicate configured slot (static
+error), potentially repeated numeric port (review only without
+transport type) and optional gap advisory (no vendor rejection
+claim). Input None means not supplied; [] means explicitly empty;
+no active sockets, hardware capabilities or vendor end codes are
+inferred. The RnCPU SSOT now also records a **newer manufacturer
+AG (2026-10)** revision with actual AD-to-AG diff NOT VERIFIED,
+instead of assuming current firmware parity. See
+[batch research](research/RNCPU_R04CPU_BATCH_LINT_20261101.md).

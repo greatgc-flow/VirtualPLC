@@ -1,3 +1,24 @@
+## 2026-11-01 R04CPU CPU built-in multi-entry configuration lint and AG source gate (PR #37)
+
+Newest manufacturer catalogue lists SH-081257ENG-AG
+(**2026-10**), but direct PDF contents were NOT accessible for
+an AG-vs-AD clause diff. Existing facts remain explicitly
+SH-081257ENG-AD pp.324-326 and Appendix 10 p.554, restricted
+to R04CPU CPU built-in (not RJ71EN71 network part).
+New offline `inspect_reference_rncpu_external_device_batch`
+reuses the independent scalar reference checker and adds
+developer-authored static diagnostics for duplicate configured
+user slot numbers, optional holes, potentially reused PLC own
+ports (review, not guaranteed conflict) and vendor-reserved
+port violations. Strict root/input/row validation; None versus
+[] is distinct; no vendor end codes, live TCP connection budget,
+new network listeners, physical PLC or PyPI changes.
+The SSOT carries `manual_revision_gate` with
+`newer_revision_comparison=NOT_VERIFIED`.
+See [research](research/RNCPU_R04CPU_BATCH_LINT_20261101.md),
+[PR #37](https://github.com/greatgc-flow/VirtualPLC/pull/37),
+and issue #14. Check actual CI/merge before assuming success.
+
 ## 2026-11-01 R04CPU CPU built-in external-device slot and own-port preflight (PR #36)
 
 Mitsubishi official SH-081257ENG-AD pp.324–326 distinguishes the

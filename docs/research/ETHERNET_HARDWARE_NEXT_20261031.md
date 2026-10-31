@@ -146,3 +146,14 @@ user slots** (not total TCP concurrency), own PLC port range/default,
 and RJ71EN71 network-part difference. Appendix 10 p.554 reserves
 system ports even where numeric ranges would otherwise allow them;
 reference validator checks those first. No new hardware runtime preset.
+
+### 2026-11-01 independent multi-row R04CPU static preflight / AG revision gate
+
+[Offline multi-entry static lint](RNCPU_R04CPU_BATCH_LINT_20261101.md)
+composes already verified AD-manual single-row scalar checks for
+R04CPU CPU built-in. Duplicate GX Works3 setting IDs are static
+input collisions; numeric own-port reuse and gaps are explicit
+review warnings (NOT proven vendor rejections). None vs empty
+handled; no real sockets. Manufacturer lists latest
+SH-081257ENG-AG (2026-10), but differences from source AD
+remain NOT_VERIFIED until PDF access is available.
