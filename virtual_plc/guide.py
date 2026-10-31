@@ -61,6 +61,7 @@ Optional model: --ethernet-model qj71e71 | --profile iQ-R --ethernet-model rj71e
 Set --ethernet-config FILE for overrides; --show-effective-ethernet prints JSON without listening.
 Multi-port: virtual-plc --listen tcp:5000 --listen tcp:5001 --listen udp:5000 (one shared PLC).
 1E batch mode: virtual-plc --slmp-1e --listen tcp:5000 --listen udp:5000 (not full FX5 hardware).
+Physical switch edge: --slmp-1e --slmp-1e-run-switch STOP --initial-state STOP; 13H ACK succeeds yet CPU stays STOP.
 --listen replaces --port. UDP accepts one exact MC frame/datagram; no TCP fault plan with UDP.
 -v logs requests/close reasons (no payloads/passwords). TCP idle timeout defaults to none.
 """.strip("\n")
