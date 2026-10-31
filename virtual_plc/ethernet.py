@@ -141,6 +141,7 @@ class EthernetSettings:
             "model": self.model,
             "editor": spec["editor"],
             "profile": self.profile,
+            "source": _source(spec, f"{spec['timer_pages']};{spec['policy_pages']}"),
             "parameters": parameters,
             "vendor_ports_reference_only": deepcopy(spec["ports"]),
             "simulation_notes": [

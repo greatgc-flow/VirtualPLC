@@ -151,7 +151,9 @@ def main(argv=None):
         try:
             server = Server(args.host, 0 if args.listen else args.port, **options)
         except ValueError as error:
-            hint = "ethernet" if "ethernet" in str(error) or "profile" in str(error) else ("memory" if "latch" in str(error) else topic)
+            hint = ("ethernet" if args.ethernet_model and (args.ethernet_config or
+                    "ethernet" in str(error) or "profile" in str(error))
+                    else ("memory" if "latch" in str(error) else topic))
             parser.error(str(error), hint)
         if args.show_effective_ethernet:
             print(json.dumps(server.ethernet.report(), indent=2))
