@@ -21,22 +21,22 @@ ERROR = {
     "request": 0xC05C, "bit_data": 0xC060,
 }
 # ASCII 16H maximum: 8 header + 2 length + 254 encoded bytes (508).
-MAX_1E_REQUEST = 518
+MAX_1E_REQUEST = 4092  # 255 untrusted 05H ASCII records, bounded
 
 
 def _command_and_wire(buffer):
     if not buffer:
         return None
     first = buffer[0]
-    if first in (0x30, 0x31):  # ASCII 00..03, 15, 16
+    if first in (0x30, 0x31):  # ASCII 00..05, 13..16
         if len(buffer) < 2:
             return None
-        if first == 0x30 and buffer[1] in (0x30, 0x31, 0x32, 0x33):
+        if first == 0x30 and buffer[1] in b"012345":
             return buffer[1] - 0x30, "ascii"
-        if first == 0x31 and buffer[1] in (0x35, 0x36):
+        if first == 0x31 and buffer[1] in b"3456":
             return 0x10 + buffer[1] - 0x30, "ascii"
         raise ValueError("unsupported or malformed 1E ASCII subheader")
-    if first in (0, 1, 2, 3, 0x15, 0x16):
+    if first in (0, 1, 2, 3, 4, 5, 0x13, 0x14, 0x15, 0x16):
         return first, "binary"
     raise ValueError("unknown 1E subheader (3E/4E not accepted)")
 
@@ -57,11 +57,11 @@ def frame_size_1e(buffer):
     if item is None:
         return None
     command, wire = item
-    if command in (0x15, 0x16):
+    if command in (0x13, 0x14, 0x15, 0x16):
         header = 8 if wire == "ascii" else 4
         if len(buffer) < header:
             return None
-        if command == 0x15:
+        if command != 0x16:
             return header
         count_width = 2 if wire == "ascii" else 1
         if len(buffer) < header + count_width:
@@ -74,6 +74,18 @@ def frame_size_1e(buffer):
         if result > MAX_1E_REQUEST:
             raise ValueError("1E loopback size exceeds bounded maximum")
         return result
+    if command in (4, 5):
+        # Random 1E: one-byte count/fixed and repeated device records.
+        header = 12 if wire == "ascii" else 6
+        if len(buffer) < header:
+            return None
+        count = _hex_number(buffer[8:10]) if wire == "ascii" else buffer[4]
+        per_item = ((14 if command == 4 else 16) if wire == "ascii"
+                    else (7 if command == 4 else 8))
+        size = header + count * per_item
+        if size > MAX_1E_REQUEST:
+            raise ValueError("1E random write exceeds bounded maximum")
+        return size
     header = 24 if wire == "ascii" else 12
     if len(buffer) < header:
         return None
@@ -139,7 +151,7 @@ def _word_to_bits(word):
     return [(word >> bit) & 1 for bit in range(16)]
 
 
-def dispatch_1e(frame, memory, max_points=None):
+def dispatch_1e(frame, memory, max_points=None, control=None, requester=None):
     """Return 1E answer; diagnostic 15/16 replies lack the batch status prefix.
 
     Caller MUST hold Server._request_lock when invoking this function.
@@ -149,6 +161,10 @@ def dispatch_1e(frame, memory, max_points=None):
     if layout is None:
         raise ValueError("short 1E request")
     command, wire = layout
+    if command in (4, 5):
+        return _random_write(frame, command, wire, memory, max_points)
+    if command in (0x13, 0x14):
+        return _remote_control(frame, command, wire, control, requester)
     if command in (0x15, 0x16):
         if frame_size_1e(frame) != len(frame):
             raise ValueError("1E diagnostic frame length mismatch")
