@@ -39,7 +39,8 @@ class Server:
                  initial_state="RUN", latch_ranges=None, password=None, fault_plan=None,
                  ascii_dword_order="swapped", text_pad=0x00, ascii_numbering="compat", verbose=False,
                  allow_nonlocal=False, max_clients=64, listeners=None,
-                 ethernet_model=None, ethernet_overrides=None, slmp_1e=False):
+                 ethernet_model=None, ethernet_overrides=None, slmp_1e=False,
+                 slmp_1e_run_switch="RUN"):
         if type(port) is not int or not 0 <= port <= 65535:
             raise ValueError("port must be an integer 0..65535")
         if max_points is not None and (type(max_points) is not int or max_points < 1):
@@ -79,6 +80,13 @@ class Server:
         if slmp_1e and (profile != "Q" or ethernet_model is not None or
                        ethernet_overrides is not None or fault_plan is not None):
             raise ValueError("slmp_1e requires synthetic Q profile, without model or TCP fault plan")
+        if type(slmp_1e_run_switch) is not str or slmp_1e_run_switch not in ("RUN", "STOP"):
+            raise ValueError("slmp_1e_run_switch must be RUN or STOP")
+        if slmp_1e_run_switch != "RUN" and not slmp_1e:
+            raise ValueError("nondefault 1E RUN switch requires slmp_1e=True")
+        if slmp_1e_run_switch == "STOP" and initial_state != "STOP":
+            raise ValueError("physical STOP requires initial_state=STOP")
+        self.slmp_1e_run_switch = slmp_1e_run_switch
         self.slmp_1e = slmp_1e
         if not is_loopback_host(host):
             if not allow_nonlocal:
