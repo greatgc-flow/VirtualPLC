@@ -128,6 +128,14 @@ def test_two_tcp_ports_share_memory_and_enforce_global_client_limit():
                 except ConnectionResetError:
                     pass
             assert exchange(connection, request(data=device_data())) == (0, b"\x00\x00")
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            with server._clients_lock:
+                remaining = len(server._clients)
+            if remaining == 0:
+                break
+            time.sleep(0.005)
+        assert remaining == 0
         with socket.create_connection(second[1:], timeout=2) as after_close:
             assert exchange(after_close, request(data=device_data())) == (0, b"\x00\x00")
 

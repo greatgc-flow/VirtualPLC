@@ -225,7 +225,9 @@ class Server:
         """One exact 3E/4E binary/ASCII request per datagram, sharing the TCP lock."""
         while not self._stopping.is_set():
             try:
-                packet, peer = listener.recvfrom(MAX_UDP_DATAGRAM + 1)
+                # Receive the full OS datagram before enforcing our smaller cap:
+                # Winsock raises WSAEMSGSIZE on an undersized recvfrom buffer.
+                packet, peer = listener.recvfrom(65535)
             except socket.timeout:
                 continue
             except OSError:
