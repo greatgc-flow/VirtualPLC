@@ -145,7 +145,8 @@ def test_duplicate_slot_port_and_gap_have_stable_order(lint):
 ])
 def test_bad_user_configurable_ports_report_individual_rows(
         lint, number, port, classification):
-    report = lint([row(number, port)])
+    # Focus on own-port classification. Gap warnings are tested separately.
+    report = lint([row(number, port)], report_slot_gaps=False)
     assert report["rows"][0]["plc_port_classification"] == classification
     assert codes(report) == ["VENDOR_PORT_NOT_CONFIGURABLE"]
     assert report["static_preflight_state"] == "REJECTED_STATIC_SETTINGS"
@@ -251,3 +252,14 @@ def test_no_network_runtime_listener_or_hardware_access(lint, monkeypatch):
     assert lint([])["simulator_network_affected"] is False
     assert build_parser().get_default("max_clients") == 64
     assert Server.__init__.__defaults__ is not None
+
+
+def test_invalid_port_and_missing_slot_can_be_reported_together(lint):
+    # Deliberately assert composition instead of concealing independent
+    # diagnostics. Slot 2 exists, No.1 is absent, 61441 is reserved.
+    result = lint([row(2, 61441)])
+    assert codes(result) == [
+        "VENDOR_PORT_NOT_CONFIGURABLE", "SLOT_GAP_REVIEW",
+    ]
+    assert result["static_preflight_state"] == "REJECTED_STATIC_SETTINGS"
+    assert result["diagnostics"][1]["missing_slots"] == [1]
