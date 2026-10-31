@@ -436,3 +436,15 @@ For `do_not_open_by_program`, it reports the vendor recommendation
 remote control or PyPI release is changed. See
 [the manufacturer-scoped RnCPU opening guide](docs/research/RNCPU_REMOTE_OPENING_SAFETY_20261101.md)
 and `virtual-plc guide ethernet --json` for source-backed metadata.
+
+### R04CPU built-in Ethernet A038H offline timer preflight
+
+A source-checkout helper `inspect_reference_rncpu_data_timers()`
+validates the **R04CPU CPU-built-in** GX Works3 timer reference from
+official SH-081257ENG-AD pp.329–330 and 396–397 (not the separate
+RJ71EN71 Ethernet module). It is read-only and retains the default
+`Change/Set Timer Value = No`; documented optional overrides are
+strictly checked, never applied to OS sockets or to the VirtualPLC
+server. For runnable examples and scope limits see
+[manufacturer-scoped R04CPU guide](docs/research/RNCPU_R04CPU_A038H_DATA_TIMER_REFERENCE_20261101.md)
+and `virtual-plc guide ethernet --json`.

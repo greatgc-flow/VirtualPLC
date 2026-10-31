@@ -87,3 +87,13 @@ reconnect hazard when configured Open by Program. See
 [the isolated remote opening-method preflight](RNCPU_REMOTE_OPENING_SAFETY_20261101.md)
 and PR #34. No factory opening default is inferred; no real PLC
 is contacted and no runtime control is enabled.
+
+## 5. R04CPU built-in timer GUI source (independent of service rules)
+
+The R04CPU built-in Ethernet GX Works3 screen links its separate
+**A038H Timer Settings for Data Communication** to official manual
+SH-081257ENG-AD pp.396–397. Source-scoped offline preflight:
+[R04CPU A038H evidence](RNCPU_R04CPU_A038H_DATA_TIMER_REFERENCE_20261101.md),
+[PR #35](https://github.com/greatgc-flow/VirtualPLC/pull/35).
+This does not change the auto-open simple CPU/GOT TCP/UDP FAQ rules
+above or generalize the hardware profile to RnCPU models.

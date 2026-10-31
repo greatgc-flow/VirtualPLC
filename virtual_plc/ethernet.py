@@ -232,6 +232,30 @@ _FX5_ENET_ALIVE_TIMER_REFERENCE = {
 
 # Reference-only hardware facts. Unsupported models never enter _MODELS, and
 # unknown module timers must never be borrowed from Q/L or RJ71EN71.
+# Independent CPU-built-in R04CPU example from SH-081257ENG-AD
+# pp.329-330 -> pp.396-397, not copied from RJ71EN71 _TIMER_DEFAULTS.
+# The p.396 table explicitly gives 100-ms increments for time units.
+_R04CPU_BUILTIN_DATA_TIMERS = {
+    name: {
+        "default": default_ms, "unit": "ms",
+        "min": 100, "max": 16383000, "step": 100,
+    }
+    for name, default_ms in (
+        ("tcp_ulp_ms", 30000),
+        ("tcp_zero_window_ms", 10000),
+        ("tcp_resend_ms", 10000),
+        ("tcp_end_ms", 20000),
+        ("ip_assembly_ms", 5000),
+        ("response_monitor_ms", 30000),
+        ("alive_start_ms", 600000),
+        ("alive_interval_ms", 10000),
+    )
+}
+_R04CPU_BUILTIN_DATA_TIMERS["alive_retries"] = {
+    "default": 3, "unit": "count", "min": 1, "max": 99999, "step": 1,
+}
+
+
 _REFERENCE_HARDWARE = {
     "fx5_cpu_builtin": {
         "implementation": "research_only",
@@ -386,6 +410,27 @@ _REFERENCE_HARDWARE = {
                 "page": "3, 684-685",
                 "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh082488eng/sh082488enge.pdf",
             },
+        },
+        # R04CPU *CPU built-in* GX Works3 example points to the shared
+        # timer section: SH-081257ENG-AD pp.329-330 -> 396-397.
+        # SH-082488ENG-E p.685 independently identifies CPU A038H.
+        # Do not promote these settings to all RnCPU firmware or copy
+        # the RJ71EN71 network-module runtime profile.
+        "data_timer_reference": {
+            "parameter_id": "A038H",
+            "factory_model_scope": "R04CPU_GXWORKS3_EXAMPLE",
+            "default_change_set_timer_value": False,
+            "source": {
+                "manual": "SH-081257ENG-AD",
+                "page": "329-330, 396-397",
+                "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf",
+            },
+            "cpu_parameter_source": {
+                "manual": "SH-082488ENG-E",
+                "page": "685",
+                "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh082488eng/sh082488enge.pdf",
+            },
+            "parameters": deepcopy(_R04CPU_BUILTIN_DATA_TIMERS),
         },
         "unverified": [
             "tcp_ulp_ms", "tcp_resend_ms", "response_monitor_ms",
@@ -621,4 +666,106 @@ def inspect_reference_rncpu_remote_opening(opening_method=None):
         "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
         "physical_hardware_certified": False,
         "simulator_network_affected": False,
+    }
+
+
+def inspect_reference_rncpu_data_timers(model="R04CPU", overrides=None):
+    """Validate R04CPU CPU-built-in A038H GUI timer settings OFFLINE.
+
+    Manufacturer SH-081257ENG-AD pp.329-330 explicitly links the R04CPU
+    built-in Ethernet GUI to the p.396-397 table. SH-082488ENG-E p.685
+    identifies the separate CPU parameter A038H. No RJ71EN71 reuse,
+    vendor port binding, host TCP tuning or hardware certification.
+
+    Optional overrides: {
+        "change_set_timer_value": True,
+        "timers": {"tcp_ulp_ms": {"value": 30, "unit": "s"},
+                   "alive_retries": 3}
+    }
+    Time fields use documented 1..16383 s or 100..16383000 ms,
+    step 100ms; count 1..99999. Preserve explicit overrides even
+    when equal to the default. Unverified per-firmware special cases
+    (e.g. zero-timer retry cancellation) are intentionally not modeled.
+    """
+    spec = _REFERENCE_HARDWARE["rncpu_builtin"]["data_timer_reference"]
+    if type(model) is not str or model != "R04CPU":
+        raise ValueError("only R04CPU built-in GUI example is independently sourced")
+    if overrides is None:
+        overrides = {}
+    if type(overrides) is not dict or set(overrides) - {
+        "change_set_timer_value", "timers"
+    }:
+        raise ValueError("timer overrides must be a supported object")
+    change = overrides.get(
+        "change_set_timer_value", spec["default_change_set_timer_value"]
+    )
+    if type(change) is not bool:
+        raise ValueError("change_set_timer_value requires a boolean")
+    requested = overrides.get("timers", {})
+    if type(requested) is not dict or set(requested) - set(spec["parameters"]):
+        raise ValueError("timers must contain only supported A038H entries")
+    if requested and not change:
+        raise ValueError("explicit timer values require change_set_timer_value=True")
+
+    parameters = {}
+    for name, item in spec["parameters"].items():
+        explicit = name in requested
+        if not explicit:
+            value = item["default"]
+        elif item["unit"] == "count":
+            value = requested[name]
+            if type(value) is not int:
+                raise ValueError("{} must be an integer count".format(name))
+        else:
+            supplied = requested[name]
+            if type(supplied) is not dict or set(supplied) != {"value", "unit"}:
+                raise ValueError("{} requires value and unit (s or ms)".format(name))
+            number, unit = supplied["value"], supplied["unit"]
+            if type(number) is not int or type(unit) is not str or unit not in ("s", "ms"):
+                raise ValueError("{} requires integer time and unit s or ms".format(name))
+            if unit == "s" and not 1 <= number <= 16383:
+                raise ValueError("{} seconds must be 1..16383".format(name))
+            value = number * 1000 if unit == "s" else number
+
+        if (type(value) is not int or not item["min"] <= value <= item["max"]
+                or value % item["step"] != 0):
+            raise ValueError("{} violates official A038H bounds or increment".format(name))
+        parameters[name] = {
+            "value": value,
+            "default": item["default"],
+            "unit": item["unit"],
+            "overridden": explicit,
+            "min": item["min"],
+            "max": item["max"],
+            "step": item["step"],
+        }
+
+    v = {name: p["value"] for name, p in parameters.items()}
+    # Printed p.397 uses >=, including equality at the lower boundary;
+    # do not import the older runnable RJ71EN71 policy of strict >.
+    if not (v["response_monitor_ms"] >= v["tcp_ulp_ms"]
+            >= v["tcp_end_ms"] >= v["tcp_resend_ms"]
+            >= v["ip_assembly_ms"]):
+        raise ValueError("response >= ULP >= end >= resend >= IP assembly required")
+    if v["tcp_resend_ms"] != v["tcp_zero_window_ms"]:
+        raise ValueError("TCP resend and zero-window timers must be equal")
+
+    return {
+        "interface": "rncpu_builtin",
+        "model": model,
+        "parameter_id": spec["parameter_id"],
+        "factory_model_scope": spec["factory_model_scope"],
+        "change_set_timer_value": change,
+        "parameters": parameters,
+        "source": deepcopy(spec["source"]),
+        "cpu_parameter_source": deepcopy(spec["cpu_parameter_source"]),
+        "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
+        "physical_hardware_certified": False,
+        "simulator_network_affected": False,
+        "notes": [
+            "R04CPU GX Works3 CPU built-in example only; other CPU/firmware applicability UNKNOWN.",
+            "Timers are manual reference values; this does not tune OS sockets or emulate firmware.",
+            "Special zero-time settings and physical retry/close timing are not certified.",
+            "No production equipment, network access or built-in Ethernet server is activated.",
+        ],
     }

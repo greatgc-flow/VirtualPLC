@@ -125,3 +125,15 @@ line and prevent later remote RUN). Appendix 8 pp.684–685 identifies
 Opening Method (A031H) and a *separate* CPU timer setting (A038H).
 Reference-only strict offline inspector; CPU-specific factory opening
 method / timer values remain UNKNOWN. No RJ71EN71 inheritance.
+
+### 2026-11-01 independently sourced R04CPU built-in A038H GUI timers
+
+[Official R04CPU timer matrix and offline preflight](RNCPU_R04CPU_A038H_DATA_TIMER_REFERENCE_20261101.md):
+SH-081257ENG-AD pp.329–330 explicitly names the **CPU built-in**
+R04CPU Application Settings and points to timer range/default table
+pp.396–397; CPU SH-082488ENG-E p.685 identifies parameter A038H.
+This is a **specific documented R04CPU GUI example** with nine
+default reference values and strict optional validation, not a blanket
+RnCPU firmware guarantee, automatic socket timing, or RJ71EN71 clone.
+The earlier UNKNOWN timer caveat remains for other CPU variants and
+for physical vendor behavior.
