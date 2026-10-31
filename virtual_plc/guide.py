@@ -123,7 +123,10 @@ This is a simulator, not a PLC. These behaviors are synthetic or unverified; do 
 - Optional --slmp-1e uses bounded 1E framing: batch 00..03, atomic random 04/05,
   TCP-owner-only remote RUN/STOP 13/14, model-code 15 and loopback 16. The STOP
   owner persists across disconnects; local Server.reset_1e_remote_control() releases
-  it while keeping STOP; UDP remote control denied. These are simulator safety rules.
+  it while keeping STOP; UDP remote control denied. Local
+  Server.get_1e_remote_control_status() reports owned/connected/orphaned safely.
+  CPU hardware RUN/STOP selector is not simulated: vendor 13H RUN can return
+  success with physical switch STOP while CPU remains STOP. Simulator only.
   Unlike batches, 15 replies F3 and 16 raw length+data. No mixed 1E/3E/4E.
   Synthetic Q memory, not vendor FX5 CPU/ENET certification.
   Every network/PC/station route aliases one memory.

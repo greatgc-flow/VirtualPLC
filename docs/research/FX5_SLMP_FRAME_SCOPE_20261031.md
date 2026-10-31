@@ -1,6 +1,6 @@
 # FX5 SLMP frames and X/Y ASCII numbering — implementation gate
 
-Evidence snapshot: 2026-10-31. Implementations: [PR #21](https://github.com/greatgc-flow/VirtualPLC/pull/21) for the ASCII X/Y octal prerequisite and [PR #23](https://github.com/greatgc-flow/VirtualPLC/pull/23) for the opt-in **1E batch 00..03** parser; [PR #24](https://github.com/greatgc-flow/VirtualPLC/pull/24) for **15H/16H diagnostic** frames; [draft PR #26](https://github.com/greatgc-flow/VirtualPLC/pull/26) covers manual-scoped 04/05 random and 13/14 remote; [issue #22](https://github.com/greatgc-flow/VirtualPLC/issues/22) retains the remaining 1E commands/physical-verification gate; [issue #14](https://github.com/greatgc-flow/VirtualPLC/issues/14) for per-hardware Ethernet configuration and physical parity. Read alongside [hardware model differences](ETHERNET_HARDWARE_NEXT_20261031.md).
+Evidence snapshot: 2026-10-31. Implementations: [PR #21](https://github.com/greatgc-flow/VirtualPLC/pull/21) for the ASCII X/Y octal prerequisite and [PR #23](https://github.com/greatgc-flow/VirtualPLC/pull/23) for the opt-in **1E batch 00..03** parser; [PR #24](https://github.com/greatgc-flow/VirtualPLC/pull/24) for **15H/16H diagnostic** frames; [merged PR #26](https://github.com/greatgc-flow/VirtualPLC/pull/26) covers manual-scoped 04/05 random and 13/14 remote; [issue #22](https://github.com/greatgc-flow/VirtualPLC/issues/22) retains the remaining 1E commands/physical-verification gate; [issue #14](https://github.com/greatgc-flow/VirtualPLC/issues/14) for per-hardware Ethernet configuration and physical parity. Read alongside [hardware model differences](ETHERNET_HARDWARE_NEXT_20261031.md).
 
 **Status legend:** `IMPLEMENTED_SIMULATOR` means observed behavior in VirtualPLC tests; `OFFICIAL_MANUAL` means documented vendor behavior but not verified on live equipment; `NOT_IMPLEMENTED` means unsupported. Green CI is not physical PLC certification.
 
@@ -143,3 +143,19 @@ without automatically starting the CPU. UDP 13/14 is rejected because
 there is no trustworthy connection continuity. Neither the selected
 error code nor the fail-closed recovery policy claims real FX5 firmware
 parity. Physical oracle, hardware variant and PyPI release remain HOLD.
+
+
+### Physical RUN/STOP selector switch: confirmed hardware gap
+
+Mitsubishi JY997D56001-K, printed page 132 (PDF zero-index page
+133), states that an authorized remote RUN command can **return normally
+without moving the accessed CPU to RUN** when its physical selector is
+STOP. VirtualPLC has only a synthetic CPU state: it does not model the
+selector or that special successful-but-still-STOP response.
+
+Local `Server.get_1e_remote_control_status()` exposes
+`cpu_state`, `owned`, `owner_connected`, `orphaned` and
+`owner_connection_id` under the shared request lock. Connection closure
+does not release STOP ownership; a worker must observe EOF/timeout before
+`owner_connected` becomes false. Local reset leaves STOP. This is an
+operator-facing simulator invariant, not a hardware specification.

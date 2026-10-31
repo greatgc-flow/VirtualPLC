@@ -230,9 +230,11 @@ def _remote_control(frame, command, wire, control, requester):
     if command == 0x14:
         control.set_state("STOP")
         control._remote_stop_owner = requester
+        control._remote_stop_owner_connected = True
     else:
         control.set_state("RUN")
         control._remote_stop_owner = None
+        control._remote_stop_owner_connected = False
     return _response(command, wire)
 
 
