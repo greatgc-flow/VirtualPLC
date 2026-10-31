@@ -138,6 +138,35 @@ SIGBREAK needs a shared console; forced termination bypasses Python handlers.
 
 Every topic accepts `--json`. Unknown topics list the choices and exit 2.
 
+## MELSEC iQ-F SLMP 1E batch mode (opt-in; source checkout)
+
+For client testing of the **separate 1E** request/response format, use:
+
+```powershell
+# One synthetic PLC, two explicit listener protocols:
+virtual-plc --slmp-1e --listen tcp:5000 --listen udp:5000
+
+# Python API:
+# with Server(slmp_1e=True, listeners=[("tcp", 0), ("udp", 0)]) as plc: ...
+```
+
+This opt-in mode is **1E-only** on all of that process's listeners.
+It supports batch bit/word read/write commands `00H`–`03H` in binary and
+ASCII, with manual 1E headers, per-command framing and special `5BH`
+extended errors. In this bounded initial slice, supported simulated
+devices are M/X/Y (bits) and D (words); bit devices also support aligned
+16-point word access. Invalid frames are closed/dropped rather than
+interpreted as 3E. Legacy default 3E/4E behavior is unchanged.
+
+**Not FX5-ENET hardware parity:** 1E mode uses synthetic Q memory,
+cannot be combined with `--ethernet-model` or a 3E fault plan, does not
+implement remaining 1E remote operations or vendor socket timers, and
+does not open system/MELSOFT ports. [1E packet contract and unsupported
+features](docs/research/FX5_SLMP_FRAME_SCOPE_20261031.md) ·
+[1E implementation issue #22](https://github.com/greatgc-flow/VirtualPLC/issues/22).
+Each independent PLC still runs as its own OS process; TCP/UDP
+listeners of one process share its CPU/memory.
+
 ## GX Works2/3 model-specific Ethernet settings (opt-in)
 
 GX Works2/3 is an editor, **not** the hardware identity. This source checkout

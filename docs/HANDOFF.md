@@ -21,9 +21,12 @@ the factory default. Review changes against
 [VerySimpleGuide](https://github.com/greatgc-flow/VerySimpleGuide). Vendor TCP/IP timers are *reference-only*;
 physical PLC equivalence is not claimed. The source checkout also supports
 opt-in `--ascii-numbering fx5-octal` for X/Y octal on the generic 3E/4E
-simulator. The FX5-specific 1E frame adapter is **not implemented**;
-[issue #22](https://github.com/greatgc-flow/VirtualPLC/issues/22) tracks the
-separate command/response implementation gates. Do not mark hardware parity.
+simulator. The new explicit `--slmp-1e` mode implements a bounded
+**1E 00..03 batch-only** binary/ASCII adapter using synthetic Q memory;
+this is **not** a complete FX5-ENET/RnCPU hardware profile. See
+[issue #22](https://github.com/greatgc-flow/VirtualPLC/issues/22)
+for remaining remote operations, unsupported devices, firmware-specific
+policies and physical PLC acceptance. Do not mark hardware parity.
 
 ---
 

@@ -8,6 +8,17 @@ features of
 profile: **Q series**.
 Not for industrial use. Binds 127.0.0.1 by default.
 
+**SLMP 1E (opt-in):** `virtual_plc/one_e.py` owns the independently
+bounded, command-aware 1E parser/response codec and first 00..03 batch
+subset. `Server(slmp_1e=True)` selects **1E-only** framing, reuses
+the existing single Memory/lock across TCP/UDP, and rejects
+incompatible hardware-model/fault-plan/profile choices before binding.
+1E has no 3E network route or common length header; invalid commands
+are closed/dropped, never passed to the 3E decoder. Manual test
+vectors and limits: [FX5 1E/3E protocol scope](research/FX5_SLMP_FRAME_SCOPE_20261031.md). Physical FX5 parity,
+unimplemented 1E operations, and firmware-specific policy remain open
+under [#22](https://github.com/greatgc-flow/VirtualPLC/issues/22).
+
 **GX Works2 / GX Works3 hardware-specific Ethernet mode (opt-in):**
 [usage/config/effective-settings guide](ETHERNET_MODEL_SETTINGS.md) and
 [official-manual timer/port/open-setting research](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md).

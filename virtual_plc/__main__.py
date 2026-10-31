@@ -60,7 +60,7 @@ def local_host(host):
 class GuideParser(argparse.ArgumentParser):
     def error(self, message, topic=None):
         if topic is None:
-            flags = re.findall(r"--[a-z][a-z-]*", message)
+            flags = re.findall(r"--[a-z][a-z0-9-]*", message)
             topic = guide.option_topic("/".join(flags))
         # JSON errors and filenames can contain newlines; diagnostics stay one line.
         self.exit(2, f"{self.prog}: error: {' '.join(message.split())}; see: virtual-plc guide {topic}\n")
@@ -77,6 +77,7 @@ def build_parser():
                         help="repeatable tcp:PORT or udp:PORT; shares one PLC state, overrides default --port")
     parser.add_argument("--profile", choices=PROFILES, default="Q", help="simulated CPU profile (inferred from --ethernet-model unless explicitly specified)")
     parser.add_argument("--ethernet-model", choices=tuple(model_catalog()), help="optional GX Works CPU/module Ethernet model (legacy defaults unchanged)")
+    parser.add_argument("--slmp-1e", action="store_true", help="opt-in 1E batch frame server (Q synthetic memory; not an FX5 hardware preset)")
     parser.add_argument("--ethernet-config", metavar="FILE", help="JSON Ethernet timer/policy overrides (requires --ethernet-model)")
     parser.add_argument("--show-effective-ethernet", action="store_true", help="print model defaults/overrides and fidelity as JSON without binding")
     parser.add_argument("--password", help="simulated lock password (not authentication)")
@@ -125,6 +126,8 @@ def main(argv=None):
         parser.error("--port cannot be combined with --listen")
     if (args.ethernet_config or args.show_effective_ethernet) and not args.ethernet_model:
         parser.error("--ethernet-model is required for ethernet configuration/inspection", "ethernet")
+    if args.slmp_1e and (args.profile != "Q" or args.ethernet_model or args.fault_plan):
+        parser.error("--slmp-1e requires the synthetic Q profile, no --ethernet-model or --fault-plan")
     if args.ethernet_model:
         required_profile = EthernetSettings(args.ethernet_model).profile
         specified_profile = any(value == "--profile" or value.startswith("--profile=") for value in argv)
@@ -144,6 +147,8 @@ def main(argv=None):
                        max_clients=args.max_clients, allow_nonlocal=args.allow_nonlocal,
                        ascii_dword_order=args.ascii_dword_order, text_pad=args.text_pad,
                        ascii_numbering=args.ascii_numbering, verbose=args.verbose)
+        if args.slmp_1e:
+            options["slmp_1e"] = True
         if args.listen:
             options["listeners"] = args.listen
         if args.ethernet_model:
