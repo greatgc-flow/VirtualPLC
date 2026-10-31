@@ -114,17 +114,17 @@ def test_1e_bit_read_256_points_count_zero():
             assert receive_exact(client, 130) == b"\x80\x00" + b"\x11" * 128
 
 
-@pytest.mark.parametrize("request,expected", [
+@pytest.mark.parametrize("frame_bytes,expected", [
     (req(1, count=65), b"\x81\x5b\x52\xc0"),
     (req(0, device="D", count=1), b"\x80\x5b\x5c\xc0"),
     (req(1, device="M", count=33), b"\x81\x5b\x52\xc0"),
     (req(3, head=7999, count=2, payload=b"\x01\x00\x02\x00"), b"\x83\x5b\x56\xc0"),
 ])
-def test_1e_error_contains_5b_and_manual_16bit_code(request, expected):
+def test_1e_error_contains_5b_and_manual_16bit_code(frame_bytes, expected):
     with Server(slmp_1e=True) as plc:
         with socket.create_connection(plc.address, timeout=2) as client:
             client.settimeout(2)
-            client.sendall(request)
+            client.sendall(frame_bytes)
             assert receive_exact(client, 4) == expected
 
 
