@@ -20,6 +20,16 @@ FX5-ENET 32 module connections. The port check is purely informational;
 no runnable FX5 model or user listener default changes. Official source
 pages and test links are in the separate matrix. Source code is the SSOT.
 
+### 2026-11-01 FX5-ENET existence-check timer reference
+
+[Verified FX5-ENET time-unit matrix](FX5_ENET_ALIVE_REFERENCE_20261101.md)
+distinguishes `Change/Set Timer Value` factory No and the 600s/10s/3
+start/interval/retry reference defaults under SH-082026ENG-H p.70. The
+reference-only validator accepts documented integer seconds or milliseconds
+within the official ranges; the manual page does not independently establish
+an additional 100ms increment requirement. No host TCP socket timer
+application or FX5 CPU built-in defaults are inferred.
+
 ## 1. Evidence and engineering decisions
 
 | Hardware/interface | Editor | Officially established here | Implementation disposition |
@@ -30,7 +40,7 @@ pages and test links are in the separate matrix. Source code is the SSOT.
 | **RJ71EN71 / RnENCPU network portion** | GX Works3 | [SH-081257ENG](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf) network portion currently has an opt-in `rj71en71` preset | **Runnable, separate from CPU built-in**. Vendor TCP/IP timers remain reference only |
 | **FX5 CPU built-in Ethernet (FX5U/FX5UC etc.)** | GX Works3 | [FX5 Communication SH-082625ENG-H](https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082625eng/sh082625engh.pdf), SLMP setting p.100, accepts host SLMP ports 1–5548 or 5570–65534; **5549–5569 reserved**. [Mitsubishi CPU connection FAQ 24204](https://fa-faq.mitsubishielectric.co.jp/faq/show/24204) states **up to 8 concurrent external connections** for included services, with listed services excluded from the count | **Research only**. Do not force 8 on other hardware or use the simulator's global `max_clients` default as a vendor assertion. Keep port guard opt-in to the eventual FX5 hardware model |
 | **FX5-ENET Ethernet module (not built-in)** | GX Works3 | [SH-082026ENG-H](https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082026eng/sh082026engh.pdf), pp.69–70,79: default Binary, configurable ASCII (X/Y octal) **and** ASCII (X/Y hexadecimal), Do Not Open by Program default, SLMP own-port **blank** until configured, host ports 1–5548 or 5570–65534, system-reserved 5549–5569 | **Research only**: no fake single `ascii` mode or invented all-nine-timer factory preset. A future FX5-ENET mode needs its own ASCII numbering and supported function contract |
-| **FX5-ENET module's existence-check timers** | GX Works3 | [SH-082026ENG-H p.70](https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082026eng/sh082026engh.pdf): Start **600s**, interval **10s**, retry **3**, with configurable 1–16383s or 100–16,383,000ms (100ms increments) for time and 1–32767 count for retry | **Reference-only subset**. The source does *not* establish that the FX5-ENET exposes Q/R TCP ULP, zero-window, resend, FIN, IP assembly and response monitor timer knobs with identical defaults |
+| **FX5-ENET module's existence-check timers** | GX Works3 | [SH-082026ENG-H p.70](https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082026eng/sh082026engh.pdf): Start **600s**, interval **10s**, retry **3**, with configurable 1–16383s or 100–16,383,000ms for time (no independent 100ms step stated on this page) and 1–32767 count for retry | **Reference-only subset**. The source does *not* establish that the FX5-ENET exposes Q/R TCP ULP, zero-window, resend, FIN, IP assembly and response monitor timer knobs with identical defaults |
 | **FX5 family TCP keepalive** | GX Works3 | [FX5 Communication SH-082625ENG-H p.27](https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082625eng/sh082625engh.pdf) discusses keepalive probe start **5s**, repeat **5s**, and no-response disconnect **45s** in the Ethernet communications context | **Reference-only**, not a universal 5/5/45 override for every FX5 connection or a synonym of `--idle-timeout` |
 | **FX5-ENET connected-count GUI** | GX Works3 | FX5-ENET module manual p.79 example screenshot shows **1/32** in a connected-count panel | An example/UI capability is not by itself the runtime simulator's default client limit. Verify application/firmware specifics before hard-coding |
 

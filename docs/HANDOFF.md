@@ -1,6 +1,17 @@
 # Handoff (historical baseline 2026-10-23)
 
-## 2026-10-31 FX5 reference-only port/connection preflight (PR #30, not merged)
+## 2026-11-01 FX5-ENET alive-check reference timer validation (PR #31)
+
+The new `inspect_reference_fx5_enet_alive_timers` API validates the
+FX5-ENET module's SH-082026ENG-H p.70 existence-check start/interval/retry
+factory values, supported units and ranges under an explicit Change/Set
+Timer Value flag. Reference-only, no socket effects, runtime hardware
+activation or physical PLC parity. See
+[FX5-ENET alive reference](research/FX5_ENET_ALIVE_REFERENCE_20261101.md).
+Check live PR #31 and CI status; this dated handoff is not an assertion of
+merge or complete tests.
+
+## 2026-10-31 FX5 reference-only port/connection preflight (PR #30 merged)
 
 New `inspect_reference_slmp_port` in `virtual_plc/ethernet.py` exposes
 manual-scoped FX5 CPU/ENET SLMP vendor port classification without socket
@@ -10,8 +21,10 @@ binding, runtime hardware activation, or changing `Server(port=0)` and
 [FX5 port and connection scope](research/FX5_SLMP_PORT_SCOPE_20261031.md),
 [PR #30](https://github.com/greatgc-flow/VirtualPLC/pull/30),
 [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
-**This is an unmerged feature-branch checkpoint; do not assume it exists
-on main.** Confirm candidate CI and current remote SHA before proceeding.
+**PR #30 was squash-merged** into main SHA
+`cf41bf1961d69ad85411f942fbc2c81cea748bcb`; post-merge main CI
+[#41213732838](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41213732838)
+was independently verified 9/9 SUCCESS. Check for later main changes.
 
 ## 2026-10-31 offline reference oracle checkpoint
 
