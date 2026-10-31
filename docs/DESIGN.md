@@ -16,6 +16,15 @@ This small static switch models the official JY997D56001-K p.132 condition,
 without changing default mode or pretending to implement physical switch
 transitions, firmware behavior or complete FX5 hardware parity.
 
+**Offline manufacturer vector oracle (separate from simulator networking):**
+`virtual_plc/oracle.py` defines four manual-derived 1E 15H/16H binary/ASCII
+read-only request/response cases and a minimal offline plan/template/compare CLI.
+A self-reported model/interface/firmware provenance contract, strict
+request matching, SHA-256-only redacted report, and atomic stdout-identical
+file output avoid confusing a manual/simulated result with real PLC parity.
+No socket or PLC control operation exists in this utility; see
+[offline procedure](PHYSICAL_ORACLE.md).
+
 **SLMP 1E (opt-in):** `virtual_plc/one_e.py` owns the independently
 bounded, command-aware 1E parser/response codec with 00..03 batch, 04/05 transactional random writes, TCP owner-checked 13/14 remote RUN/STOP, and 15/16 diagnostics. The latter use
 **raw identity or length+data replies**, not the batch 8X/00 status layout. `Server(slmp_1e=True)` selects **1E-only** framing, reuses

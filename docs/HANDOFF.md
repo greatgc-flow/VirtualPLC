@@ -1,5 +1,14 @@
 # Handoff (historical baseline 2026-10-23)
 
+## 2026-10-31 offline reference oracle checkpoint
+
+`python -m virtual_plc.oracle plan|template|compare` implements an
+**offline, read-only** manual-vector comparison workflow for 1E 15/16
+binary/ASCII. Strict self-reported origin/target provenance, SHA-256-only
+reporting and no socket operations; never physical-certification evidence.
+[Procedure](PHYSICAL_ORACLE.md). Always check live main/PRs/CI before
+assuming this dated status is current.
+
 ## Current-source checkpoint (2026-10-31)
 
 **Use remote `main` and GitHub CI as the current source of truth.** The

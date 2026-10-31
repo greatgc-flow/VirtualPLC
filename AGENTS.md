@@ -18,6 +18,7 @@ This file is for agents developing this repository. For product usage, run
 
 - `virtual_plc/__main__.py:build_parser` owns CLI flags, defaults and help.
 - `virtual_plc/profiles.py` and command dispatch tables own profile/device/command data.
+- Offline-only oracle: `virtual_plc/oracle.py`; no network/control/certification (`docs/PHYSICAL_ORACLE.md`).
 - `virtual_plc/ethernet.py` owns runnable defaults and reference-only
   FX5/RnCPU facts/unknowns; `guide ethernet --json` projects both.
 - [VerySimpleGuide](https://github.com/greatgc-flow/VerySimpleGuide):
