@@ -69,6 +69,42 @@ class Memory:
         self.check(device, head, len(values), "bit")
         self._store(device, head, values)
 
+    def write_atomic(self, operations):
+        """Stage and commit a group of bit/word writes as one request.
+
+        operations: iterable of (device, head, "bit"|"word", values).
+        Validate every value and range before replacing any storage. Repeated
+        addresses are applied in request order (last value wins). The caller
+        must hold the Server request lock during this operation.
+        """
+        staged = {}
+        for device, head, unit, raw_values in operations:
+            if unit not in ("bit", "word"):
+                raise ValueError("write_atomic needs bit or word unit")
+            values = list(raw_values)
+            if any(type(v) is not int for v in values):
+                raise ValueError("write_atomic values must be integers")
+            max_value = 1 if unit == "bit" else 0xFFFF
+            if any(not 0 <= v <= max_value for v in values):
+                raise ValueError("write_atomic value out of range")
+            spec = self.check(device, head, len(values), unit)
+            if device not in staged:
+                staged[device] = self._cells[device].copy()
+            cells = staged[device]
+            if spec.kind == "bit":
+                if unit == "word":
+                    values = [value >> i & 1 for value in values for i in range(16)]
+                cells.update(enumerate(values, head))
+            elif spec.kind == "dword":
+                for i, value in enumerate(values):
+                    point, shift = head + i // 2, 16 * (i % 2)
+                    cells[point] = ((cells.get(point, 0) & ~(0xFFFF << shift))
+                                    | (value << shift))
+            else:
+                cells.update(enumerate(values, head))
+        # Single commit point under request lock; failures above leave state as-is.
+        self._cells.update(staged)
+
     def check(self, device, head, count, unit):
         """Validate one access; `count` is in `unit`s. Returns the device spec."""
         spec = self.profile.devices.get(device)

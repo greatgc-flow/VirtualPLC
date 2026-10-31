@@ -9,15 +9,14 @@ profile: **Q series**.
 Not for industrial use. Binds 127.0.0.1 by default.
 
 **SLMP 1E (opt-in):** `virtual_plc/one_e.py` owns the independently
-bounded, command-aware 1E parser/response codec with 00..03 batch
-commands and 15H type-code/16H loopback diagnostics. The latter use
+bounded, command-aware 1E parser/response codec with 00..03 batch, 04/05 transactional random writes, TCP owner-checked 13/14 remote RUN/STOP, and 15/16 diagnostics. The latter use
 **raw identity or length+data replies**, not the batch 8X/00 status layout. `Server(slmp_1e=True)` selects **1E-only** framing, reuses
 the existing single Memory/lock across TCP/UDP, and rejects
 incompatible hardware-model/fault-plan/profile choices before binding.
-1E has no 3E network route or common length header; invalid commands
+1E has no 3E network route or common length header; random frames carry one count then exact device records. Owner ID is a monotonically increasing TCP-accept counter; ownership persists across close and can only be cleared by owner RUN or explicit local administrator reset, which leaves CPU STOP. UDP remote control is rejected with simulator C05F. Atomic writes stage only touched device maps, validating the entire request under the existing shared request lock. These are simulator safety choices, not vendor identity/error parity. Invalid commands
 are closed/dropped, never passed to the 3E decoder. Manual test
-vectors and limits: [FX5 1E/3E protocol scope](research/FX5_SLMP_FRAME_SCOPE_20261031.md). Physical FX5 parity,
-unimplemented 1E operations, and firmware-specific policy remain open
+vectors and limits: [FX5 1E/3E protocol scope](research/FX5_SLMP_FRAME_SCOPE_20261031.md). Physical FX5 parity, unsupported device/firmware variants and physical
+remote ownership/release/error-code semantics remain open
 under [#22](https://github.com/greatgc-flow/VirtualPLC/issues/22).
 
 **GX Works2 / GX Works3 hardware-specific Ethernet mode (opt-in):**

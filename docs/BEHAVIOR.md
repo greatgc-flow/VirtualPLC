@@ -16,8 +16,7 @@ settings raise `ValueError` before any port is bound.
 Commands `00H` (bit read, max 256, encoded count 00H=256), `01H`
 (word/group read, max 64 D words / 32 aligned groups of 16 bits),
 `02H` (bit write, max 160), and `03H` (word/group write, max 64 D
-words / 10 aligned bit groups), plus diagnostic `15H` (type code)
-and `16H` (loopback, 1–254 bytes) are supported in binary and ASCII.
+words / 10 aligned bit groups), plus 04H random bit writes (1–80 points), 05H random word/aligned bit-group writes (1–10 items), TCP owner-scoped 13H RUN / 14H STOP and diagnostics `15H` / `16H` are supported in binary and ASCII.
 **Unlike batch responses**, `15H` replies with only model code `F3H`
 (binary) or `F3` (ASCII); `16H` echoes only the original byte count
 and data (binary length byte; ASCII two-character hexadecimal length).
@@ -31,8 +30,24 @@ manufacturer-table-derived code; simulator error mapping and physical
 PLC equivalence remain unverified. TCP fragmented and coalesced frames
 are handled by **command-specific bounded lengths**, while UDP accepts
 exactly one complete frame/datagram. No legacy 3E-style length/route
-field is parsed. Unknown 1E commands fail closed without guessing
-their packet lengths. See [official-manual comparison and test vectors](research/FX5_SLMP_FRAME_SCOPE_20261031.md). All listeners share one
+field is parsed. Unknown 1E commands fail closed without guessing their packet lengths.
+
+Random 04/05 validate all device names, addresses, values, point counts,
+storage ranges and alignment before one atomic commit. Duplicate destinations
+are applied in request order (last value wins); invalid later records never
+partially mutate memory.
+
+Remote 14H STOP owns one unique TCP connection ID across all listener ports.
+Another TCP connection cannot RUN or STOP until the same owner has sent 13H
+RUN. On socket disconnect/idle timeout, ownership remains orphaned and CPU
+stays STOP: no automatic transfer. Explicit local
+`Server.reset_1e_remote_control()` clears ownership and leaves STOP,
+incrementing reset_count. UDP 13/14 are rejected with simulator 5B/C05F
+because session continuity cannot be authenticated. The simulated password
+lock also prevents remote control. Mitsubishi documents same-origin RUN and
+reset/power release, but exact connection identity, UDP ownership,
+disconnect semantics and foreign-owner error codes are not verified hardware
+facts. The deliberate fail-closed policy must not be called vendor parity. See [official-manual comparison and test vectors](research/FX5_SLMP_FRAME_SCOPE_20261031.md). All listeners share one
 request lock and one Memory; separate PLCs require separate OS processes.
 
 ## Public API

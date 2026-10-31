@@ -151,21 +151,18 @@ virtual-plc --slmp-1e --listen tcp:5000 --listen udp:5000
 ```
 
 This opt-in mode is **1E-only** on all of that process's listeners.
-It supports batch bit/word read/write commands `00H`–`03H` and
-diagnostics `15H` (model code) and `16H` (loopback) in binary and ASCII.
+It supports batch bit/word read/write `00H`–`03H`, random writes `04H` (up to 80 individual bits) and `05H` (up to 10 word or aligned bit-group items), remote `13H` RUN / `14H` STOP, and diagnostics `15H` / `16H` in binary and ASCII.
 Batch responses have the normal 1E subheader/status, but diagnostics have
 **different** reply layouts: `15H` returns only `F3H` (ASCII: `F3`),
 and `16H` returns the original length plus data, without a batch status.
 Loopback length is 1–254 bytes. Batch errors use special `5BH`
 extended errors. In this bounded initial slice, supported simulated
 devices are M/X/Y (bits) and D (words); bit devices also support aligned
-16-point word access. Invalid frames are closed/dropped rather than
-interpreted as 3E. Legacy default 3E/4E behavior is unchanged.
+16-point word access. Random writes validate the full list before a single atomic storage commit. TCP remote STOP is owned by the requesting connection: only that same live connection can RUN until explicit local `Server.reset_1e_remote_control()`. A disconnect **does not** release ownership (CPU remains STOP); UDP remote RUN/STOP receives a simulated `C05F` unsupported-policy error because it has no verifiable TCP session. The local reset releases ownership but deliberately keeps the simulator STOP. These are **simulator safety policies**, not verified FX5 error codes or physical reset timing. Invalid frames are closed/dropped rather than interpreted as 3E. Legacy default 3E/4E behavior is unchanged.
 
 **Not FX5-ENET hardware parity:** 1E mode uses synthetic Q memory,
 cannot be combined with `--ethernet-model` or a 3E fault plan, does not
-implement remaining 1E random-write/remote operations or vendor socket timers, and
-does not open system/MELSOFT ports. [1E packet contract and unsupported
+implement full vendor device/firmware behavior or socket timers, and does not open system/MELSOFT ports. [1E packet contract and unsupported
 features](docs/research/FX5_SLMP_FRAME_SCOPE_20261031.md) ·
 [1E implementation issue #22](https://github.com/greatgc-flow/VirtualPLC/issues/22).
 Each independent PLC still runs as its own OS process; TCP/UDP
