@@ -71,7 +71,7 @@ def test_unsupported_hardware_must_not_inherit_r04cpu_reference(inspect, model):
         inspect(model, 1, 1024)
 
 
-@pytest.mark.parametrize("port", [1, 1023, 61440, 61696, 65534])
+@pytest.mark.parametrize("port", [1, 1023, 61443, 61500, 61695])
 def test_permitted_but_discouraged_ports_are_not_rejected_as_invalid(inspect, port):
     result = inspect("R04CPU", 16, port)
     assert result["plc_port_classification"] == "permitted_not_recommended"
@@ -87,7 +87,7 @@ def test_recommended_vendor_own_ports(inspect, port):
     assert result["plc_port_recommended"] is True
 
 
-@pytest.mark.parametrize("port", [0, 5000, 5001, 5002, 5003, 5004, 5008, 5009, 65535])
+@pytest.mark.parametrize("port", [0, 5000, 5002, 5003, 5004, 65535])
 def test_outside_vendor_configurable_range_or_simulator_ephemeral(inspect, port):
     result = inspect("R04CPU", 1, port)
     assert result["plc_port_configurable"] is False
@@ -98,12 +98,24 @@ def test_outside_vendor_configurable_range_or_simulator_ephemeral(inspect, port)
 
 
 @pytest.mark.parametrize("port,service", [
-    (5005, "auto_open_udp"), (5006, "melsoft_udp"), (5007, "melsoft_tcp"),
+    (20, "ftp_server_data"), (21, "ftp_server_control"),
+    (80, "web_server"), (123, "sntp_client"),
+    (5001, "melsoft_udp"), (5005, "auto_open_udp"),
+    (5006, "melsoft_udp"), (5007, "melsoft_tcp"),
+    (5008, "melsoft_direct_udp"), (5009, "network_module_search_udp"),
+    (61440, "iqss_data_udp"), (61441, "slmp_snd_udp"),
+    (61442, "iqss_backup_restore_udp"), (61448, "dns_client_udp"),
+    (61450, "cc_link_field_basic_udp"), (61461, "database_access_udp"),
+    (61696, "simple_cpu_communication_udp"),
+    (61999, "simple_cpu_communication_udp"),
+    (62000, "ftp_client_dynamic_tcp"),
+    (65534, "ftp_client_dynamic_tcp"),
 ])
 def test_existing_system_service_ports_never_become_configurable_user_ports(inspect, port, service):
     result = inspect("R04CPU", 1, port)
     assert result["plc_port_classification"] == "system_service_port_not_user_configurable"
     assert result["system_service"] == service
+    assert result["system_port_source"]["page"] == "554"
     assert result["plc_port_configurable"] is False
     assert result["plc_port_recommended"] is False
     assert result["simulator_bind_affected"] is False
@@ -126,6 +138,15 @@ def test_scopes_source_of_truth_and_network_part_difference(inspect):
     assert r["plc_port_ranges"] == [[1, 4999], [5010, 65534]]
     assert r["plc_port_recommended_ranges"] == [[1024, 4999], [5010, 61439]]
     assert r["factory_plc_port"] is None
+    assert r["system_port_source"]["page"] == "554"
+    assert r["system_service_ports"]["5001"] == "melsoft_udp"
+    assert r["system_service_ports"]["61441"] == "slmp_snd_udp"
+    assert r["system_port_ranges"] == [
+        {"start": 61696, "end": 61999,
+         "service": "simple_cpu_communication_udp"},
+        {"start": 62000, "end": 65534,
+         "service": "ftp_client_dynamic_tcp"},
+    ]
     assert r["source"]["manual"] == "SH-081257ENG-AD"
     assert r["source"]["page"] == "324-326"
     assert r["source"]["url"].endswith("/sh081257engad.pdf")
