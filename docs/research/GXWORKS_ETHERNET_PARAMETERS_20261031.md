@@ -18,6 +18,8 @@
 
 The editor is an interface to *hardware-specific module parameters*. Avoid generic `gxworks2` and `gxworks3` factory-default presets with unqualified applicability.
 
+**LJ71E71-100 confirmed independently:** [SH-081105ENG-G pp.35–36](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081105eng/sh081105engg.pdf) lists buffer words 11–19 defaults 60/20/20/40/10/60/1200/20/3 (500ms unit except retry count), word 20 auto-open UDP 0x1388 (5000), and initial word 31 = 0 (Binary, RUN write disabled). The runnable model is `lj71e71` with `profile=L`, **not a Q hardware alias**. See [RnCPU/FX5 next hardware evidence](ETHERNET_HARDWARE_NEXT_20261031.md) for more distinctions and remaining unknown defaults.
+
 ## 2. Confirmed default Ethernet timer matrix
 
 Values in this table are **module defaults** in seconds (or counts). The Q/L E71 raw GX Works2 field is in **500ms ticks**, so raw 60 means 30s. iQ-R uses seconds or milliseconds with a 100ms step.

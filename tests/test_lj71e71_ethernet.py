@@ -56,7 +56,7 @@ def test_l_profile_keeps_independent_model_identity_and_legacy_unchanged():
         with socket.create_connection(legacy.address, timeout=2) as client:
             client.settimeout(2)
             assert exchange(client, request(0x1401, data=device_data(
-                payload=b"\\x05\\x00")))[0] == 0
+                payload=b"\x05\x00")))[0] == 0
 
 
 @pytest.mark.parametrize("value", [0, 501, 999, 16384000, True, "35000"])
@@ -80,10 +80,10 @@ def test_l_e71_overrides_and_same_model_state_across_tcp_listeners():
         with socket.create_connection(a[1:], timeout=2) as writer:
             writer.settimeout(2)
             assert exchange(writer, request(0x1401, data=device_data(
-                payload=b"\\x19\\x00")))[0] == 0
+                payload=b"\x19\x00")))[0] == 0
         with socket.create_connection(b[1:], timeout=2) as reader:
             reader.settimeout(2)
-            assert exchange(reader, request(data=device_data())) == (0, b"\\x19\\x00")
+            assert exchange(reader, request(data=device_data())) == (0, b"\x19\x00")
 
 
 def test_l_e71_run_write_default_rejects_while_stop_allows():
@@ -91,12 +91,12 @@ def test_l_e71_run_write_default_rejects_while_stop_allows():
         with socket.create_connection(server.address, timeout=2) as client:
             client.settimeout(2)
             code, _ = exchange(client, request(0x1401, data=device_data(
-                payload=b"\\x03\\x00")))
+                payload=b"\x03\x00")))
             assert code == 0x0055
         assert server.memory.read_words("D", 0, 1) == [0]
     with Server(profile="L", ethernet_model="lj71e71", initial_state="STOP") as server:
         with socket.create_connection(server.address, timeout=2) as client:
             client.settimeout(2)
             code, _ = exchange(client, request(0x1401, data=device_data(
-                payload=b"\\x03\\x00")))
+                payload=b"\x03\x00")))
             assert code == 0

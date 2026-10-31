@@ -318,26 +318,31 @@ def _memory(parser):
 
 
 def _ethernet(parser):
-    """Compact ASCII guidance generated from the model parameter registry."""
+    """Short ASCII instructions; full model defaults and references in --json."""
     lines = [
         "Ethernet hardware model mode (opt-in; legacy behavior unchanged without it).",
         "  virtual-plc --ethernet-model qj71e71 --show-effective-ethernet",
+        "  virtual-plc --profile L --ethernet-model lj71e71 --show-effective-ethernet",
         "  virtual-plc --profile iQ-R --ethernet-model rj71en71 --ethernet-config FILE",
         "JSON keys: timers, communication_data_code, allow_write_during_run.",
         "  Example: {\"timers\":{\"tcp_ulp_ms\":35000,\"response_monitor_ms\":35000}}",
-        "Timer values: integer milliseconds or count; exact model bounds and step enforced.",
-        "reference_only = stored/validated; not applied to host TCP stack.",
-        "simulated = applied to MC responses; physical parity remains unverified.",
-        "Wrong data-code mode: TCP closes, UDP drops. RUN write denied: code 0055.",
-        "Vendor MELSOFT ports are not auto-opened; use --listen explicitly.",
-        "One independent PLC per process; all listeners share its state.",
+        "Timer values: integer milliseconds or count, strict model bounds/steps.",
+        "reference_only = stored/validated; never applied to OS TCP stack.",
+        "simulated = wire code + RUN-write gate, with no physical PLC parity claim.",
+        "Wrong data-code: TCP closes, UDP drops; RUN writes denied: code 0055.",
+        "Vendor MELSOFT/auto ports are NOT opened; use --listen explicitly.",
+        "One independent PLC per process; all its listeners share state.",
     ]
     for model, spec in model_catalog().items():
-        lines.append(f"{model} ({spec['editor']}, profile {spec['profile']}):")
-        for key, field in spec["parameters"].items():
-            lines.append(f"  {key}: {field['default']} {field['unit']} [{field['effect']}]")
+        lines.append(f"{model} ({spec['editor']}, profile {spec['profile']}, {spec['source']['manual']}):")
+        timers = [f"{k}={f['default']}{f['unit']}" for k, f in spec["parameters"].items()
+                  if f["effect"] == "reference_only"]
+        lines.append("  reference factory timers: " + ", ".join(timers))
+        lines.append("  simulated controls: code={communication_data_code}, "
+                     "write_RUN={allow_write_during_run}".format(**{
+                         key: field["default"] for key, field in spec["parameters"].items()
+                         if field["effect"] == "simulated"}))
     return "\n".join(lines)
-
 
 GENERATED = {None: _overview, "options": _options, "profiles": _profiles, "ethernet": _ethernet, "embed": _embed,
              "faults": _faults, "memory": _memory}

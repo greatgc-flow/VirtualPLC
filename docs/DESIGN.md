@@ -14,7 +14,10 @@ Not for industrial use. Binds 127.0.0.1 by default.
 The single source of truth for the implemented model defaults, ranges, sources
 and fidelity is `virtual_plc/ethernet.py`, exposed through
 `virtual-plc guide ethernet --json` and `--show-effective-ethernet`.
-Initially the supported model keys are `qj71e71` (Q) and `rj71en71` (iQ-R).
+The supported model keys are `qj71e71` (Q), `lj71e71` (L), and
+`rj71en71` (iQ-R), with independent official manual sources.
+[Remaining RnCPU/FX5 hardware gaps](research/ETHERNET_HARDWARE_NEXT_20261031.md)
+are separate from runnable presets.
 Only model-selected binary/ASCII wire mode and RUN-write policy are simulated;
 OS network-stack and manufacturer timers are reference-only. Legacy Q mode and
 socket `idle_timeout` are not modified. The broader fidelity backlog remains
