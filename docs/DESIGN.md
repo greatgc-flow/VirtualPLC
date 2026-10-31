@@ -8,6 +8,16 @@ features of
 profile: **Q series**.
 Not for industrial use. Binds 127.0.0.1 by default.
 
+**GX Works2 / GX Works3 Ethernet compatibility (research only):**
+[official-manual, model-scoped timer/port/open-setting matrix](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md)
+tracks CPU/module-specific defaults, units and limits, and what this simulator
+can actually emulate. The research does not silently change the legacy Q
+profile or socket `idle_timeout`; implementation and overrides are
+tracked in [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
+**One independent PLC per OS process**; multiple listeners within that
+process share one PLC state.
+
+
 ## Optional multi-listener transport extension
 
 `Server(listeners=[("tcp", 5000), ("udp", 5000)])` optionally binds
