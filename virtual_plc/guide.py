@@ -53,9 +53,10 @@ Same program: python -m virtual_plc ...   Every option: virtual-plc guide option
 Banner: "listening on HOST:PORT (...)". With --port 0 parse the real port from it.
 Stop: Ctrl+C or SIGTERM exits 0 and writes --dump-on-exit; Windows SIGBREAK needs a shared console.
 Exit codes: 0 clean stop, 1 cannot bind, 2 bad configuration (message ends "see: virtual-plc guide TOPIC").
-Default bind is 127.0.0.1. Other hosts print a WARNING: there is no authentication, so never expose it.
--v logs request summaries (no payloads or passwords) and why each connection closed.
-Idle clients stay connected unless --idle-timeout SECONDS is set.
+Default 127.0.0.1 TCP. Nonlocal bind needs --allow-nonlocal --idle-timeout N; no authentication.
+Multi-port: virtual-plc --listen tcp:5000 --listen tcp:5001 --listen udp:5000 (one shared PLC).
+--listen replaces --port. UDP accepts one exact MC frame/datagram; no TCP fault plan with UDP.
+-v logs requests/close reasons (no payloads/passwords). TCP idle timeout defaults to none.
 """.strip("\n")
 
 CLIENT = """
@@ -80,6 +81,7 @@ setaccessopt(timer_sec=2) sets the PLC monitoring timer (ignored here) and a 3 s
 TROUBLESHOOT = """
 Symptom -> cause -> fix
 "cannot listen on H:P" (exit 1): port busy or denied -> choose another --port, or --port 0 and read the banner.
+UDP timeout: each datagram must contain exactly one full frame (max 8192 bytes); invalid requests get no response.
 Exit 2 and "see: virtual-plc guide TOPIC": bad option, JSON file or plan -> read that topic; nothing was bound.
 Client times out: wrong host/port, a fault plan that holds or drops replies, or --idle-timeout closed the socket
   (reconnect). A silent_hold fault ends only when the server stops.
@@ -137,8 +139,9 @@ OPTIONS_TAIL = ("DEV:LO-HI repeats (--limit D:0-99 --limit M:0-15); its endpoint
                 "Same data for programs: virtual-plc guide options --json")
 
 FAULTS_HEAD = """
-Faults change how replies are delivered AFTER the command ran; writes are never rolled back. Opt in with
---fault-plan FILE or Server(fault_plan=FaultPlan(steps)); without a plan nothing is matched or delayed.
+Faults change TCP replies AFTER the command ran; writes are never rolled back. UDP + fault plan is
+rejected (RST/stream-close/partial-send do not apply). Opt in with --fault-plan FILE or
+Server(fault_plan=FaultPlan(steps)); without a plan nothing is matched or delayed.
 Schema: {"steps": [STEP, ...]} in a file (no other root keys); Python takes the list. A bad plan exits 2 before bind.
 STEP = {"match": {...}, "times": N, "action": {"type": T, ...}}; match and times are optional (times defaults to 1).
 match keys, ANDed: command (int or "0x0619"), connection (1 = first accepted), nth (1 = first request on it).
