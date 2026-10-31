@@ -42,6 +42,17 @@ FX5 CPU/FX5-ENET threshold. The offline reference API
 `inspect_reference_fx5_simple_cpu_communication` never binds a
 port or changes existing listeners.
 
+### 2026-11-01 RnCPU built-in service-specific settings
+
+[Official RnCPU service matrix](RNCPU_BUILTIN_SERVICE_CONNECTIONS_20261101.md):
+Mitsubishi FAQ #20230 states that the receiving RCPU built-in
+Ethernet port uses auto-open UDP for *simple CPU communication*
+and needs no extra opening configuration. FAQ #45267 establishes
+a distinct *multiple GOT* scenario: TCP needs External Device
+Configuration per GOT; UDP needs no open setting. Both are
+reference-only and do NOT create a generic SLMP listener default,
+or promote RnCPU built-in to the runnable RJ71EN71 network model.
+
 ## 1. Evidence and engineering decisions
 
 | Hardware/interface | Editor | Officially established here | Implementation disposition |

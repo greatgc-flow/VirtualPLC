@@ -45,6 +45,15 @@ sessions and the FX5U/UC 16 targets for *simple CPU communication* are
 separate scoped counts with independent official sources. See
 [FX5 scope matrix](research/FX5_SLMP_PORT_SCOPE_20261031.md).
 
+**RnCPU built-in application-specific external settings (reference-only):**
+`reference_catalog()["rncpu_builtin"]["service_connection_reference"]`
+separates the receiving RCPU auto-open UDP *simple CPU communication*
+scenario from the multiple-GOT built-in-port TCP/UDP configuration
+scenario. These source-only Mitsubishi FAQ facts do not imply a generic
+SLMP socket/open setting, automatic listeners or MELSOFT/GOT protocol
+support. RnCPU built-in remains separate from RJ71EN71 network module;
+see [RnCPU service matrix](research/RNCPU_BUILTIN_SERVICE_CONNECTIONS_20261101.md).
+
 **FX5 CPU simple communication firmware gate (reference-only):**
 `inspect_reference_fx5_simple_cpu_communication(model, firmware_version)`
 uses official Mitsubishi FAQ #39316's distinct FX5U/FX5UC >=1.110 and

@@ -1,5 +1,19 @@
 # Handoff (historical baseline 2026-10-23)
 
+## 2026-11-01 RnCPU built-in service connection reference (PR #33)
+
+Mitsubishi official FAQs [#20230](https://fa-faq.mitsubishielectric.co.jp/faq/show/20230)
+and [#45267](https://fa-faq.mitsubishielectric.com/faq/show/45267)
+document *different* RnCPU built-in Ethernet service requirements:
+simple CPU communication receiving partner via auto-open UDP needs no
+extra opening setting, while multiple GOTs using TCP need a per-GOT
+GX Works3 External Device Configuration (GOT UDP does not).
+The `reference_catalog()` SSOT and `guide ethernet --json` project
+these separately without enabling network services. See
+[service-specific matrix](research/RNCPU_BUILTIN_SERVICE_CONNECTIONS_20261101.md)
+and [PR #33](https://github.com/greatgc-flow/VirtualPLC/pull/33).
+Check live HEAD and exact PR/head CI; no physical PLC verification.
+
 ## 2026-11-01 FX5 CPU simple communication firmware gate (PR #32)
 
 The offline, reference-only API
@@ -11,8 +25,10 @@ interop route is mapped; early UJ/S route remains unknown. No SLMP
 socket/CPU behavior changes, physical captures or PyPI releases.
 See [firmware matrix](research/FX5_CPU_FIRMWARE_SIMPLE_COMM_20261101.md)
 and [PR #32](https://github.com/greatgc-flow/VirtualPLC/pull/32).
-Check latest remote main, PR, issue #14 and exact candidate CI before
-making claims about completion/merge.
+PR #32 was squash-merged into main
+`42d1a19b1258c3dd0157f280049db7144992e7bc`; independent post-merge
+[CI #41216086296](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41216086296)
+COMPLETED SUCCESS 9/9. Check for later remote changes.
 
 ## 2026-11-01 FX5-ENET alive-check reference timer validation (PR #31)
 

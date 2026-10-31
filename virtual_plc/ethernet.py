@@ -327,6 +327,49 @@ _REFERENCE_HARDWARE = {
             "melsoft_udp": 5006,
             "melsoft_tcp": 5007,
         },
+        # These are independent vendor FAQ *service* contracts, not
+        # SLMP TCP/UDP behavior or automatically opened simulator ports.
+        "service_connection_reference": {
+            "applicability": "rncpu_builtin_only",
+            "simulator_network_affected": False,
+            "physical_hardware_certified": False,
+            "simple_cpu_communication_partner": {
+                "transport": "udp",
+                "auto_open_udp": True,
+                "requires_additional_open_setting": False,
+                "role": "receiving_rncpu_builtin_ethernet_partner",
+                "status": "OFFICIAL_FAQ_REFERENCE_ONLY",
+                "source": {
+                    "faq_id": 20230,
+                    "url": "https://fa-faq.mitsubishielectric.co.jp/faq/show/20230",
+                },
+            },
+            "multiple_got": {
+                "scope": "multiple_got_to_one_rncpu_builtin_ethernet_port",
+                "status": "OFFICIAL_FAQ_REFERENCE_ONLY",
+                "by_transport": {
+                    "tcp": {
+                        "requires_external_device_configuration": True,
+                        "configure_each_got": True,
+                        "gxworks3_path": [
+                            "Navigation Window", "Parameter", "RnCPU", "Module parameter",
+                            "Basic Settings", "External Device Configuration",
+                            "Detail settings",
+                            "Ethernet configuration (built-in Ethernet port)",
+                        ],
+                    },
+                    "udp": {
+                        "requires_external_device_configuration": False,
+                        "configure_each_got": False,
+                        "gxworks3_path": None,
+                    },
+                },
+                "source": {
+                    "faq_id": 45267,
+                    "url": "https://fa-faq.mitsubishielectric.com/faq/show/45267",
+                },
+            },
+        },
         "unverified": [
             "tcp_ulp_ms", "tcp_resend_ms", "response_monitor_ms",
             "per-CPU/firmware editable timer ranges", "RUN-write behavior",
