@@ -137,3 +137,12 @@ default reference values and strict optional validation, not a blanket
 RnCPU firmware guarantee, automatic socket timing, or RJ71EN71 clone.
 The earlier UNKNOWN timer caveat remains for other CPU variants and
 for physical vendor behavior.
+
+### 2026-11-01 R04CPU CPU built-in external-device user slots/ports
+
+[Independent offline source matrix](RNCPU_R04CPU_EXTERNAL_DEVICE_PORTS_20261101.md):
+SH-081257ENG-AD pp.324–326 establishes CPU built-in **1–16 configured
+user slots** (not total TCP concurrency), own PLC port range/default,
+and RJ71EN71 network-part difference. Appendix 10 p.554 reserves
+system ports even where numeric ranges would otherwise allow them;
+reference validator checks those first. No new hardware runtime preset.

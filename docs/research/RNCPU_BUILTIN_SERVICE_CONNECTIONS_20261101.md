@@ -97,3 +97,12 @@ SH-081257ENG-AD pp.396–397. Source-scoped offline preflight:
 [PR #35](https://github.com/greatgc-flow/VirtualPLC/pull/35).
 This does not change the auto-open simple CPU/GOT TCP/UDP FAQ rules
 above or generalize the hardware profile to RnCPU models.
+
+## 6. CPU built-in external-device slot/port settings are separate
+
+The [R04CPU external-device source matrix](RNCPU_R04CPU_EXTERNAL_DEVICE_PORTS_20261101.md)
+covers configured GX Works3 user slots, PLC own-port limits, and
+Appendix 10 fixed system services. The MELSOFT/GOT and simple-CPU
+FAQ requirements above remain **distinct**: there is no inference
+that 16 slots means 16 active TCP sockets or that an auto-open vendor
+port is simulated. PR #36, reference-only.

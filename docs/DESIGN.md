@@ -450,3 +450,17 @@ Validation is pure/strict: numeric unit conversion, bounds, step,
 equality and five-field `>=` chain, copies, model rejection, and
 no socket operations. Other RnCPU CPU/firmware variants remain UNKNOWN.
 See [R04CPU timer reference](research/RNCPU_R04CPU_A038H_DATA_TIMER_REFERENCE_20261101.md).
+
+### 2026-11-01 R04CPU CPU built-in external-device GX Works3 slot/port checker
+
+An isolated, pure `inspect_reference_rncpu_external_device` reads
+`_REFERENCE_HARDWARE["rncpu_builtin"]["external_device_configuration_reference"]`
+and never starts a listener. SH-081257ENG-AD pp.324–326 documents
+configuration slot 1..16 vs RJ71EN71 network module 1..64 and
+PLC own-port ranges; Appendix 10 p.554 defines system-reserved ports
+that can lie inside the broader numeric bounds. *Reservation precedes
+range*. The API treats missing slot as UNSPECIFIED, blank PLC port as
+a GUI default, refuses invalid types and other CPU families, and
+never equates setting slots with simultaneous client sockets.
+See [scope/edge cases](research/RNCPU_R04CPU_EXTERNAL_DEVICE_PORTS_20261101.md).
+No changes to max_clients, runtime ports, protocol or PyPI.

@@ -1,3 +1,25 @@
+## 2026-11-01 R04CPU CPU built-in external-device slot and own-port preflight (PR #36)
+
+Mitsubishi official SH-081257ENG-AD pp.324–326 distinguishes the
+**CPU built-in** GX Works3 configured user connection slots **1–16**
+from RJ71EN71 network-part **1–64**; these are NOT live simultaneous
+TCP socket limits. User-configurable PLC own ports: 1–4999 and
+5010–65534, with the default Blank and recommended 1024–4999 or
+5010–61439. Appendix 10 p.554 reserves several ports/ranges *inside*
+those broad bounds (including 5001, 5005–5009, 61441, 61696–65534),
+so system reservation overrides numeric range classification.
+
+New standalone, no-network `inspect_reference_rncpu_external_device`
+is restricted to the R04CPU example and reports source, unknown slot,
+GUI blank port, recommended/discouraged/system-reserved classifications;
+it never changes sockets or total client limits. All values in
+`virtual_plc/ethernet.py` source registry, projected by
+`guide ethernet --json`. See
+[research](research/RNCPU_R04CPU_EXTERNAL_DEVICE_PORTS_20261101.md)
+and [PR #36](https://github.com/greatgc-flow/VirtualPLC/pull/36).
+Keep other RnCPU firmwares/models and physical parity UNKNOWN.
+Verify actual latest PR and postmerge main CI before declaring complete.
+
 ## 2026-11-01 R04CPU built-in A038H timers, independent manual scope (PR #35)
 
 Official SH-081257ENG-AD **R04CPU CPU built-in** parameter screen
