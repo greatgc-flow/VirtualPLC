@@ -175,6 +175,16 @@ def model_catalog():
     return {model: EthernetSettings(model).report() for model in _MODELS}
 
 
+# Vendor FX5 host SLMP port setting. Port 0 is a simulator-only ephemeral
+# socket choice, NOT a GX Works3 setting. 1..1023 and 61440..65534 are
+# permitted by these manual tables, but are NOT recommended for SLMP.
+# SH-082625ENG-H p.100 (CPU); SH-082026ENG-H p.79 (ENET).
+_FX5_SLMP_PORT_REFERENCE = {
+    "vendor_port_ranges": [[1, 5548], [5570, 65534]],
+    "vendor_port_recommended_ranges": [[1024, 5548], [5570, 61439]],
+    "vendor_reserved_port_range": [5549, 5569],
+}
+
 # Reference-only hardware facts. Unsupported models never enter _MODELS, and
 # unknown module timers must never be borrowed from Q/L or RJ71EN71.
 _REFERENCE_HARDWARE = {
@@ -189,6 +199,27 @@ _REFERENCE_HARDWARE = {
             "connection_limit": 8,
             "connection_limit_scope": "SLMP/MELSOFT/MODBUS-TCP/socket/predefined-protocol combined; documented exclusions apply",
             "slmp_server_frames": ["1E", "3E"],
+            **deepcopy(_FX5_SLMP_PORT_REFERENCE),
+        },
+        "port_source": {
+            "manual": "SH-082625ENG-H (FX5 CPU communication)",
+            "page": "100",
+            "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082625eng/sh082625engh.pdf",
+        },
+        # A target count for one *feature* is not an aggregate count of
+        # simultaneously open SLMP/server socket connections.
+        "service_specific_connection_reference": {
+            "feature": "simple_cpu_communication",
+            "target_limits": {
+                "FX5U": 16, "FX5UC": 16, "FX5UJ": 8, "FX5S": 8,
+            },
+            "scope": "not the total Ethernet SLMP/socket connection limit; simple CPU communication target count only",
+            "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
+            "source": {
+                "manual": "Mitsubishi FAQ #40032",
+                "page": "FAQ #40032, 2023-08-24",
+                "url": "https://fa-faq.mitsubishielectric.com/faq/show/40032",
+            },
         },
         "unverified": [
             "tcp_ulp_ms", "tcp_resend_ms", "response_monitor_ms",
@@ -207,8 +238,7 @@ _REFERENCE_HARDWARE = {
             "communication_data_code_choices": ["binary", "ascii_x_y_octal", "ascii_x_y_hexadecimal"],
             "opening_method_default": "do_not_open_by_program",
             "default_slmp_host_port": "blank",
-            "vendor_port_ranges": [[1, 5548], [5570, 65534]],
-            "vendor_reserved_port_range": [5549, 5569],
+            **deepcopy(_FX5_SLMP_PORT_REFERENCE),
             "alive_start_ms": 600000,
             "alive_interval_ms": 10000,
             "alive_retries": 3,
@@ -220,6 +250,11 @@ _REFERENCE_HARDWARE = {
             "manual": "JY997D56001-K (FX5 SLMP)",
             "page": "41-45, 66-67, 119-122",
             "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/jy997d56001/jy997d56001k.pdf",
+        },
+        "port_source": {
+            "manual": "SH-082026ENG-H (FX5-ENET)",
+            "page": "79",
+            "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082026eng/sh082026engh.pdf",
         },
         "unverified": [
             "tcp_ulp_ms", "tcp_zero_window_ms", "tcp_resend_ms",
@@ -251,3 +286,48 @@ _REFERENCE_HARDWARE = {
 def reference_catalog():
     """Read-only discovery; these hardware IDs are NOT runnable models."""
     return deepcopy(_REFERENCE_HARDWARE)
+
+
+def inspect_reference_slmp_port(model, port):
+    """Classify one *vendor* FX5 SLMP host port without opening a socket.
+
+    This is an OFFLINE and reference-only GX Works3 preflight for either
+    FX5 CPU builtin or FX5-ENET. It never configures Server listeners.
+    A positive result is a documented setting-range check, NOT an
+    assertion that the real module/firmware will accept connections.
+    """
+    if type(model) is not str or model not in ("fx5_cpu_builtin", "fx5_enet"):
+        raise ValueError("FX5 SLMP reference check requires fx5_cpu_builtin or fx5_enet")
+    if type(port) is not int or not 0 <= port <= 65535:
+        raise ValueError("vendor SLMP port must be an integer 0..65535")
+    entry = _REFERENCE_HARDWARE[model]
+    reference = entry["reference"]
+
+    def contains(ranges):
+        return any(start <= port <= end for start, end in ranges)
+
+    if port == 0:
+        classification = "simulator_only_ephemeral"
+    elif contains([reference["vendor_reserved_port_range"]]):
+        classification = "vendor_system_reserved"
+    elif contains(reference["vendor_port_recommended_ranges"]):
+        classification = "recommended"
+    elif contains(reference["vendor_port_ranges"]):
+        classification = "permitted_not_recommended"
+    else:
+        classification = "outside_vendor_range"
+    return {
+        "model": model,
+        "port": port,
+        "classification": classification,
+        "permitted": classification in ("recommended", "permitted_not_recommended"),
+        "recommended": classification == "recommended",
+        "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
+        "source": deepcopy(entry["port_source"]),
+        "physical_hardware_certified": False,
+        "simulator_bind_affected": False,
+        "note": ("Vendor reference only; 5549..5569 are system-reserved. "
+                 "Port 0 is solely VirtualPLC ephemeral binding; "
+                 "1..1023 and 61440..65534 are permitted but not recommended. "
+                 "Does not inspect firmware or host operating-system port conflicts."),
+    }

@@ -201,6 +201,16 @@ responses, use `python -m virtual_plc.oracle plan`, `template`, and
 `compare FILE --report REPORT.json`. This offline utility **never contacts
 a PLC** and never certifies real hardware. See [offline oracle procedure](docs/PHYSICAL_ORACLE.md).
 
+## FX5 vendor SLMP port preflight (offline, reference only)
+
+This source checkout includes `inspect_reference_slmp_port(model, port)`
+for `fx5_cpu_builtin` and `fx5_enet`. It distinguishes vendor
+**recommended**, **permitted but not recommended**, **5549–5569 system
+reserved**, and **port 0 simulator-only**. It never binds sockets or
+enables an FX5 hardware profile. The CPU's 8 aggregate Ethernet connections
+must not be confused with 16 simple-CPU-communication targets on FX5U/UC.
+See [FX5 connection/port scope](docs/research/FX5_SLMP_PORT_SCOPE_20261031.md).
+
 ## GX Works2/3 model-specific Ethernet settings (opt-in)
 
 GX Works2/3 is an editor, **not** the hardware identity. This source checkout

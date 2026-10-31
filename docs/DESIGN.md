@@ -36,6 +36,15 @@ vectors and limits: [FX5 1E/3E protocol scope](research/FX5_SLMP_FRAME_SCOPE_202
 remote ownership/release/error-code semantics remain open
 under [#22](https://github.com/greatgc-flow/VirtualPLC/issues/22).
 
+**FX5 offline SLMP host-port metadata (not a runtime model):**
+`virtual_plc.ethernet.inspect_reference_slmp_port(model, port)` reads
+reference-only GX Works3 FX5 CPU/ENET vendor port ranges and classifies
+recommended/permitted/system-reserved/invalid values. It never binds a
+socket or modifies the default server. The FX5 CPU 8 combined Ethernet
+sessions and the FX5U/UC 16 targets for *simple CPU communication* are
+separate scoped counts with independent official sources. See
+[FX5 scope matrix](research/FX5_SLMP_PORT_SCOPE_20261031.md).
+
 **GX Works2 / GX Works3 hardware-specific Ethernet mode (opt-in):**
 [usage/config/effective-settings guide](ETHERNET_MODEL_SETTINGS.md) and
 [official-manual timer/port/open-setting research](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md).

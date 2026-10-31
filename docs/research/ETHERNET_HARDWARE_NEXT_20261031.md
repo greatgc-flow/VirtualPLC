@@ -10,6 +10,16 @@ executable.
 
 **One independent PLC = one OS process.** Multiple TCP/UDP listeners inside that process share one simulated CPU and memory; multiple independent PLCs use separate processes. These notes apply to the *specific hardware interface*, not to every PLC configured by the same GX Works version.
 
+### 2026-10-31 reference-only FX5 port and connection semantics
+
+[Separate reference matrix](FX5_SLMP_PORT_SCOPE_20261031.md) documents
+vendor **permitted** vs **recommended** host ports, 5549–5569 reserved,
+port 0 as a simulator-only ephemeral bind, FX5 built-in 8 combined external
+Ethernet sessions vs FX5U/UC 16 *simple CPU communication targets*, and
+FX5-ENET 32 module connections. The port check is purely informational;
+no runnable FX5 model or user listener default changes. Official source
+pages and test links are in the separate matrix. Source code is the SSOT.
+
 ## 1. Evidence and engineering decisions
 
 | Hardware/interface | Editor | Officially established here | Implementation disposition |
