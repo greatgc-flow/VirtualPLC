@@ -77,6 +77,8 @@ class Memory:
         addresses are applied in request order (last value wins). The caller
         must hold the Server request lock during this operation.
         """
+        if operations is None:
+            raise ValueError("write_atomic operations cannot be None; use [] for no-op")
         staged = {}
         for device, head, unit, raw_values in operations:
             if unit not in ("bit", "word"):
