@@ -12,6 +12,7 @@ from .codec import decode_request, encode_response, frame_size
 from .commands import CPU_STATES, dispatch
 from .ethernet import EthernetSettings
 from .memory import Memory, valid_span
+from .one_e import frame_size_1e, dispatch_1e
 from .profiles import PROFILES
 
 LOG = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ class Server:
                  initial_state="RUN", latch_ranges=None, password=None, fault_plan=None,
                  ascii_dword_order="swapped", text_pad=0x00, ascii_numbering="compat", verbose=False,
                  allow_nonlocal=False, max_clients=64, listeners=None,
-                 ethernet_model=None, ethernet_overrides=None):
+                 ethernet_model=None, ethernet_overrides=None, slmp_1e=False):
         if type(port) is not int or not 0 <= port <= 65535:
             raise ValueError("port must be an integer 0..65535")
         if max_points is not None and (type(max_points) is not int or max_points < 1):
@@ -73,6 +74,12 @@ class Server:
             listen_specs = tuple(listen_specs)
         if any(transport == "udp" for transport, _ in listen_specs) and fault_plan is not None:
             raise ValueError("UDP listeners do not support TCP fault plans")
+        if type(slmp_1e) is not bool:
+            raise ValueError("slmp_1e must be a boolean")
+        if slmp_1e and (profile != "Q" or ethernet_model is not None or
+                       ethernet_overrides is not None or fault_plan is not None):
+            raise ValueError("slmp_1e requires synthetic Q profile, without model or TCP fault plan")
+        self.slmp_1e = slmp_1e
         if not is_loopback_host(host):
             if not allow_nonlocal:
                 raise ValueError("non-loopback host requires allow_nonlocal=True (CLI: --allow-nonlocal)")
@@ -244,8 +251,14 @@ class Server:
                 self._log("UDP drop: empty or oversized datagram")
                 continue
             try:
-                if frame_size(packet) != len(packet):
+                if (frame_size_1e(packet) if self.slmp_1e else frame_size(packet)) != len(packet):
                     self._log("UDP drop: incomplete or concatenated frame")
+                    continue
+                if self.slmp_1e:
+                    with self._request_lock:
+                        response = dispatch_1e(packet, self.memory, self._max_points)
+                    if not self._stopping.is_set():
+                        listener.sendto(response, peer)
                     continue
                 request = decode_request(packet)
                 if self.ethernet is not None and request.wire != self.ethernet.values["communication_data_code"]:
@@ -326,13 +339,24 @@ class Server:
             buffer += chunk
             while True:
                 try:
-                    size = frame_size(buffer)
+                    size = frame_size_1e(buffer) if self.slmp_1e else frame_size(buffer)
                     if size is None or len(buffer) < size:
                         break
-                    request = decode_request(bytes(buffer[:size]))
+                    if self.slmp_1e:
+                        packet = bytes(buffer[:size])
+                        with self._request_lock:
+                            response = dispatch_1e(packet, self.memory, self._max_points)
+                    else:
+                        request = decode_request(bytes(buffer[:size]))
                 except ValueError:
                     return "malformed framing"
                 del buffer[:size]
+                if self.slmp_1e:
+                    try:
+                        connection.sendall(response)
+                    except OSError:
+                        return "send error/reset"
+                    continue
                 if self.ethernet is not None and request.wire != self.ethernet.values["communication_data_code"]:
                     return "communication data code mismatch"
                 with self._request_lock:

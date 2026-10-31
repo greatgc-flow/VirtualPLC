@@ -60,6 +60,7 @@ Default 127.0.0.1 TCP. Nonlocal bind needs --allow-nonlocal --idle-timeout N; no
 Optional model: --ethernet-model qj71e71 | --profile iQ-R --ethernet-model rj71en71.
 Set --ethernet-config FILE for overrides; --show-effective-ethernet prints JSON without listening.
 Multi-port: virtual-plc --listen tcp:5000 --listen tcp:5001 --listen udp:5000 (one shared PLC).
+1E batch mode: virtual-plc --slmp-1e --listen tcp:5000 --listen udp:5000 (not full FX5 hardware).
 --listen replaces --port. UDP accepts one exact MC frame/datagram; no TCP fault plan with UDP.
 -v logs requests/close reasons (no payloads/passwords). TCP idle timeout defaults to none.
 """.strip("\n")
@@ -87,6 +88,7 @@ TROUBLESHOOT = """
 Symptom -> cause -> fix
 "cannot listen on H:P" (exit 1): port busy or denied -> choose another --port, or --port 0 and read the banner.
 UDP timeout: each datagram must contain exactly one full frame (max 8192 bytes); invalid requests get no response.
+1E: use --slmp-1e; batch subheaders 00/01/02/03 only; not mixed with 3E/4E on a listener.
 Exit 2 and "see: virtual-plc guide TOPIC": bad option, JSON file or plan -> read that topic; nothing was bound.
 Client times out: wrong host/port, a fault plan that holds or drops replies, or --idle-timeout closed the socket
   (reconnect). A silent_hold fault ends only when the server stops.
@@ -118,6 +120,8 @@ This is a simulator, not a PLC. These behaviors are synthetic or unverified; do 
 - iQ-R native dword devices (LTN LSTN LCN LZ) use one 32-bit point per address; word access streams the
   low/high halves. The stride is unverified.
 - Timers and counters hold plain values; no PLC logic executes. The monitoring timer is parsed and ignored.
+- Optional --slmp-1e uses separate bounded command-aware framing for 00..03 only;
+  synthetic Q memory, not vendor FX5 CPU/ENET certification. No mixed 1E and 3E/4E.
   Every network/PC/station route aliases one memory.
 - Error codes are design values. Z devices are unsupported.
 - Faults act after execution: a faulted write or reset has already happened.
