@@ -144,6 +144,7 @@ class Server:
         self._max_clients = max_clients
         self._idle_timeout = idle_timeout
         self._request_lock = threading.Lock()
+        self._remote_stop_owner = None  # 1E connection ID; orphaned on disconnect
         self._clients_lock = threading.Lock()
         self._clients = {}  # connection -> worker thread
         self._stopping = threading.Event()
@@ -155,6 +156,21 @@ class Server:
     def set_state(self, state):
         self.memory.write_words("SD", 203, [CPU_STATES[state]])
         self.state = state
+
+    def reset_1e_remote_control(self):
+        """Explicit local-only simulator reset of 1E remote STOP ownership.
+
+        Holds the same request lock as all network operations. Deliberately
+        leaves CPU in STOP, regardless of initial RUN setting: safe simulator
+        policy, NOT a claim about FX5 physical power-cycle behavior. TCP
+        disconnect, idle timeout and UDP packets never release ownership.
+        """
+        if not self.slmp_1e:
+            raise ValueError("reset_1e_remote_control requires slmp_1e=True")
+        with self._request_lock:
+            self._remote_stop_owner = None
+            self.reset_count += 1
+            self.set_state("STOP")
 
     def __enter__(self):
         self.start()
@@ -256,7 +272,8 @@ class Server:
                     continue
                 if self.slmp_1e:
                     with self._request_lock:
-                        response = dispatch_1e(packet, self.memory, self._max_points)
+                        response = dispatch_1e(packet, self.memory, self._max_points,
+                                               control=self, requester=None)
                     if self._hook is not None:
                         response = self._hook(response)
                     if len(response) > MAX_UDP_DATAGRAM:
@@ -298,8 +315,7 @@ class Server:
             connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             connection.settimeout(self._idle_timeout)
             with self._clients_lock:
-                if self._fault_plan is not None:
-                    self._connection_number += 1
+                self._connection_number += 1  # unique for STOP owner, including cross-port TCP
                 connection_id = self._connection_number
                 rejected = self._stopping.is_set() or len(self._clients) >= self._max_clients
                 worker = threading.Thread(target=self._serve, args=(connection, connection_id), daemon=True)
@@ -350,7 +366,8 @@ class Server:
                     if self.slmp_1e:
                         packet = bytes(buffer[:size])
                         with self._request_lock:
-                            response = dispatch_1e(packet, self.memory, self._max_points)
+                            response = dispatch_1e(packet, self.memory, self._max_points,
+                                                   control=self, requester=connection_id)
                     else:
                         request = decode_request(bytes(buffer[:size]))
                 except ValueError:
