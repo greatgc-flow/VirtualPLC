@@ -51,8 +51,9 @@ def test_model_specific_firmware_and_legacy_configuration(
     assert report["model"] == model
     assert report["firmware_version"] == firmware
     assert report["support_status"] == support
-    assert report["gxworks3_configuration_path"] is None if path is None else True
-    if path is not None:
+    if path is None:
+        assert report["gxworks3_configuration_path"] is None
+    else:
         assert report["gxworks3_configuration_path"][-1] == path
     assert report["destination_device_type"] == destination
     assert report["status"] == "OFFICIAL_FAQ_REFERENCE_ONLY"

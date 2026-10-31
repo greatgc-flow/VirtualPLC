@@ -211,6 +211,16 @@ enables an FX5 hardware profile. The CPU's 8 aggregate Ethernet connections
 must not be confused with 16 simple-CPU-communication targets on FX5U/UC.
 See [FX5 connection/port scope](docs/research/FX5_SLMP_PORT_SCOPE_20261031.md).
 
+## FX5 CPU firmware compatibility (offline reference only)
+
+Mitsubishi's simple CPU communication firmware gate differs by CPU:
+FX5U/FX5UC need **1.110+**, while FX5UJ/FX5S support the feature from
+first release. `inspect_reference_fx5_simple_cpu_communication("FX5U", "1.110")`
+reports the official model/firmware rule and a narrowly scoped GX Works3
+interop configuration path; unknown firmware is not silently marked
+unsupported. The feature is **not** an SLMP socket listener setting.
+See [FX5 CPU firmware matrix](docs/research/FX5_CPU_FIRMWARE_SIMPLE_COMM_20261101.md).
+
 ## FX5-ENET existence-check settings (offline reference)
 
 `inspect_reference_fx5_enet_alive_timers(overrides=None)` checks the FX5-ENET

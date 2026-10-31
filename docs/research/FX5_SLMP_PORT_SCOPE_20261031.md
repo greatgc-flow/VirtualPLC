@@ -27,6 +27,16 @@ external Ethernet connections** cited in FAQ #22320. In particular,
 inbound SLMP TCP sessions. The FX5-ENET 32 connection limit is
 module-specific, not the same setting as Q/L/R client caps.
 
+## FX5 CPU firmware-dependent simple communication (2026-11-01 update)
+
+The [official FAQ-backed firmware matrix](FX5_CPU_FIRMWARE_SIMPLE_COMM_20261101.md)
+separates the simple CPU communication feature from SLMP inbound
+connections. **FX5U/FX5UC >=1.110**, FX5UJ/FX5S from first revision;
+unsupported/unknown firmware does not imply any new SLMP port count.
+The pure reference API and the `guide ethernet --json` catalog
+retain model-specific provenance. FX5-ENET has its own separate
+expansion-module reference behavior and is not inherited here.
+
 ## Port classes (FX5 CPU built-in / FX5-ENET only)
 
 | Inclusive vendor port range | Classification | Meaning |
