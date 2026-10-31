@@ -448,3 +448,13 @@ strictly checked, never applied to OS sockets or to the VirtualPLC
 server. For runnable examples and scope limits see
 [manufacturer-scoped R04CPU guide](docs/research/RNCPU_R04CPU_A038H_DATA_TIMER_REFERENCE_20261101.md)
 and `virtual-plc guide ethernet --json`.
+
+### R04CPU built-in Ethernet external-device settings (offline)
+
+The pure `inspect_reference_rncpu_external_device("R04CPU", slot, plc_port)`
+checks GX Works3 user slot numbers 1–16 and user-configurable
+PLC own-port ranges with explicit Appendix 10 **system reservations**.
+These are settings, **not** active TCP client limits or newly opened
+VirtualPLC ports. It is available from a source checkout and remains
+reference-only; see [R04CPU source matrix](docs/research/RNCPU_R04CPU_EXTERNAL_DEVICE_PORTS_20261101.md)
+and `virtual-plc guide ethernet --json`.
