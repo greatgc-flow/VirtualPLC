@@ -182,3 +182,33 @@ def test_1e_cli_exposes_explicit_mode_without_mimicking_fx5_hardware():
     from virtual_plc.ethernet import model_catalog, reference_catalog
     assert "fx5_enet" not in model_catalog()
     assert reference_catalog()["fx5_enet"]["implementation"] == "research_only"
+
+
+def test_1e_response_hook_transforms_tcp_and_udp_replies():
+    seen = []
+    def transform(reply):
+        seen.append(reply)
+        return reply + b"Z"
+
+    with Server(slmp_1e=True, response_hook=transform,
+                listeners=[("tcp", 0), ("udp", 0)]) as plc:
+        with socket.create_connection(plc.address, timeout=2) as conn:
+            conn.settimeout(2)
+            conn.sendall(req(1, head=100))
+            assert receive_exact(conn, 5) == b"\x81\x00\x00\x00Z"
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp:
+            udp.settimeout(2)
+            udp.sendto(req(1, head=100), plc.addresses[1][1:])
+            reply, _ = udp.recvfrom(8192)
+            assert reply == b"\x81\x00\x00\x00Z"
+    assert seen == [b"\x81\x00\x00\x00", b"\x81\x00\x00\x00"]
+
+
+def test_1e_udp_drops_hook_response_over_datagram_limit():
+    with Server(slmp_1e=True, response_hook=lambda _: b"Z" * 8193,
+                listeners=[("udp", 0)]) as plc:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp:
+            udp.settimeout(0.1)
+            udp.sendto(req(1, head=100), plc.address)
+            with pytest.raises(socket.timeout):
+                udp.recvfrom(8192)

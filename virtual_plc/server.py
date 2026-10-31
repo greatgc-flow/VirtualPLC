@@ -257,6 +257,11 @@ class Server:
                 if self.slmp_1e:
                     with self._request_lock:
                         response = dispatch_1e(packet, self.memory, self._max_points)
+                    if self._hook is not None:
+                        response = self._hook(response)
+                    if len(response) > MAX_UDP_DATAGRAM:
+                        self._log("UDP drop: oversized 1E response")
+                        continue
                     if not self._stopping.is_set():
                         listener.sendto(response, peer)
                     continue
@@ -352,6 +357,8 @@ class Server:
                     return "malformed framing"
                 del buffer[:size]
                 if self.slmp_1e:
+                    if self._hook is not None:
+                        response = self._hook(response)
                     try:
                         connection.sendall(response)
                     except OSError:
