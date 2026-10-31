@@ -46,13 +46,23 @@ def test_drop_once_keeps_connection_and_next_response_usable(server_factory, fra
 
 
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
-def test_delay_is_bounded_and_does_not_change_frame(server_factory, frame, wire):
+def test_delay_uses_configured_wait_and_keeps_frame(server_factory, monkeypatch, frame, wire):
     server = start_fault_server(server_factory, {"type": "delay", "seconds": 0.03})
+    # Windows timer/scheduler quantization makes short elapsed-wall-time assertions
+    # unreliable (observed 15ms on a 30ms configured wait). Verify the exact
+    # requested delay against the real wait method instead of timing a socket.
+    waits = []
+    real_wait = server._stopping.wait
+
+    def recorded_wait(seconds=None):
+        waits.append(seconds)
+        return real_wait(seconds)
+
+    monkeypatch.setattr(server._stopping, "wait", recorded_wait)
     with socket.create_connection(server.address, timeout=1) as connection:
-        started = time.monotonic()
         connection.sendall(echo_packet(frame, wire))
         assert receive(connection, frame, wire) == (0, expected_echo(frame, wire))
-        assert time.monotonic() - started >= 0.02
+    assert waits == [0.03]
 
 
 @pytest.mark.parametrize("frame,wire", TRANSPORTS)
