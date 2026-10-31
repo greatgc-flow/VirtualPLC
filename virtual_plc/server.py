@@ -145,6 +145,7 @@ class Server:
         self._idle_timeout = idle_timeout
         self._request_lock = threading.Lock()
         self._remote_stop_owner = None  # 1E connection ID; orphaned on disconnect
+        self._remote_stop_owner_connected = False
         self._clients_lock = threading.Lock()
         self._clients = {}  # connection -> worker thread
         self._stopping = threading.Event()
@@ -156,6 +157,25 @@ class Server:
     def set_state(self, state):
         self.memory.write_words("SD", 203, [CPU_STATES[state]])
         self.state = state
+
+    def get_1e_remote_control_status(self):
+        """Return a request-consistent, read-only 1E STOP owner snapshot.
+
+        Local Python API only, not network authentication. Worker cleanup
+        may lag the peer closing its socket; orphaned reflects observed EOF.
+        """
+        if not self.slmp_1e:
+            raise ValueError("get_1e_remote_control_status requires slmp_1e=True")
+        with self._request_lock:
+            owned = self._remote_stop_owner is not None
+            connected = owned and self._remote_stop_owner_connected
+            return {
+                "cpu_state": self.state,
+                "owned": owned,
+                "owner_connected": connected,
+                "orphaned": owned and not connected,
+                "owner_connection_id": self._remote_stop_owner,
+            }
 
     def reset_1e_remote_control(self):
         """Explicit local-only simulator reset of 1E remote STOP ownership.
@@ -169,6 +189,7 @@ class Server:
             raise ValueError("reset_1e_remote_control requires slmp_1e=True")
         with self._request_lock:
             self._remote_stop_owner = None
+            self._remote_stop_owner_connected = False
             self.reset_count += 1
             self.set_state("STOP")
 
@@ -342,6 +363,10 @@ class Server:
                 print(f"connection worker: {type(error).__name__}: {error}", file=sys.stderr, flush=True)
             finally:
                 self._log("close: %s", reason)
+                # A disconnected STOP owner is NOT released: mark it orphaned.
+                with self._request_lock:
+                    if self._remote_stop_owner == connection_id:
+                        self._remote_stop_owner_connected = False
                 with self._clients_lock:
                     self._clients.pop(connection, None)
 
