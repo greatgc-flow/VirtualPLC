@@ -26,8 +26,7 @@ PLC equivalence remain unverified. TCP fragmented and coalesced frames
 are handled by **command-specific bounded lengths**, while UDP accepts
 exactly one complete frame/datagram. No legacy 3E-style length/route
 field is parsed. Unknown 1E commands fail closed without guessing
-their packet lengths. See [official-manual comparison and test vectors]
-(research/FX5_SLMP_FRAME_SCOPE_20261031.md). All listeners share one
+their packet lengths. See [official-manual comparison and test vectors](research/FX5_SLMP_FRAME_SCOPE_20261031.md). All listeners share one
 request lock and one Memory; separate PLCs require separate OS processes.
 
 ## Public API

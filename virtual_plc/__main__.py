@@ -60,7 +60,7 @@ def local_host(host):
 class GuideParser(argparse.ArgumentParser):
     def error(self, message, topic=None):
         if topic is None:
-            flags = re.findall(r"--[a-z][a-z-]*", message)
+            flags = re.findall(r"--[a-z][a-z0-9-]*", message)
             topic = guide.option_topic("/".join(flags))
         # JSON errors and filenames can contain newlines; diagnostics stay one line.
         self.exit(2, f"{self.prog}: error: {' '.join(message.split())}; see: virtual-plc guide {topic}\n")
@@ -146,8 +146,9 @@ def main(argv=None):
                        max_points=args.max_points, idle_timeout=args.idle_timeout, fault_plan=plan,
                        max_clients=args.max_clients, allow_nonlocal=args.allow_nonlocal,
                        ascii_dword_order=args.ascii_dword_order, text_pad=args.text_pad,
-                       ascii_numbering=args.ascii_numbering, verbose=args.verbose,
-                       slmp_1e=args.slmp_1e)
+                       ascii_numbering=args.ascii_numbering, verbose=args.verbose)
+        if args.slmp_1e:
+            options["slmp_1e"] = True
         if args.listen:
             options["listeners"] = args.listen
         if args.ethernet_model:

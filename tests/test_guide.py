@@ -67,7 +67,7 @@ def test_overview_lists_every_user_option(parser):
 def test_no_stale_option_names_in_any_text(parser):
     valid = {flag for action in parser._actions for flag in action.option_strings} | {"--json"}
     for topic, text in every_text(parser).items():
-        assert set(re.findall(r"--[a-z][a-z-]*", text)) <= valid, topic
+        assert set(re.findall(r"--[a-z][a-z0-9-]*", text)) <= valid, topic
 
 
 def test_profiles_topic_covers_profiles_devices_and_commands(parser):
