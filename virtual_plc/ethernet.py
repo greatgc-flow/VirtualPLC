@@ -432,6 +432,52 @@ _REFERENCE_HARDWARE = {
             },
             "parameters": deepcopy(_R04CPU_BUILTIN_DATA_TIMERS),
         },
+        # SH-081257ENG-AD pp.324-326: GX Works3 configured USER slots
+        # are not the total live TCP connection count. R04CPU example.
+        # Appendix 10 p.554 lists *additional* reserved system ports
+        # within otherwise configurable numeric PLC-port ranges.
+        "external_device_configuration_reference": {
+            "factory_model_scope": "R04CPU_GXWORKS3_CPU_BUILTIN_EXAMPLE",
+            "connection_number_range": [1, 16],
+            "connection_range_scope": "gxworks3_configured_user_connection_numbers_not_tcp_client_capacity",
+            "plc_port_ranges": [[1, 4999], [5010, 65534]],
+            "plc_port_recommended_ranges": [[1024, 4999], [5010, 61439]],
+            "factory_plc_port": None,
+            "system_service_ports": {
+                "20": "ftp_server_data",
+                "21": "ftp_server_control",
+                "80": "web_server",
+                "123": "sntp_client",
+                "5001": "melsoft_udp",
+                "5005": "auto_open_udp",
+                "5006": "melsoft_udp",
+                "5007": "melsoft_tcp",
+                "5008": "melsoft_direct_udp",
+                "5009": "network_module_search_udp",
+                "61440": "iqss_data_udp",
+                "61441": "slmp_snd_udp",
+                "61442": "iqss_backup_restore_udp",
+                "61448": "dns_client_udp",
+                "61450": "cc_link_field_basic_udp",
+                "61461": "database_access_udp",
+            },
+            "system_port_ranges": [
+                {"start": 61696, "end": 61999,
+                 "service": "simple_cpu_communication_udp"},
+                {"start": 62000, "end": 65534,
+                 "service": "ftp_client_dynamic_tcp"},
+            ],
+            "source": {
+                "manual": "SH-081257ENG-AD",
+                "page": "324-326",
+                "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf",
+            },
+            "system_port_source": {
+                "manual": "SH-081257ENG-AD",
+                "page": "554",
+                "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf",
+            },
+        },
         "unverified": [
             "tcp_ulp_ms", "tcp_resend_ms", "response_monitor_ms",
             "per-CPU/firmware editable timer ranges", "RUN-write behavior",
@@ -768,4 +814,87 @@ def inspect_reference_rncpu_data_timers(model="R04CPU", overrides=None):
             "Special zero-time settings and physical retry/close timing are not certified.",
             "No production equipment, network access or built-in Ethernet server is activated.",
         ],
+    }
+
+
+def inspect_reference_rncpu_external_device(
+        model="R04CPU", connection_number=None, plc_port=None):
+    """Offline R04CPU CPU-built-in GX Works3 user-slot and own-port preflight.
+
+    SH-081257ENG-AD pp.324-326 and Appendix 10 p.554.
+    Connection numbers 1..16 describe *configured user slots*, not
+    total simultaneous TCP client capacity. For the PLC own-port,
+    vendor system reservations take precedence over otherwise valid
+    numeric ranges. The blank default is valid only as configuration
+    metadata, not a bound socket. This routine never accesses a PLC.
+    """
+    if type(model) is not str or model != "R04CPU":
+        raise ValueError("only R04CPU CPU-built-in GUI scope is documented")
+    if (connection_number is not None and
+            (type(connection_number) is not int or
+             not 1 <= connection_number <= 16)):
+        raise ValueError("R04CPU built-in user slot must be integer 1..16 or omitted")
+    if (plc_port is not None and
+            (type(plc_port) is not int or not 0 <= plc_port <= 65535)):
+        raise ValueError("PLC port must be integer 0..65535 or omitted")
+
+    spec = _REFERENCE_HARDWARE["rncpu_builtin"][
+        "external_device_configuration_reference"
+    ]
+
+    def in_ranges(value, ranges):
+        return any(low <= value <= high for low, high in ranges)
+
+    system_service = None
+    if plc_port is None:
+        classification = "blank_default"
+        configurable, recommended = True, False
+    elif plc_port == 0:
+        classification = "simulator_only_ephemeral"
+        configurable, recommended = False, False
+    else:
+        system_service = spec["system_service_ports"].get(str(plc_port))
+        if system_service is None:
+            for entry in spec["system_port_ranges"]:
+                if entry["start"] <= plc_port <= entry["end"]:
+                    system_service = entry["service"]
+                    break
+        if system_service is not None:
+            classification = "system_service_port_not_user_configurable"
+            configurable, recommended = False, False
+        elif in_ranges(plc_port, spec["plc_port_recommended_ranges"]):
+            classification = "recommended"
+            configurable, recommended = True, True
+        elif in_ranges(plc_port, spec["plc_port_ranges"]):
+            classification = "permitted_not_recommended"
+            configurable, recommended = True, False
+        else:
+            classification = "outside_vendor_configurable_range"
+            configurable, recommended = False, False
+
+    return {
+        "interface": "rncpu_builtin",
+        "model": model,
+        "connection_number": connection_number,
+        "connection_status": ("UNSPECIFIED" if connection_number is None
+                              else "CONFIGURATION_SLOT_VALID"),
+        "user_connection_number_range": deepcopy(spec["connection_number_range"]),
+        "connection_range_scope": spec["connection_range_scope"],
+        "not_a_simultaneous_tcp_socket_limit": True,
+        "plc_port": plc_port,
+        "factory_plc_port": spec["factory_plc_port"],
+        "plc_port_classification": classification,
+        "plc_port_configurable": configurable,
+        "plc_port_recommended": recommended,
+        "system_service": system_service,
+        "source": deepcopy(spec["source"]),
+        "system_port_source": deepcopy(spec["system_port_source"]),
+        "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
+        "physical_hardware_certified": False,
+        "simulator_bind_affected": False,
+        "note": (
+            "R04CPU GX Works3 configured user slot, not active socket count; "
+            "reserved system services override numeric port ranges. "
+            "No system ports are auto-bound and no RnCPU profile is enabled."
+        ),
     }
