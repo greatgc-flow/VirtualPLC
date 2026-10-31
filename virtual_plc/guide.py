@@ -14,7 +14,7 @@ import textwrap
 from . import __version__
 from .codec import FRAMES, WIRES
 from .commands import COMMAND_NAMES, supported_commands
-from .ethernet import model_catalog
+from .ethernet import model_catalog, reference_catalog
 from .faults import ACTION_FIELDS
 from .profiles import PROFILES
 from .server import Server
@@ -332,6 +332,8 @@ def _ethernet(parser):
         "Wrong data-code: TCP closes, UDP drops; RUN writes denied: code 0055.",
         "Vendor MELSOFT/auto ports are NOT opened; use --listen explicitly.",
         "One independent PLC per process; all its listeners share state.",
+        "Research ONLY (not executable): fx5_cpu_builtin, fx5_enet, rncpu_builtin; see --json.",
+        "Hardware model picks its wire profile automatically; explicit mismatch is an error.",
     ]
     for model, spec in model_catalog().items():
         lines.append(f"{model} ({spec['editor']}, profile {spec['profile']}, {spec['source']['manual']}):")
@@ -362,6 +364,7 @@ def data(parser, topic=None):
         document.update(_profile_data())
     elif topic == "ethernet":
         document["models"] = model_catalog()
+        document["reference_only_models"] = reference_catalog()
     else:
         document["text"] = render(parser, topic)
     return document

@@ -21,17 +21,22 @@ Implementation: issue [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14
 virtual-plc --ethernet-model qj71e71 --show-effective-ethernet
 
 # GX Works2 MELSEC-L LJ71E71-100:
-virtual-plc --profile L --ethernet-model lj71e71 --show-effective-ethernet
+virtual-plc --ethernet-model lj71e71 --show-effective-ethernet
 
-# GX Works3 RJ71EN71 (must also choose matching wire profile):
-virtual-plc --profile iQ-R --ethernet-model rj71en71 --show-effective-ethernet
+# GX Works3 RJ71EN71:
+virtual-plc --ethernet-model rj71en71 --show-effective-ethernet
 
 # Compact help and full machine-readable model registry:
 virtual-plc guide ethernet
 virtual-plc guide ethernet --json
 ```
 
-`--show-effective-ethernet` exits successfully **without binding any TCP or UDP ports**. Output contains every setting's `default`, `value`, `overridden`, `unit`, range/step or choices, source manual/page/URL and `effect`. The model catalog includes vendor system-port **reference metadata**; those ports are not bound.
+`--show-effective-ethernet` exits successfully **without binding any TCP or UDP ports**. Output contains every setting's `default`, `value`, `overridden`, `unit`, range/step or choices, source manual/page/URL and `effect`. The hardware model supplies the matching CLI wire profile automatically; an explicitly
+conflicting `--profile` causes a usage error. The Python `Server(profile=...)`
+API remains strict and still requires the matching profile. The model catalog
+includes vendor system-port **reference metadata**; those ports are not bound.
+The `overridden` field means **explicitly supplied by the user**, even if
+`value` equals `default`; otherwise it is `false`.
 
 ### JSON override example
 
@@ -60,7 +65,10 @@ Run the simulator (loopback only):
 virtual-plc --ethernet-model qj71e71 --ethernet-config ethernet.json --listen tcp:5000 --listen udp:5000
 ```
 
-JSON is intentionally strict: unrecognized fields, noninteger timers, booleans used as numbers, out-of-range increments and incorrect types fail **before binding**. There is no live reload; change the file and restart. Do not pass `--ethernet-config` without selecting `--ethernet-model`.
+JSON is intentionally strict: an explicitly supplied `null`, list, string or
+scalar root is **not** an omitted configuration. Only a JSON object is valid;
+unrecognized fields, noninteger timers, booleans used as numbers, out-of-range
+increments and incorrect types fail **before binding**. There is no live reload; change the file and restart. Do not pass `--ethernet-config` without selecting `--ethernet-model`.
 
 ## 2. Manufacturer timer defaults
 
@@ -82,7 +90,7 @@ Ranges and increments **differ by hardware**, so do not simply reuse GX Works2 v
 
 - **QJ71E71 and LJ71E71-100** use 500ms increments; most TCP timers have a minimum of 1000ms, IP assembly and alive intervals a minimum of 500ms. Defaults and Q-format buffer-memory ticks are reported as **milliseconds**, not raw GX Works 500ms units. The manufacturer permits up to 32767 ticks for most fields, IP assembly up to 32766 ticks, retries 1–32767.
 - **RJ71EN71** allows 100ms increments across 100–16,383,000ms, and retries 1–99,999. For this model, the following manual constraints are validated for each override: `response_monitor >= tcp_ulp >= tcp_end >= tcp_resend > ip_assembly` and `tcp_zero_window == tcp_resend`.
-- A single override only replaces named keys; the remaining values retain their factory defaults. Use an explicit, locally saved JSON file so configuration can be inspected/reproduced.
+- A single override only replaces named keys; the remaining values retain their factory defaults. Reporting distinguishes inherited defaults from explicitly specified values, including an explicit value equal to its default. Use an explicit, locally saved JSON file so configuration can be inspected/reproduced.
 
 **All nine timers are reference-only.** VirtualPLC does **not** replace Windows/Linux TCP RTO, zero-window, TCP FIN, kernel keepalive or IP reassembly logic. It does not implement a firmware-equivalent response-monitor state machine, retry count, UDP reliability or silent timeouts. `--idle-timeout` is strictly a separate simulator **TCP socket** idle limit / nonlocal-bind safety guard.
 
@@ -131,6 +139,18 @@ The `Server` constructor validates model/PLC profile matching before listening. 
 
 `tests/test_ethernet_settings.py` provides table-driven model defaults, Q/R units/ranges, invalid JSON, override precedence, introspection without binding, profile mismatch, legacy-mode safety, TCP/UDP data-code isolation, shared RUN-write protection, STOP/enable overrides and source/fidelity reporting. CI covers Linux and Windows on Python 3.10–3.13.
 
-See [remaining RnCPU and FX5 hardware gap matrix](research/ETHERNET_HARDWARE_NEXT_20261031.md): neither RnCPU built-in nor FX5U/FX5-ENET is a runnable Ethernet model yet.
+Read-only discovery for unimplemented interfaces:
+
+```powershell
+virtual-plc guide ethernet --json
+```
+
+The top-level `models` object contains **runnable** Q/L/R Ethernet models.
+The separate `reference_only_models` object describes `fx5_cpu_builtin`,
+`fx5_enet`, and `rncpu_builtin` with independently sourced known settings and
+an explicit `unverified` list. These are **not** valid `--ethernet-model`
+values; their missing timer defaults are not inferred from Q/L/R.
+See [the hardware gap matrix](research/ETHERNET_HARDWARE_NEXT_20261031.md)
+for model-specific open questions and firmware differences.
 
 Manufacturer citations: [L E71 Basic SH-081105ENG-G](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081105eng/sh081105engg.pdf) pp.35–36, [Q E71 Basic SH-080009ENG](https://www.mitsubishielectric.com/dl/fa/document/manual/plc/sh080009/sh080009x.pdf) pp.38–39, [Q E71 Application SH-080010ENG](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh080010/sh080010r.pdf), [iQ-R Ethernet Application SH-081257ENG](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf) pp.322–323, 396–397. These are **manual** references, not captured measurements from real hardware.

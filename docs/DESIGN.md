@@ -17,7 +17,14 @@ and fidelity is `virtual_plc/ethernet.py`, exposed through
 The supported model keys are `qj71e71` (Q), `lj71e71` (L), and
 `rj71en71` (iQ-R), with independent official manual sources.
 [Remaining RnCPU/FX5 hardware gaps](research/ETHERNET_HARDWARE_NEXT_20261031.md)
-are separate from runnable presets.
+are separate from runnable presets. Those interfaces are exposed as
+`reference_only_models` in the existing `guide ethernet --json` output;
+only entries under `models` may be used with `--ethernet-model`.
+The CLI infers the matching wire profile unless the user specifies an explicit
+`--profile` (then mismatches are errors). Explicit override provenance is
+preserved even when a configured value equals the factory default.
+This follows [VerySimpleGuide](https://github.com/greatgc-flow/VerySimpleGuide):
+small interfaces, one source of truth, no invented unknown vendor defaults.
 Only model-selected binary/ASCII wire mode and RUN-write policy are simulated;
 OS network-stack and manufacturer timers are reference-only. Legacy Q mode and
 socket `idle_timeout` are not modified. The broader fidelity backlog remains

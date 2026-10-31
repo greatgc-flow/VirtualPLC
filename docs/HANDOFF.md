@@ -12,7 +12,12 @@ Review [Ethernet settings](ETHERNET_MODEL_SETTINGS.md), the
 [manufacturer research matrix](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md),
 [remaining hardware gaps](research/ETHERNET_HARDWARE_NEXT_20261031.md) and
 [issue #14](https://github.com/greatgc-flow/VirtualPLC/issues/14) for
-accuracy and future changes. Vendor TCP/IP timers are *reference-only*;
+accuracy and future changes. Reference-only GX Works3 FX5 CPU/FX5-ENET/
+RnCPU hardware metadata is available under `virtual-plc guide ethernet --json`
+without promoting these interfaces to runnable profiles. CLI model selection
+infers the wire profile; explicit JSON overrides are tracked even if equal to
+the factory default. Review changes against
+[VerySimpleGuide](https://github.com/greatgc-flow/VerySimpleGuide). Vendor TCP/IP timers are *reference-only*;
 physical PLC equivalence is not claimed.
 
 ---

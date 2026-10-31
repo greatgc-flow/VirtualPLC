@@ -148,19 +148,24 @@ inspection are in the [Ethernet settings guide](docs/ETHERNET_MODEL_SETTINGS.md)
 The [official-manual research matrix](docs/research/GXWORKS_ETHERNET_PARAMETERS_20261031.md)
 documents model boundaries and unresolved physical fidelity.
 See the [RnCPU/FX5 hardware gap matrix](docs/research/ETHERNET_HARDWARE_NEXT_20261031.md)
-before using an unsupported model's defaults.
+before using an unsupported model's defaults. The existing
+`guide ethernet --json` exposes FX5 built-in, FX5-ENET and RnCPU built-in as
+**reference-only, not runnable** hardware; unknown timer defaults remain unknown.
 
 ```powershell
 # Inspect defaults and configurable ranges without listening:
 virtual-plc --ethernet-model qj71e71 --show-effective-ethernet
-virtual-plc --profile L --ethernet-model lj71e71 --show-effective-ethernet
-virtual-plc --profile iQ-R --ethernet-model rj71en71 --show-effective-ethernet
+virtual-plc --ethernet-model lj71e71 --show-effective-ethernet
+virtual-plc --ethernet-model rj71en71 --show-effective-ethernet
 
 # Load optional JSON changes, share PLC state across explicit TCP/UDP ports:
 virtual-plc --ethernet-model qj71e71 --ethernet-config ethernet.json --listen tcp:5000 --listen udp:5000
 virtual-plc guide ethernet --json
 ```
 
+The hardware model automatically selects its matching wire profile in the CLI;
+explicitly conflicting `--profile` values are errors. JSON overrides preserve
+whether each key was explicitly specified, even if equal to its factory value.
 Selecting a model simulates its binary/ASCII data-code setting and RUN-time
 MC write permission. **Only those settings change runtime behavior**; module
 TCP/IP retransmit, response monitoring and alive timers are explicitly marked
