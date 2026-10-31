@@ -45,6 +45,16 @@ sessions and the FX5U/UC 16 targets for *simple CPU communication* are
 separate scoped counts with independent official sources. See
 [FX5 scope matrix](research/FX5_SLMP_PORT_SCOPE_20261031.md).
 
+**FX5 CPU simple communication firmware gate (reference-only):**
+`inspect_reference_fx5_simple_cpu_communication(model, firmware_version)`
+uses official Mitsubishi FAQ #39316's distinct FX5U/FX5UC >=1.110 and
+FX5UJ/FX5S from-first rules. FAQ #44329's mixed-firmware interop
+GX Works3 path applies only where documented; unsupported/unknown
+firmware is not conflated and early UJ/S path remains unknown.
+The SSOT belongs in `virtual_plc/ethernet.py` reference hardware,
+not runnable settings; simple CPU target limits are not SLMP TCP sockets.
+See [FX5 firmware gate](research/FX5_CPU_FIRMWARE_SIMPLE_COMM_20261101.md).
+
 **FX5-ENET alive-check timer range (reference only):**
 `inspect_reference_fx5_enet_alive_timers(overrides=None)` performs pure
 metadata validation for the FX5-ENET expansion module's documented

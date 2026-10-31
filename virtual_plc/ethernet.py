@@ -175,6 +175,39 @@ def model_catalog():
     return {model: EthernetSettings(model).report() for model in _MODELS}
 
 
+# Model-scoped firmware support for the FX5 built-in Ethernet CPU's separate
+# simple CPU communication function. Official Mitsubishi FAQs #39316 and
+# #44329; do not inherit this on FX5-ENET, RnCPU or the SLMP server.
+_FX5_SIMPLE_CPU_FIRMWARE_REFERENCE = {
+    "models": {
+        "FX5U": {"minimum_version": "1.110"},
+        "FX5UC": {"minimum_version": "1.110"},
+        "FX5UJ": {"from_first": True},
+        "FX5S": {"from_first": True},
+    },
+    "source": {
+        "manual": "Mitsubishi FAQ #39316",
+        "page": "FAQ #39316, published 2023-02-14",
+        "url": "https://fa-faq.mitsubishielectric.com/faq/show/39316",
+    },
+}
+_FX5_SIMPLE_CPU_INTEROP_REFERENCE = {
+    "supported_path": [
+        "Ethernet port", "Application settings",
+        "Simple CPU communication settings",
+    ],
+    "legacy_path": [
+        "Ethernet port", "Basic settings",
+        "External device configuration",
+    ],
+    "destination_device_type": "SLMP-compatible device (QnA-compatible 3E frame)",
+    "source": {
+        "manual": "Mitsubishi FAQ #44329",
+        "page": "FAQ #44329, published 2024-03-20",
+        "url": "https://fa-faq.mitsubishielectric.com/faq/show/44329",
+    },
+}
+
 # Vendor FX5 host SLMP port setting. Port 0 is a simulator-only ephemeral
 # socket choice, NOT a GX Works3 setting. 1..1023 and 61440..65534 are
 # permitted by these manual tables, but are NOT recommended for SLMP.
@@ -233,6 +266,8 @@ _REFERENCE_HARDWARE = {
                 "url": "https://fa-faq.mitsubishielectric.com/faq/show/40032",
             },
         },
+        "simple_cpu_firmware_reference": deepcopy(_FX5_SIMPLE_CPU_FIRMWARE_REFERENCE),
+        "simple_cpu_interop_reference": deepcopy(_FX5_SIMPLE_CPU_INTEROP_REFERENCE),
         "unverified": [
             "tcp_ulp_ms", "tcp_resend_ms", "response_monitor_ms",
             "model/firmware-specific SLMP default host port", "RUN-write behavior",
@@ -412,4 +447,64 @@ def inspect_reference_fx5_enet_alive_timers(overrides=None):
         "physical_hardware_certified": False,
         "simulator_network_affected": False,
         "parameters": parameters,
+    }
+
+
+def inspect_reference_fx5_simple_cpu_communication(model, firmware_version=None):
+    """OFFLINE firmware/interop guidance for the *simple CPU* feature.
+
+    The FX5 CPU built-in Ethernet hardware family is reference-only;
+    this is NOT a SLMP server configuration or physical PLC test.
+    U/UC feature support begins at 1.110, UJ/S from the first release
+    (FAQ #39316). The old/new GX Works3 connection example (FAQ #44329)
+    is modeled only for U/UC, not guessed for early UJ/S revisions.
+    """
+    import re
+
+    support = _REFERENCE_HARDWARE["fx5_cpu_builtin"]["simple_cpu_firmware_reference"]
+    interop = _REFERENCE_HARDWARE["fx5_cpu_builtin"]["simple_cpu_interop_reference"]
+    if type(model) is not str or model not in support["models"]:
+        raise ValueError("model must be FX5U, FX5UC, FX5UJ, or FX5S")
+    firmware_tuple = None
+    if firmware_version is not None:
+        if (type(firmware_version) is not str or
+                re.fullmatch(r"[1-9][0-9]*\.[0-9]{3}", firmware_version) is None):
+            raise ValueError("firmware_version must use the vendor form 1.110")
+        major, revision = firmware_version.split(".")
+        firmware_tuple = (int(major), int(revision))
+
+    family_rule = support["models"][model]
+    if family_rule.get("from_first", False):
+        state = "SUPPORTED"
+        path = None  # The FAQ does not establish this for every early UJ/S firmware.
+        destination = None
+    elif firmware_tuple is None:
+        state, path, destination = "UNKNOWN_FIRMWARE", None, None
+    else:
+        threshold = tuple(int(x) for x in family_rule["minimum_version"].split("."))
+        modern = firmware_tuple >= threshold
+        state = "SUPPORTED" if modern else "NOT_SUPPORTED"
+        path = deepcopy(interop["supported_path"] if modern else interop["legacy_path"])
+        destination = interop["destination_device_type"] if modern else None
+
+    cpu = _REFERENCE_HARDWARE["fx5_cpu_builtin"]
+    return {
+        "model": model,
+        "firmware_version": firmware_version,
+        "support_status": state,
+        "gxworks3_configuration_path": path,
+        "destination_device_type": destination,
+        "target_limit": cpu["service_specific_connection_reference"]["target_limits"][model],
+        "target_limit_scope": "simple_cpu_communication_targets_not_slmp_sockets",
+        "external_ethernet_connection_limit": cpu["reference"]["connection_limit"],
+        "status": "OFFICIAL_FAQ_REFERENCE_ONLY",
+        "sources": [deepcopy(support["source"]), deepcopy(interop["source"])],
+        "physical_hardware_certified": False,
+        "simulator_network_affected": False,
+        "notes": [
+            "A simple CPU communication target is not an inbound SLMP socket.",
+            "GX Works3 paths apply only to the cited mixed-firmware CPU connection example.",
+            "Unknown firmware is not evidence that FX5U/FX5UC lack support.",
+            "No firmware data was read from physical equipment.",
+        ],
     }

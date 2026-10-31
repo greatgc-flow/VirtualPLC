@@ -30,6 +30,18 @@ within the official ranges; the manual page does not independently establish
 an additional 100ms increment requirement. No host TCP socket timer
 application or FX5 CPU built-in defaults are inferred.
 
+### 2026-11-01 FX5 CPU firmware gate, simple CPU communication
+
+[Official FAQ cross-check](FX5_CPU_FIRMWARE_SIMPLE_COMM_20261101.md):
+FX5U/FX5UC require firmware 1.110+ for *simple CPU communication*,
+whereas FX5UJ/FX5S support it from initial release (Mitsubishi
+FAQ #39316). FAQ #44329 documents distinct GX Works3 setting
+routes for a mixed newer/legacy CPU link. This must **not** be
+mistaken for the SLMP socket server firmware matrix or a uniform
+FX5 CPU/FX5-ENET threshold. The offline reference API
+`inspect_reference_fx5_simple_cpu_communication` never binds a
+port or changes existing listeners.
+
 ## 1. Evidence and engineering decisions
 
 | Hardware/interface | Editor | Officially established here | Implementation disposition |

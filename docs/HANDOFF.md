@@ -1,5 +1,19 @@
 # Handoff (historical baseline 2026-10-23)
 
+## 2026-11-01 FX5 CPU simple communication firmware gate (PR #32)
+
+The offline, reference-only API
+`inspect_reference_fx5_simple_cpu_communication(model, firmware_version)`
+uses Mitsubishi FAQs #39316/#44329: FX5U/FX5UC require firmware >=1.110
+for the *simple CPU communication* feature, FX5UJ/FX5S support it
+from first release. Only documented U/UC mixed-firmware GX Works3
+interop route is mapped; early UJ/S route remains unknown. No SLMP
+socket/CPU behavior changes, physical captures or PyPI releases.
+See [firmware matrix](research/FX5_CPU_FIRMWARE_SIMPLE_COMM_20261101.md)
+and [PR #32](https://github.com/greatgc-flow/VirtualPLC/pull/32).
+Check latest remote main, PR, issue #14 and exact candidate CI before
+making claims about completion/merge.
+
 ## 2026-11-01 FX5-ENET alive-check reference timer validation (PR #31)
 
 The new `inspect_reference_fx5_enet_alive_timers` API validates the
@@ -8,8 +22,10 @@ factory values, supported units and ranges under an explicit Change/Set
 Timer Value flag. Reference-only, no socket effects, runtime hardware
 activation or physical PLC parity. See
 [FX5-ENET alive reference](research/FX5_ENET_ALIVE_REFERENCE_20261101.md).
-Check live PR #31 and CI status; this dated handoff is not an assertion of
-merge or complete tests.
+PR #31 was merged into main SHA
+`fa8c71e469607eb88a2816e0ce4e424e73c1d9b1` with independent
+post-merge [CI #41214550025](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41214550025)
+9/9 SUCCESS. Check for newer remote changes.
 
 ## 2026-10-31 FX5 reference-only port/connection preflight (PR #30 merged)
 
