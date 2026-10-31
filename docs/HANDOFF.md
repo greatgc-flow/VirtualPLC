@@ -1,5 +1,18 @@
 # Handoff (historical baseline 2026-10-23)
 
+## 2026-10-31 FX5 reference-only port/connection preflight (PR #30, not merged)
+
+New `inspect_reference_slmp_port` in `virtual_plc/ethernet.py` exposes
+manual-scoped FX5 CPU/ENET SLMP vendor port classification without socket
+binding, runtime hardware activation, or changing `Server(port=0)` and
+`max_clients=64`. Separates 8 aggregate Ethernet connections from
+16/8 *simple CPU communication target* counts by CPU family. See
+[FX5 port and connection scope](research/FX5_SLMP_PORT_SCOPE_20261031.md),
+[PR #30](https://github.com/greatgc-flow/VirtualPLC/pull/30),
+[#14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
+**This is an unmerged feature-branch checkpoint; do not assume it exists
+on main.** Confirm candidate CI and current remote SHA before proceeding.
+
 ## 2026-10-31 offline reference oracle checkpoint
 
 `python -m virtual_plc.oracle plan|template|compare` implements an
