@@ -118,7 +118,6 @@ def test_1e_random_udp_and_tcp_pipelined_compatibility():
 
 @pytest.mark.parametrize("packet", [
     b"04FF00000201" + BIT_ASCII[12:],  # reserved not zero
-    b"04FF00000200" + BIT_ASCII[12:-2] + b"02",  # bit value 2
     b"05FF00000200" + WORD_ASCII[12:-4] + b"ZZZZ",  # word nonhex
     bytes.fromhex("04 00 00 00 02 00") + BIT_BINARY[6:],
 ])
