@@ -1,4 +1,4 @@
-"""TCP server and request lifecycle for local simulation."""
+"""TCP/UDP server and request lifecycle for local simulation."""
 
 import socket
 import ipaddress
@@ -15,7 +15,8 @@ from .profiles import PROFILES
 
 LOG = logging.getLogger(__name__)
 
-ACCEPT_POLL = 0.1  # seconds between stop checks of the accept loop
+ACCEPT_POLL = 0.1  # seconds between stop checks of the accept/receive loops
+MAX_UDP_DATAGRAM = 8192  # one complete MC frame per datagram; bound allocation
 
 
 def is_loopback_host(host):
@@ -35,7 +36,7 @@ class Server:
                  response_hook=None, max_points=None, idle_timeout=None,
                  initial_state="RUN", latch_ranges=None, password=None, fault_plan=None,
                  ascii_dword_order="swapped", text_pad=0x00, ascii_numbering="compat", verbose=False,
-                 allow_nonlocal=False, max_clients=64):
+                 allow_nonlocal=False, max_clients=64, listeners=None):
         if type(port) is not int or not 0 <= port <= 65535:
             raise ValueError("port must be an integer 0..65535")
         if max_points is not None and (type(max_points) is not int or max_points < 1):
@@ -47,6 +48,29 @@ class Server:
             raise ValueError("allow_nonlocal must be a boolean")
         if type(max_clients) is not int or max_clients < 1:
             raise ValueError("max_clients must be a positive integer")
+        if listeners is None:
+            listen_specs = (("tcp", port),)
+        else:
+            if not isinstance(listeners, (list, tuple)) or not listeners:
+                raise ValueError("listeners must be a nonempty sequence of (tcp|udp, port) pairs")
+            if port != 0:
+                raise ValueError("port must be 0 when explicit listeners are provided")
+            listen_specs = []
+            used = set()
+            for entry in listeners:
+                if not isinstance(entry, (tuple, list)) or len(entry) != 2:
+                    raise ValueError("invalid listener: expected (tcp|udp, port)")
+                transport, bind_port = entry
+                if transport not in ("tcp", "udp") or type(bind_port) is not int or not 0 <= bind_port <= 65535:
+                    raise ValueError("invalid listener transport or port")
+                key = (transport, bind_port)
+                if bind_port and key in used:
+                    raise ValueError("duplicate listener transport and port")
+                used.add(key)
+                listen_specs.append(key)
+            listen_specs = tuple(listen_specs)
+        if any(transport == "udp" for transport, _ in listen_specs) and fault_plan is not None:
+            raise ValueError("UDP listeners do not support TCP fault plans")
         if not is_loopback_host(host):
             if not allow_nonlocal:
                 raise ValueError("non-loopback host requires allow_nonlocal=True (CLI: --allow-nonlocal)")
@@ -95,7 +119,9 @@ class Server:
         self.reset_count = 0
         self.set_state(initial_state)
         self._bind_address = (host, port)
-        self.address = (host, port)
+        self._listen_specs = tuple(listen_specs)
+        self.addresses = [(transport, host, bind_port) for transport, bind_port in self._listen_specs]
+        self.address = (host, self._listen_specs[0][1])
         self._hook = response_hook
         self._fault_plan = fault_plan
         self._connection_number = 0
@@ -106,8 +132,10 @@ class Server:
         self._clients_lock = threading.Lock()
         self._clients = {}  # connection -> worker thread
         self._stopping = threading.Event()
-        self._listener = None
-        self._acceptor = None
+        self._listener = None   # legacy first endpoint, including UDP-only instances
+        self._acceptor = None   # legacy first listener thread
+        self._listeners = []    # (transport, socket) pairs for every endpoint
+        self._listener_threads = []
 
     def set_state(self, state):
         self.memory.write_words("SD", 203, [CPU_STATES[state]])
@@ -129,20 +157,59 @@ class Server:
             return
         self._stopping.clear()
         family = socket.AF_INET6 if ":" in self._bind_address[0] else socket.AF_INET
-        self._listener = socket.create_server(self._bind_address, family=family)
-        self._listener.settimeout(ACCEPT_POLL)
-        self.address = self._listener.getsockname()[:2]
-        self._acceptor = threading.Thread(target=self._accept_loop, daemon=True)
-        self._acceptor.start()
+        opened = []
+        try:
+            # Bind every endpoint before starting any workers (all-or-nothing startup).
+            for transport, port in self._listen_specs:
+                address = (self._bind_address[0], port)
+                if transport == "tcp":
+                    listener = socket.create_server(address, family=family)
+                else:
+                    listener = socket.socket(family, socket.SOCK_DGRAM)
+                    try:
+                        listener.bind(address)
+                    except BaseException:
+                        listener.close()
+                        raise
+                listener.settimeout(ACCEPT_POLL)
+                opened.append((transport, listener))
+        except BaseException:
+            for _, listener in opened:
+                listener.close()
+            raise
+
+        self._listeners = opened
+        self.addresses = [(transport, *listener.getsockname()[:2])
+                          for transport, listener in opened]
+        self.address = self.addresses[0][1:]
+        self._listener = opened[0][1]
+        try:
+            for transport, listener in opened:
+                target = self._accept_loop if transport == "tcp" else self._udp_loop
+                worker = threading.Thread(target=target, args=(listener,), daemon=True)
+                worker.start()
+                self._listener_threads.append(worker)
+            self._acceptor = self._listener_threads[0]
+        except BaseException:
+            self.stop()
+            raise
 
     def stop(self):
-        """Close the listener and every client, then join all workers."""
+        """Close all endpoints and clients, then join every listener and client worker."""
         self._stopping.set()
-        if self._listener is not None:
-            self._listener.close()
-        if self._acceptor is not None:
-            self._acceptor.join()
-            self._acceptor = None
+        listeners = [listener for _, listener in self._listeners]
+        if self._listener is not None and self._listener not in listeners:
+            listeners.append(self._listener)
+        for listener in listeners:
+            listener.close()
+        threads = list(self._listener_threads)
+        if self._acceptor is not None and self._acceptor not in threads:
+            threads.append(self._acceptor)
+        for worker in threads:
+            worker.join()
+        self._listener_threads = []
+        self._listeners = []
+        self._acceptor = None
         self._listener = None
         with self._clients_lock:
             clients = list(self._clients.items())
@@ -154,21 +221,59 @@ class Server:
             connection.close()
             worker.join()
 
-    def _accept_loop(self):
+    def _udp_loop(self, listener):
+        """One exact 3E/4E binary/ASCII request per datagram, sharing the TCP lock."""
         while not self._stopping.is_set():
             try:
-                connection, _ = self._listener.accept()
+                # Receive the full OS datagram before enforcing our smaller cap:
+                # Winsock raises WSAEMSGSIZE on an undersized recvfrom buffer.
+                packet, peer = listener.recvfrom(65535)
+            except socket.timeout:
+                continue
+            except OSError:
+                return
+            if not packet or len(packet) > MAX_UDP_DATAGRAM:
+                self._log("UDP drop: empty or oversized datagram")
+                continue
+            try:
+                if frame_size(packet) != len(packet):
+                    self._log("UDP drop: incomplete or concatenated frame")
+                    continue
+                request = decode_request(packet)
+                with self._request_lock:
+                    end_code, data = dispatch(request, self.memory, self._max_points, self)
+                self._log("UDP %s %s command=%04X sub=%04X end=%04X",
+                          request.frame, request.wire, request.command, request.subcommand, end_code)
+                response = encode_response(request, end_code, data,
+                                           ascii_dword_order=self.ascii_dword_order)
+                if self._hook is not None:
+                    response = self._hook(response)
+                if len(response) > MAX_UDP_DATAGRAM:
+                    self._log("UDP drop: oversized response")
+                    continue
+                if not self._stopping.is_set():
+                    listener.sendto(response, peer)
+            except (ValueError, OSError) as error:
+                self._log("UDP drop: %s", error)
+            except Exception as error:
+                print(f"UDP worker: {type(error).__name__}: {error}", file=sys.stderr, flush=True)
+
+    def _accept_loop(self, listener):
+        while not self._stopping.is_set():
+            try:
+                connection, _ = listener.accept()
             except socket.timeout:
                 continue
             except OSError:
                 return
             connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             connection.settimeout(self._idle_timeout)
-            if self._fault_plan is not None:
-                self._connection_number += 1
-            worker = threading.Thread(target=self._serve, args=(connection, self._connection_number), daemon=True)
             with self._clients_lock:
+                if self._fault_plan is not None:
+                    self._connection_number += 1
+                connection_id = self._connection_number
                 rejected = self._stopping.is_set() or len(self._clients) >= self._max_clients
+                worker = threading.Thread(target=self._serve, args=(connection, connection_id), daemon=True)
                 if not rejected:
                     self._clients[connection] = worker
             if rejected:

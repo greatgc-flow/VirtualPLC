@@ -68,6 +68,49 @@ closed without allocating workers. Embedded servers use
 A non-loopback host without explicit permission (or without an idle timeout
 when permitted) raises a configuration error before listening.
 
+## Multiple TCP/UDP listeners (unreleased source feature)
+
+The legacy command `virtual-plc --port 5000` still opens **one TCP port**.
+From an updated source checkout (this change is not included in published v0.5.0),
+repeat `--listen` to expose several ports on **one shared virtual PLC**:
+
+```powershell
+virtual-plc --listen tcp:5000 --listen tcp:5001 --listen udp:5000
+```
+
+Each endpoint shares memory, CPU state, authentication-simulation lock and
+the request serialization lock. Different transports can reuse the same
+numeric port (TCP/5000 and UDP/5000). For a completely independent virtual
+PLC with different memory, start another process. `--listen` replaces the
+legacy `--port` option and may not be combined with it; `--host` applies
+to every endpoint.
+
+The same topology is available to embedded Python programs:
+
+```python
+from virtual_plc import Server
+
+with Server(listeners=[("tcp", 0), ("udp", 0)]) as plc:
+    print(plc.addresses)  # [("tcp", host, assigned_port), ("udp", host, assigned_port)]
+    # Use a TCP client or an MC request datagram to either bound address.
+```
+
+For UDP, send **exactly one complete 3E/4E binary or ASCII MC request frame**
+per datagram; replies are datagrams sent back to the source IP/port. Invalid,
+truncated, concatenated or over-8192-byte datagrams are silently dropped.
+UDP is connectionless: no TCP stream reassembly, session/idle timeout, or
+retransmission is provided. Use application-level timeouts/retries and keep
+UDP packets small enough to avoid IP fragmentation. Stock `pymcprotocol`
+client connections are TCP; UDP clients must use a datagram-capable client.
+The TCP-oriented `--fault-plan` is rejected if any UDP listener is enabled,
+rather than pretending its close/RST/partial-send actions work for UDP.
+`--max-clients` limits TCP sessions only.
+
+Nonlocal network binds continue to require `--allow-nonlocal` and
+`--idle-timeout`; that timeout does **not** add UDP session semantics.
+There is no authentication or UDP rate limiting. Run on loopback or on
+an isolated, trusted **test** network only; never connect to production PLCs.
+
 ## CLI reference
 
 Run `virtual-plc guide options` for the option/default/meaning table generated

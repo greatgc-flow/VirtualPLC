@@ -18,8 +18,25 @@ See the [canonical CLI reference](../README.md#cli-reference),
 - `max_clients=64` limits concurrent accepted clients; an excess connection is
   closed before creating a worker, without affecting existing clients.
   Positive integer overrides are supported by `--max-clients N`.
-- `.stop()` synchronously closes clients/listener and joins workers; idempotent,
-  including incomplete frames.
+- `Server(listeners=[("tcp", 5000), ("udp", 5000)])` opens multiple sockets
+  for one PLC state and per-request lock. When omitted, `port` remains the
+  legacy single TCP endpoint. Explicit listeners require `port=0`, and
+  unique protocol/port pairs except ephemeral port zero.
+- `server.addresses` reports `(transport, host, actual_port)` entries; the
+  legacy `server.address` reports the first endpoint. A separate process
+  remains necessary for separate, independent PLC memory/state.
+- UDP accepts one exact complete 3E/4E binary/ASCII MC frame per datagram,
+  with an 8192-byte limit. Invalid, truncated, concatenated, empty and
+  oversized datagrams receive no response. It shares CPU state, Memory and
+  the request lock with all TCP listeners; no reliable delivery, retry or
+  TCP-style sessions are simulated. A UDP listener cannot be combined with
+  TCP-only `FaultPlan` actions. `max_clients` and `idle_timeout` govern TCP
+  sessions only; the nonlocal bind guard still requires both explicit permission
+  and an idle timeout option, even for UDP-only configurations.
+- All requested sockets bind before any listener starts processing. Failure
+  to bind one socket closes those already bound without serving requests.
+- `.stop()` synchronously closes all endpoints and clients and joins workers;
+  idempotent, including incomplete TCP frames.
 - Accepted sockets use TCP_NODELAY; EOF, bad framing or `idle_timeout` closes only that
   client.
 - `response_hook(response_bytes) -> bytes` transforms each complete encoded response

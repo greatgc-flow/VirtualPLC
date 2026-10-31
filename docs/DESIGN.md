@@ -8,6 +8,29 @@ features of
 profile: **Q series**.
 Not for industrial use. Binds 127.0.0.1 by default.
 
+## Optional multi-listener transport extension
+
+`Server(listeners=[("tcp", 5000), ("udp", 5000)])` optionally binds
+several protocol/port pairs in one process; the CLI equivalent is repeatable
+`--listen`. Omitted means the legacy single TCP port. The listener collection
+is transport-only: **one Server instance** owns memory, CPU state, password
+simulation, fault selection and the one request lock, so no shared-Memory
+cross-Server concurrency is introduced. Per-protocol duplicate fixed ports
+are rejected; TCP and UDP can share a numeric port, and port 0 requests a
+fresh ephemeral bind. Bind all sockets before any worker starts; rollback on
+a failed bind; stop/close/join all workers on shutdown.
+
+UDP is a datagram adapter over the existing MC 3E/4E decoder/dispatcher:
+one exact 8192-byte-maximum frame per packet, no stream reassembly, silent
+discard on malformed/oversized packet, reply to sender address. It does not
+implement retransmission, client sessions, UDP-specific fault actions,
+authentication or rate limiting. TCP-specific FaultPlans are rejected for
+mixed/UDP configurations rather than being silently misapplied. Loopback
+guard stays in effect; `--allow-nonlocal --idle-timeout` is required for
+any nonlocal bind, with no UDP timeout semantics implied. A separate
+process provides an independent PLC instance. Physical PLC behavior remains
+unverified; this is a simulator transport policy only.
+
 ## 1. Verified client facts (pinned pymcprotocol 0.3.0)
 
 - Only `plctype == iQ-R` changes wire format. Q, L, QnA, iQ-L share one **wire class**.

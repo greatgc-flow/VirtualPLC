@@ -28,6 +28,19 @@ def text_pad(value):
     raise argparse.ArgumentTypeError("text pad must be an integer 0..255 (e.g. 0x00 or 0x20)")
 
 
+def listener_spec(value):
+    """CLI listener syntax: tcp:PORT or udp:PORT (each port 0..65535)."""
+    try:
+        transport, separator, number = value.partition(":")
+        if separator == ":" and transport in ("tcp", "udp") and number.isascii() and number.isdecimal():
+            port = int(number, 10)
+            if 0 <= port <= 65535:
+                return transport, port
+    except (TypeError, ValueError):
+        pass
+    raise argparse.ArgumentTypeError("listener must be tcp:PORT or udp:PORT with port 0..65535")
+
+
 def device_range(value):
     try:
         device, span = value.split(":")
@@ -58,7 +71,9 @@ def build_parser():
     parser.add_argument("--host", default="127.0.0.1", help="bind address (loopback by default)")
     parser.add_argument("--allow-nonlocal", action="store_true", help="explicitly permit non-loopback binding (unsafe; requires --idle-timeout)")
     parser.add_argument("--max-clients", type=int, default=64, help="maximum concurrent connections; default: 64")
-    parser.add_argument("--port", type=int, default=5000, help="TCP port 0..65535; 0 chooses a free port")
+    parser.add_argument("--port", type=int, default=5000, help="legacy single TCP port 0..65535; 0 chooses a free port")
+    parser.add_argument("--listen", action="append", type=listener_spec, default=[], metavar="PROTO:PORT",
+                        help="repeatable tcp:PORT or udp:PORT; shares one PLC state, overrides default --port")
     parser.add_argument("--profile", choices=PROFILES, default="Q", help="simulated CPU profile")
     parser.add_argument("--password", help="simulated lock password (not authentication)")
     parser.add_argument("--initial-state", choices=("RUN", "STOP", "PAUSE"), default="RUN", help="initial CPU state")
@@ -102,6 +117,8 @@ def main(argv=None):
     if argv and argv[0] == "guide":
         return guide.main(argv[1:], parser)
     args = parser.parse_args(argv)
+    if args.listen and any(argument == "--port" or argument.startswith("--port=") for argument in argv):
+        parser.error("--port cannot be combined with --listen")
     topic = "faults"
     try:
         plan = FaultPlan.from_file(args.fault_plan) if args.fault_plan else None
@@ -111,6 +128,8 @@ def main(argv=None):
                        max_clients=args.max_clients, allow_nonlocal=args.allow_nonlocal,
                        ascii_dword_order=args.ascii_dword_order, text_pad=args.text_pad,
                        ascii_numbering=args.ascii_numbering, verbose=args.verbose)
+        if args.listen:
+            options["listeners"] = args.listen
         if args.init or args.limit:
             options["memory"] = Memory(args.profile, dict(args.limit))
         if args.latch_range:
@@ -120,7 +139,7 @@ def main(argv=None):
             options["latch_ranges"] = ranges
         topic = "options"
         try:
-            server = Server(args.host, args.port, **options)
+            server = Server(args.host, 0 if args.listen else args.port, **options)
         except ValueError as error:
             parser.error(str(error), "memory" if "latch" in str(error) else topic)
         topic = "memory"
@@ -132,7 +151,9 @@ def main(argv=None):
         server.start()
     except (OSError, OverflowError) as error:
         server.stop()
-        print(f"cannot listen on {args.host}:{args.port}: {error}", file=sys.stderr)
+        destination = (", ".join(f"{protocol}:{args.host}:{port}" for protocol, port in args.listen)
+                       if args.listen else f"{args.host}:{args.port}")
+        print(f"cannot listen on {destination}: {error}", file=sys.stderr)
         return 1
     warning = "; WARNING: localhost-only simulator; do not expose to production networks" if not local_host(args.host) else ""
     exit_code = 0
@@ -151,8 +172,10 @@ def main(argv=None):
             if hasattr(signal, name):
                 number = getattr(signal, name)
                 previous[number] = signal.signal(number, terminate)
-        print("listening on %s:%d (%s, %s) idle_timeout=%s text_pad=0x%02X ascii_dword_order=%s ascii_numbering=%s fault_plan=%s%s" %
-              (*server.address, args.profile, args.initial_state, args.idle_timeout, args.text_pad,
+        destination = (", ".join(f"{protocol}:{host}:{port}" for protocol, host, port in server.addresses)
+                       if args.listen else f"{server.address[0]}:{server.address[1]}")
+        print("listening on %s (%s, %s) idle_timeout=%s text_pad=0x%02X ascii_dword_order=%s ascii_numbering=%s fault_plan=%s%s" %
+              (destination, args.profile, args.initial_state, args.idle_timeout, args.text_pad,
                args.ascii_dword_order, args.ascii_numbering, args.fault_plan, warning), file=sys.stderr, flush=True)
         event = threading.Event()
         while not event.wait(0.5):
