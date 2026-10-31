@@ -1,13 +1,13 @@
 # FX5 SLMP frames and X/Y ASCII numbering — implementation gate
 
-Evidence snapshot: 2026-10-31. Implementations: [PR #21](https://github.com/greatgc-flow/VirtualPLC/pull/21) for the ASCII X/Y octal prerequisite and [PR #23](https://github.com/greatgc-flow/VirtualPLC/pull/23) for the opt-in **1E batch 00..03** parser; [PR #24](https://github.com/greatgc-flow/VirtualPLC/pull/24) for **15H/16H diagnostic** frames; [issue #22](https://github.com/greatgc-flow/VirtualPLC/issues/22) retains the remaining 1E commands/physical-verification gate; [issue #14](https://github.com/greatgc-flow/VirtualPLC/issues/14) for per-hardware Ethernet configuration and physical parity. Read alongside [hardware model differences](ETHERNET_HARDWARE_NEXT_20261031.md).
+Evidence snapshot: 2026-10-31. Implementations: [PR #21](https://github.com/greatgc-flow/VirtualPLC/pull/21) for the ASCII X/Y octal prerequisite and [PR #23](https://github.com/greatgc-flow/VirtualPLC/pull/23) for the opt-in **1E batch 00..03** parser; [PR #24](https://github.com/greatgc-flow/VirtualPLC/pull/24) for **15H/16H diagnostic** frames; [draft PR #26](https://github.com/greatgc-flow/VirtualPLC/pull/26) covers manual-scoped 04/05 random and 13/14 remote; [issue #22](https://github.com/greatgc-flow/VirtualPLC/issues/22) retains the remaining 1E commands/physical-verification gate; [issue #14](https://github.com/greatgc-flow/VirtualPLC/issues/14) for per-hardware Ethernet configuration and physical parity. Read alongside [hardware model differences](ETHERNET_HARDWARE_NEXT_20261031.md).
 
 **Status legend:** `IMPLEMENTED_SIMULATOR` means observed behavior in VirtualPLC tests; `OFFICIAL_MANUAL` means documented vendor behavior but not verified on live equipment; `NOT_IMPLEMENTED` means unsupported. Green CI is not physical PLC certification.
 
 ## 1. Critical distinction: 1E != 3E != 4E
 
 The official [MELSEC iQ-F FX5 SLMP manual JY997D56001-K](https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/jy997d56001/jy997d56001k.pdf) documents the **1E application frame** in pp.41–55 and command inventory in pp.119–135. The [FX5-ENET official product specifications](https://www.mitsubishielectric.com/fa/products/faspec/detail.page?formNm=FX5_ENET_FX5-ENET_3695&kisyu=%2Fplcnet&lang=2&popup=1) identify SLMP 1E/3E as server protocols. VirtualPLC defaults to **3E/4E** generically and supports a separate
-`--slmp-1e` option for a **bounded 1E batch + diagnostic** parser.
+`--slmp-1e` option for a **bounded 1E batch + random-write + remote-control + diagnostic** parser.
 **4E simulator support is not evidence that FX5 equipment supports 4E**.
 
 | Aspect | Official 1E frame | Current VirtualPLC 3E/4E |
@@ -21,9 +21,7 @@ The official [MELSEC iQ-F FX5 SLMP manual JY997D56001-K](https://dl.mitsubishiel
 | Status | `OFFICIAL_MANUAL`; 00..03 batch + 15H/16H diagnostics `IMPLEMENTED_SIMULATOR` | `IMPLEMENTED_SIMULATOR` |
 
 The 1E parser is **separate** from the 3E decoder, with per-command
-bounded frames rather than an invented common 3E header. The initial
-adapter handles 00..03 on a small bounded device subset and separate
-15H/16H diagnostics. Remaining 1E commands require their own proof
+bounded frames rather than an invented common 3E header. The adapter handles 00..05 on a narrow synthetic device subset, 13/14 owner-checked remote control, and 15/16 diagnostics. Further device/firmware variants require independent proof
 and parser lengths.
 
 ### First runnable 1E subset / manual-derived frames
@@ -64,11 +62,11 @@ measured FX5 device response. Fixed fields and unsupported/ambiguous
 | `01H` | Batch read 16-bit bit groups / 1-word units | Up to 32 bit-words / 64 word points |
 | `02H` | Batch bit write | Up to 160 points |
 | `03H` | Batch write 16-bit bit groups / 1-word units | Up to 10 bit-words / 64 word points |
-| `04H`, `05H` | Test / random write | Up to 80 bit points / 10 word points as applicable |
-| `13H`, `14H` | Remote RUN / STOP | May have owner-specific state restrictions |
+| `04H`, `05H` | Test / random write | Simulator: 80 individual bit points / 10 word or aligned bit-group items, atomic commit |
+| `13H`, `14H` | Remote RUN / STOP | Simulator: STOP TCP owner must RUN; ownership survives disconnect; local reset clears; UDP denied |
 | `15H`, `16H` | Read PC type / loopback | Implemented synthetic `F3` and raw count+data respectively; not a physical model identity |
 
-The exact packet layout and supported code combinations depend on device family and module firmware. **00..03 plus 15/16 are enabled in opt-in `--slmp-1e` mode**; 04/05 and 13/14 remain deferred. Do not claim the bounded simulator devices are a complete manufacturer list.
+The exact packet layout and supported code combinations depend on device family and module firmware. **00..05 plus 13..16 are in the opt-in `--slmp-1e` simulator subset**; hardware compatibility is not established. Do not claim the bounded simulator devices are a complete manufacturer list.
 
 ## 3. Implemented numeric prerequisite: FX5 3E X/Y ASCII OCT (opt-in)
 
@@ -106,8 +104,42 @@ References: [official Mitsubishi FX5 Ethernet product comparison](https://fa-faq
 
 New `tests/test_fx5_ascii_octal.py` verifies decimal/octal distinction, invalid digits, 3E/4E synthetic response handling, UDP reuse, legacy default behavior and that `fx5_enet` remains unsupported as hardware. The exact-source branch CI is the candidate evidence; a post-merge `main` workflow is distinct.
 
-Tests in `tests/test_slmp_1e.py` and `tests/test_slmp_1e_diagnostics.py`
+Tests in `tests/test_slmp_1e.py`, `tests/test_slmp_1e_random_write.py`, `tests/test_slmp_1e_remote_control.py` and `tests/test_slmp_1e_diagnostics.py`
 cover manual literal replies, diagnostic framing/1..254 limits and
-TCP/UDP transport boundaries; the first 1E batch tests cover binary/ASCII manual vectors, 00..03 reads/writes, 00=>256 bits, point limits, 16-bit bit groups, malformed/overlong PC and fixed fields, TCP fragmentation/coalescing, UDP and shared-memory safety. [#22](https://github.com/greatgc-flow/VirtualPLC/issues/22) remains open for 1E remote/random commands, expanded device/firmware maps, vendor close/error semantics and physical verification. A hardware preset requires additional manufacturer/physical gates under #14 and #2. Never equate configured TCP timers or `--idle-timeout` with Mitsubishi firmware behavior.
+TCP/UDP transport boundaries; the first 1E batch tests cover binary/ASCII manual vectors, 00..03 reads/writes, 00=>256 bits, point limits, 16-bit bit groups, malformed/overlong PC and fixed fields, TCP fragmentation/coalescing, UDP and shared-memory safety. [#22](https://github.com/greatgc-flow/VirtualPLC/issues/22) remains open for expanded device/firmware maps, vendor close/owner/error semantics and physical verification. A hardware preset requires additional manufacturer/physical gates under #14 and #2. Never equate configured TCP timers or `--idle-timeout` with Mitsubishi firmware behavior.
 
 **Operating topology:** one independent PLC per OS process; its TCP/UDP listeners share a single CPU/memory state. No in-process multi-PLC supervisor.
+
+
+## 6. Official 04/05 and 13/14 layout, implementation boundary
+
+Official evidence: Mitsubishi JY997D56001-K, printed pp.128–133
+(PDF pp.129–134). These packet contracts are manual-derived, not an
+actual PLC wire capture.
+
+| 1E command | Binary request fields | ASCII request fields | Successful response |
+| --- | --- | --- | --- |
+| 04 bit random | 04 FF 0000 count(1) 00 + count × (head 4LE, name 2 swapped, value 1) | 04FF0000 count(2) 00 + count × (name 4 hex, head 8 hex, value 2 hex) | 84 00 / 8400 |
+| 05 word random | 05 FF 0000 count(1) 00 + count × (head 4LE, name 2 swapped, value 2LE) | 05FF0000 count(2) 00 + count × (name 4 hex, head 8 hex, value 4 hex) | 85 00 / 8500 |
+| 13 RUN | 13 FF 0000 | 13FF0000 | 93 00 / 9300 |
+| 14 STOP | 14 FF 0000 | 14FF0000 | 94 00 / 9400 |
+
+For 04, supported M/X/Y bit values are strictly 0/1, max 80 items.
+For 05, supported D words and M/X/Y 16-point bit groups are max 10 items;
+bit groups must be 16-aligned. The full request is validated before
+a single staged memory commit; duplicate destinations apply in request
+order (last wins). Untrusted count up to 255 is bounded to a maximum
+4092-byte 1E request for an ASCII 05H frame, while actual point caps
+remain enforced by error response.
+
+**Owner safety policy vs manufacturer:** The manual states remote STOP
+can only be released by RUN from the same originating external device,
+with remote-operation information lost on power reset. It does **not**
+grant rights to a second connection merely because the first closed.
+VirtualPLC stores the accepted TCP connection ID, denies foreign 13/14
+using a *simulated* C05F error, and keeps STOP on disconnect. Explicit
+local `Server.reset_1e_remote_control()` clears ownership
+without automatically starting the CPU. UDP 13/14 is rejected because
+there is no trustworthy connection continuity. Neither the selected
+error code nor the fail-closed recovery policy claims real FX5 firmware
+parity. Physical oracle, hardware variant and PyPI release remain HOLD.
