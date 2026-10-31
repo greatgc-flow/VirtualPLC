@@ -274,7 +274,11 @@ More fixes: `virtual-plc guide troubleshoot`. Protocol details:
   state in one direction. CPU names default to NUL fill on both encodings;
   the client retains NULs. Physical fill remains unverified.
 - ASCII addresses default to decimal-text compatibility, including hex-base
-  devices; opt into manual hexadecimal addressing with `--ascii-numbering manual`.
+  devices; opt into hexadecimal per-device addressing with `--ascii-numbering manual`
+  or FX5-style **X/Y octal** with `--ascii-numbering fx5-octal` (D decimal,
+  W/B hexadecimal; see [FX5 1E/3E scope](docs/research/FX5_SLMP_FRAME_SCOPE_20261031.md)).
+  This address option does **not** enable an FX5-ENET hardware profile or SLMP
+  1E packets; generic simulator 4E support is not an FX5 hardware claim.
   Dword order
   defaults to low-word-first (`swapped`); `client` selects high-word-first.
   Physical order is unverified; roundtrips remain symmetric.

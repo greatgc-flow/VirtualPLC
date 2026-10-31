@@ -188,6 +188,7 @@ _REFERENCE_HARDWARE = {
         "reference": {
             "connection_limit": 8,
             "connection_limit_scope": "SLMP/MELSOFT/MODBUS-TCP/socket/predefined-protocol combined; documented exclusions apply",
+            "slmp_server_frames": ["1E", "3E"],
         },
         "unverified": [
             "tcp_ulp_ms", "tcp_resend_ms", "response_monitor_ms",
@@ -211,6 +212,14 @@ _REFERENCE_HARDWARE = {
             "alive_start_ms": 600000,
             "alive_interval_ms": 10000,
             "alive_retries": 3,
+            "slmp_server_frames": ["1E", "3E"],
+            "connection_limit": 32,
+            "ascii_xy_numbering_choices": ["octal", "hexadecimal"],
+        },
+        "protocol_source": {
+            "manual": "JY997D56001-K (FX5 SLMP)",
+            "page": "41-45, 66-67, 119-122",
+            "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/jy997d56001/jy997d56001k.pdf",
         },
         "unverified": [
             "tcp_ulp_ms", "tcp_zero_window_ms", "tcp_resend_ms",

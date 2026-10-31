@@ -135,10 +135,19 @@ def read_device(reader, profile, *, text_pad=0, ascii_numbering="compat"):
         digits = reader.take(wire.ascii_address_size)
         if device is None:
             raise ValueError("unknown device")
-        valid = (b"0123456789abcdefABCDEF" if ascii_numbering == "manual" and device.base == 16 else b"0123456789")
+        # FX5 3E ASCII has an X/Y octal option; other base-16 devices
+        # (e.g. W/B) stay hexadecimal. Binary address bytes are unaffected.
+        if ascii_numbering == "fx5-octal" and device.name in ("X", "Y"):
+            base = 8
+        elif ascii_numbering in ("manual", "fx5-octal"):
+            base = device.base
+        else:
+            base = 10
+        valid = (b"0123456789abcdefABCDEF" if base == 16
+                 else b"01234567" if base == 8 else b"0123456789")
         if any(char not in valid for char in digits):
             raise ValueError("invalid address digits")
-        head = int(digits, device.base if ascii_numbering == "manual" else 10)
+        head = int(digits, base)
     else:
         head = reader.number(wire.address_size)
         device = profile.device_by_code(reader.number(wire.code_size))

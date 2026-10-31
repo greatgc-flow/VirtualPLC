@@ -87,8 +87,8 @@ class Server:
         if ascii_dword_order not in ("swapped", "client"):
             raise ValueError("ascii_dword_order must be swapped or client")
         self.ascii_dword_order = ascii_dword_order
-        if ascii_numbering not in ("compat", "manual"):
-            raise ValueError("ascii_numbering must be compat or manual")
+        if ascii_numbering not in ("compat", "manual", "fx5-octal"):
+            raise ValueError("ascii_numbering must be compat, manual or fx5-octal")
         self.ascii_numbering = ascii_numbering
         if fault_plan is not None and not isinstance(fault_plan, faults.FaultPlan):
             raise ValueError("fault_plan must be a FaultPlan or None")

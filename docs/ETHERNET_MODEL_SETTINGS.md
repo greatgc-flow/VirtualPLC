@@ -151,6 +151,10 @@ The separate `reference_only_models` object describes `fx5_cpu_builtin`,
 an explicit `unverified` list. These are **not** valid `--ethernet-model`
 values; their missing timer defaults are not inferred from Q/L/R.
 See [the hardware gap matrix](research/ETHERNET_HARDWARE_NEXT_20261031.md)
-for model-specific open questions and firmware differences.
+and [FX5 SLMP 1E/3E protocol gate](research/FX5_SLMP_FRAME_SCOPE_20261031.md)
+for model-specific open questions and firmware differences. A separate optional
+`--ascii-numbering fx5-octal` mode recognizes X/Y octal **addresses** on
+existing 3E/4E simulator profiles; this does not enable 1E, a runnable FX5
+preset, or FX5 firmware parity.
 
 Manufacturer citations: [L E71 Basic SH-081105ENG-G](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081105eng/sh081105engg.pdf) pp.35–36, [Q E71 Basic SH-080009ENG](https://www.mitsubishielectric.com/dl/fa/document/manual/plc/sh080009/sh080009x.pdf) pp.38–39, [Q E71 Application SH-080010ENG](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh080010/sh080010r.pdf), [iQ-R Ethernet Application SH-081257ENG](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf) pp.322–323, 396–397. These are **manual** references, not captured measurements from real hardware.
