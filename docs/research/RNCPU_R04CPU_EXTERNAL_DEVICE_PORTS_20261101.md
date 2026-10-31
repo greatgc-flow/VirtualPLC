@@ -113,3 +113,14 @@ allocation or external-device transport/protocol correctness.
   OS TCP stack behavior and physical device/packet tests. Retain
   issues #14, #2, #22. No automatic vendor-port binding, physical
   equipment connection, operational machine control, tags or PyPI.
+
+## 5. Optional multi-entry R04CPU static configuration review (PR #37)
+
+[Offline source-scoped batch linter](RNCPU_R04CPU_BATCH_LINT_20261101.md)
+reuses the per-entry R04CPU slot and user-port facts above.
+Duplicate slot numbers = static input error; reused numeric PLC port
+= **review-only** without TCP/UDP/connection-mode details; missing
+slots = optional **review-only**. Empty/omitted input and hardware
+scope are explicit. This does not model a native GX Works3 project,
+prove hardware behavior or declare the new manufacturer AG (2026-10)
+revision equivalent to AD.

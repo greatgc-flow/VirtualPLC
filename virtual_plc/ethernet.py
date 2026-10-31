@@ -467,6 +467,16 @@ _REFERENCE_HARDWARE = {
                 {"start": 62000, "end": 65534,
                  "service": "ftp_client_dynamic_tcp"},
             ],
+            # Manufacturer currently publishes AG (2026-10), but a full
+            # AD-vs-AG clause diff has not been obtained. This source
+            # table is deliberately AD-scoped until confirmed.
+            "manual_revision_gate": {
+                "validated_reference_revision": "AD",
+                "newer_catalog_revision": "AG",
+                "newer_catalog_published": "2026-10",
+                "newer_revision_comparison": "NOT_VERIFIED",
+                "catalog_url": "https://www.mitsubishielectric.com/fa/download/search.page?kisyu=%2Fplcr&mode=manual",
+            },
             "source": {
                 "manual": "SH-081257ENG-AD",
                 "page": "324-326",
@@ -897,4 +907,160 @@ def inspect_reference_rncpu_external_device(
             "reserved system services override numeric port ranges. "
             "No system ports are auto-bound and no RnCPU profile is enabled."
         ),
+    }
+
+def inspect_reference_rncpu_external_device_batch(
+        entries=None, model="R04CPU", report_slot_gaps=True):
+    """Pure static review of multiple R04CPU built-in external-device rows.
+
+    Reuses the already official-source-backed single-row inspector
+    (SH-081257ENG-AD pp.324-326/554). Cross-row diagnostics (duplicate
+    setting numbers, optional gaps and possible own-port reuse) are
+    *our offline lint rules*, NOT Mitsubishi firmware error codes.
+    Without per-row transport/direction details, duplicate numeric ports
+    are only a review warning, never asserted to be a socket conflict.
+
+    entries: None (not supplied), [] (explicit empty), or a list of
+    {"connection_number": int 1..16, "plc_port": int|None}.
+    Never fills an unspecified field, binds a socket or reads a PLC.
+    """
+    if type(model) is not str or model != "R04CPU":
+        raise ValueError("batch preflight supports only R04CPU CPU built-in")
+    if type(report_slot_gaps) is not bool:
+        raise ValueError("report_slot_gaps must be a boolean")
+    spec = _REFERENCE_HARDWARE["rncpu_builtin"][
+        "external_device_configuration_reference"
+    ]
+    limit = spec["connection_number_range"][1]
+    if entries is None:
+        input_state = "NOT_PROVIDED"
+        raw_entries = []
+    elif type(entries) is list:
+        input_state = "EMPTY" if not entries else "PROVIDED"
+        raw_entries = entries
+    else:
+        raise ValueError("entries must be a list, or omitted (NOT_PROVIDED)")
+    if len(raw_entries) > limit:
+        raise ValueError("configuration contains more than 16 R04CPU user slots")
+
+    checked = []
+    used_slots = {}
+    used_ports = {}
+    for pos, entry in enumerate(raw_entries):
+        if (type(entry) is not dict or
+                set(entry) != {"connection_number", "plc_port"} or
+                entry["connection_number"] is None):
+            raise ValueError(
+                "each row requires an explicit connection_number and plc_port"
+            )
+        # Single-row inspector validates all types/ranges/known system
+        # reservations. Never duplicate its vendor truth table here.
+        report = inspect_reference_rncpu_external_device(
+            model, entry["connection_number"], entry["plc_port"]
+        )
+        checked.append(report)
+        used_slots.setdefault(report["connection_number"], []).append(pos)
+        if report["plc_port"] is not None:
+            used_ports.setdefault(report["plc_port"], []).append(pos)
+
+    diagnostics = []
+    for pos, report in enumerate(checked):
+        if not report["plc_port_configurable"]:
+            diagnostics.append({
+                "code": "VENDOR_PORT_NOT_CONFIGURABLE",
+                "severity": "error",
+                "positions": [pos],
+                "plc_port": report["plc_port"],
+                "classification": report["plc_port_classification"],
+                "explanation": (
+                    "This numeric PLC own port is not configurable "
+                    "according to the scoped AD manual single-row table."
+                ),
+            })
+
+    for number in sorted(used_slots):
+        positions = used_slots[number]
+        if len(positions) > 1:
+            diagnostics.append({
+                "code": "DUPLICATE_SETTING_NUMBER",
+                "severity": "error",
+                "connection_number": number,
+                "positions": positions[:],
+                "explanation": (
+                    "Duplicate GX Works3 user setting-number keys in the "
+                    "supplied rows; static collision, not a Mitsubishi "
+                    "protocol end code."
+                ),
+            })
+
+    for port in sorted(used_ports):
+        positions = used_ports[port]
+        if len(positions) > 1:
+            diagnostics.append({
+                "code": "POTENTIAL_OWN_PORT_REUSE",
+                "severity": "review",
+                "plc_port": port,
+                "positions": positions[:],
+                "explanation": (
+                    "Numeric PLC own port is reused. Review transport, "
+                    "connection mode and service separately; shared "
+                    "numeric port alone does not prove a socket conflict."
+                ),
+            })
+
+    if report_slot_gaps and checked:
+        # Advisory-only; manual error/rejection semantics for gaps are
+        # not independently confirmed in the current AG revision.
+        missing = [number for number in range(1, max(used_slots) + 1)
+                   if number not in used_slots]
+        if missing:
+            diagnostics.append({
+                "code": "SLOT_GAP_REVIEW",
+                "severity": "review",
+                "missing_slots": missing,
+                "positions": [],
+                "explanation": (
+                    "Configuration numbers have gaps before the highest "
+                    "selected slot. Advisory only; manufacturer rejection "
+                    "behavior is NOT VERIFIED."
+                ),
+            })
+
+    if input_state == "NOT_PROVIDED":
+        state = "NOT_PROVIDED"
+    elif input_state == "EMPTY":
+        state = "EMPTY"
+    elif any(d["severity"] == "error" for d in diagnostics):
+        state = "REJECTED_STATIC_SETTINGS"
+    elif diagnostics:
+        state = "REVIEW_REQUIRED"
+    else:
+        state = "NO_STATIC_ISSUES_FOUND"
+
+    revisions = spec["manual_revision_gate"]
+    return {
+        "model": model,
+        "interface": "rncpu_builtin",
+        "input_state": input_state,
+        "static_preflight_state": state,
+        "rows": checked,
+        "diagnostics": diagnostics,
+        "report_slot_gaps": report_slot_gaps,
+        "vendor_manual_revision": revisions["validated_reference_revision"],
+        "newer_manual_revision": revisions["newer_catalog_revision"],
+        "newer_manual_comparison": revisions["newer_revision_comparison"],
+        "source": deepcopy(spec["source"]),
+        "manual_revision_gate": deepcopy(revisions),
+        "status": "SOURCE_SCOPED_STATIC_LINT_NOT_VENDOR_CERTIFIED",
+        "vendor_end_code": None,
+        "not_a_simultaneous_tcp_socket_limit": True,
+        "physical_hardware_certified": False,
+        "simulator_network_affected": False,
+        "notes": [
+            "The scalar fields are sourced from SH-081257ENG-AD, not AG.",
+            "Duplicates/gaps/port-reuse are offline static lint decisions, "
+            "not Mitsubishi runtime error semantics.",
+            "No active TCP/UDP client count or socket binding is inferred.",
+            "No result certifies an editable GX Works3 project or real PLC.",
+        ],
     }

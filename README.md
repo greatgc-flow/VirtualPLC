@@ -458,3 +458,17 @@ These are settings, **not** active TCP client limits or newly opened
 VirtualPLC ports. It is available from a source checkout and remains
 reference-only; see [R04CPU source matrix](docs/research/RNCPU_R04CPU_EXTERNAL_DEVICE_PORTS_20261101.md)
 and `virtual-plc guide ethernet --json`.
+
+### R04CPU external-device multi-entry offline review
+
+From a source checkout,
+`inspect_reference_rncpu_external_device_batch(entries=None,
+model="R04CPU", report_slot_gaps=True)` reviews multiple GX Works3
+CPU-built-in external-device configuration rows. It composes the
+existing single-row manufacturer port/slot checks, identifies
+duplicate configuration numbers, flags potential own-port reuse
+and optionally reports missing slot numbers. Warnings do **not**
+mean the manufacturer rejects a physical connection; no network
+port is opened. See [examples and source revision gate](docs/research/RNCPU_R04CPU_BATCH_LINT_20261101.md).
+Latest manufacturer manual AG (2026-10) is known but not yet
+compared with the AD reference used here.
