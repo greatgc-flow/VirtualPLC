@@ -9,6 +9,7 @@ Implementation: issue [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14
 | CLI model | Engineering environment | PLC wire profile | Source of defaults |
 | --- | --- | --- | --- |
 | `qj71e71` | GX Works2, QJ71E71-100/-B5/-B2 Ethernet module | `Q` | Mitsubishi SH-080009ENG, pp.38–39; timer-range notes in SH-080010ENG |
+| `lj71e71` | GX Works2, LJ71E71-100 Ethernet module | `L` | Mitsubishi SH-081105ENG-G, pp.35–36, buffer-memory defaults and operation setting |
 | `rj71en71` | GX Works3, iQ-R RJ71EN71 Ethernet network module | `iQ-R` | Mitsubishi SH-081257ENG rev AD, pp.322–323, 396–397 |
 
 **Do not substitute** this RJ71EN71 network-module preset for an RnCPU built-in Ethernet port. LCPU, FX5U and FX5-ENET have their own hardware/firmware and need independent verification before implementing presets.
@@ -18,6 +19,9 @@ Implementation: issue [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14
 ```powershell
 # GX Works2 Q E71:
 virtual-plc --ethernet-model qj71e71 --show-effective-ethernet
+
+# GX Works2 MELSEC-L LJ71E71-100:
+virtual-plc --profile L --ethernet-model lj71e71 --show-effective-ethernet
 
 # GX Works3 RJ71EN71 (must also choose matching wire profile):
 virtual-plc --profile iQ-R --ethernet-model rj71en71 --show-effective-ethernet
@@ -60,7 +64,7 @@ JSON is intentionally strict: unrecognized fields, noninteger timers, booleans u
 
 ## 2. Manufacturer timer defaults
 
-The generated model registry is the authoritative implementation record. For **both currently listed models**, its factory values are:
+The generated model registry is the authoritative implementation record. For **all three currently supported hardware models**, its factory values are:
 
 | Key (milliseconds unless noted) | Factory value | Manufacturer concept | Runtime effect |
 | --- | ---: | --- | --- |
@@ -76,7 +80,7 @@ The generated model registry is the authoritative implementation record. For **b
 
 Ranges and increments **differ by hardware**, so do not simply reuse GX Works2 values in GX Works3:
 
-- **QJ71E71** uses 500ms increments; most TCP timers have a minimum of 1000ms, IP assembly and alive intervals a minimum of 500ms. Defaults and Q-format buffer-memory ticks are reported as **milliseconds**, not raw GX Works 500ms units. The manufacturer permits up to 32767 ticks for most fields, IP assembly up to 32766 ticks, retries 1–32767.
+- **QJ71E71 and LJ71E71-100** use 500ms increments; most TCP timers have a minimum of 1000ms, IP assembly and alive intervals a minimum of 500ms. Defaults and Q-format buffer-memory ticks are reported as **milliseconds**, not raw GX Works 500ms units. The manufacturer permits up to 32767 ticks for most fields, IP assembly up to 32766 ticks, retries 1–32767.
 - **RJ71EN71** allows 100ms increments across 100–16,383,000ms, and retries 1–99,999. For this model, the following manual constraints are validated for each override: `response_monitor >= tcp_ulp >= tcp_end >= tcp_resend > ip_assembly` and `tcp_zero_window == tcp_resend`.
 - A single override only replaces named keys; the remaining values retain their factory defaults. Use an explicit, locally saved JSON file so configuration can be inspected/reproduced.
 
@@ -86,7 +90,7 @@ The MC/SLMP request-frame monitoring timer (request timer field, 250ms units) an
 
 ## 3. Applied simulation policies (opt-in)
 
-| Setting | QJ71E71 / RJ71EN71 factory value | Effective behavior |
+| Setting | QJ71E71 / LJ71E71 / RJ71EN71 factory value | Effective behavior |
 | --- | --- | --- |
 | `communication_data_code` | `binary` | Only the selected binary or ASCII MC encoding is accepted on all TCP/UDP listeners. Mismatch **closes TCP** or **drops UDP** (documented simulator policy; exact physical-module mismatch response unverified). |
 | `allow_write_during_run` | `false` | When CPU state = RUN, MC batch/random write commands 1401/1402 are rejected with end code `0x0055`; memory remains intact. STOP allows the writes. `true` permits them during RUN. |
@@ -114,7 +118,7 @@ with Server(profile="Q", ethernet_model="qj71e71",
     print(plc.addresses, plc.ethernet.report()["model"])
 ```
 
-The `Server` constructor validates model/PLC profile matching before listening. `ethernet_overrides` without `ethernet_model` is an error. Selecting RJ71EN71 requires `profile="iQ-R"`.
+The `Server` constructor validates model/PLC profile matching before listening. `ethernet_overrides` without `ethernet_model` is an error. Selecting LJ71E71 requires `profile="L"`; RJ71EN71 requires `profile="iQ-R"`. Q/L timer defaults match numerically, but their manual provenance and hardware identity remain separate.
 
 ## 5. Nonfeatures / forward-compatibility gate
 
@@ -127,4 +131,6 @@ The `Server` constructor validates model/PLC profile matching before listening. 
 
 `tests/test_ethernet_settings.py` provides table-driven model defaults, Q/R units/ranges, invalid JSON, override precedence, introspection without binding, profile mismatch, legacy-mode safety, TCP/UDP data-code isolation, shared RUN-write protection, STOP/enable overrides and source/fidelity reporting. CI covers Linux and Windows on Python 3.10–3.13.
 
-Manufacturer citations: [Q E71 Basic SH-080009ENG](https://www.mitsubishielectric.com/dl/fa/document/manual/plc/sh080009/sh080009x.pdf) pp.38–39, [Q E71 Application SH-080010ENG](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh080010/sh080010r.pdf), [iQ-R Ethernet Application SH-081257ENG](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf) pp.322–323, 396–397. These are **manual** references, not captured measurements from real hardware.
+See [remaining RnCPU and FX5 hardware gap matrix](research/ETHERNET_HARDWARE_NEXT_20261031.md): neither RnCPU built-in nor FX5U/FX5-ENET is a runnable Ethernet model yet.
+
+Manufacturer citations: [L E71 Basic SH-081105ENG-G](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081105eng/sh081105engg.pdf) pp.35–36, [Q E71 Basic SH-080009ENG](https://www.mitsubishielectric.com/dl/fa/document/manual/plc/sh080009/sh080009x.pdf) pp.38–39, [Q E71 Application SH-080010ENG](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh080010/sh080010r.pdf), [iQ-R Ethernet Application SH-081257ENG](https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf) pp.322–323, 396–397. These are **manual** references, not captured measurements from real hardware.

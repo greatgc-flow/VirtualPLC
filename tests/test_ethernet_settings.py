@@ -93,7 +93,7 @@ def test_unknown_and_out_of_range_config_rejected_before_bind(model, overrides):
 
 def test_model_catalog_is_json_and_no_claim_that_reference_timers_are_applied():
     data = model_catalog()
-    assert set(data) == {"qj71e71", "rj71en71"}
+    assert set(data) == {"qj71e71", "lj71e71", "rj71en71"}
     assert all(spec["source"]["url"].startswith("https://") for spec in data.values())
     assert all(spec["parameters"]["tcp_resend_ms"]["effect"] == "reference_only"
                for spec in data.values())
@@ -194,7 +194,7 @@ def test_cli_effective_config_inspection_and_guide_json(tmp_path, monkeypatch, c
     assert report["parameters"]["allow_write_during_run"]["value"] is True
     assert main(["guide", "ethernet", "--json"]) == 0
     guide = json.loads(capsys.readouterr().out)
-    assert set(guide["models"]) == {"qj71e71", "rj71en71"}
+    assert set(guide["models"]) == {"qj71e71", "lj71e71", "rj71en71"}
 
 
 @pytest.mark.parametrize("config", [{"unexpected": 1}, {"timers": {"tcp_ulp_ms": 10}},

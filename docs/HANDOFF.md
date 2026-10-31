@@ -1,4 +1,22 @@
-# Handoff (2026-10-23)
+# Handoff (historical baseline 2026-10-23)
+
+## Current-source checkpoint (2026-10-31)
+
+**Use remote `main` and GitHub CI as the current source of truth.** The
+contents below are historical and can include outdated release/backlog claims.
+Published PyPI v0.5.0 predates the 2026-10-31 multi-TCP/UDP and GX Works
+Ethernet model changes. One independent PLC runs in **one OS process**; all
+listeners of that process share its state. The currently implemented model
+keys are `qj71e71` (Q), `lj71e71` (L) and `rj71en71` (iQ-R).
+Review [Ethernet settings](ETHERNET_MODEL_SETTINGS.md), the
+[manufacturer research matrix](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md),
+[remaining hardware gaps](research/ETHERNET_HARDWARE_NEXT_20261031.md) and
+[issue #14](https://github.com/greatgc-flow/VirtualPLC/issues/14) for
+accuracy and future changes. Vendor TCP/IP timers are *reference-only*;
+physical PLC equivalence is not claimed.
+
+---
+
 
 State: virtual-plc 0.5.0 released (PyPI + GitHub), main clean, CI green, 6,320 local tests pass.
 Design: docs/DESIGN.md. Unverified-vs-real-PLC backlog: issue #2.

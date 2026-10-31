@@ -18,7 +18,8 @@ See the [canonical CLI reference](../README.md#cli-reference),
 - `max_clients=64` limits concurrent accepted clients; an excess connection is
   closed before creating a worker, without affecting existing clients.
   Positive integer overrides are supported by `--max-clients N`.
-- Opt-in `ethernet_model="qj71e71"` (profile Q) or `"rj71en71"`
+- Opt-in `ethernet_model="qj71e71"` (profile Q), `"lj71e71"`
+  (profile L), or `"rj71en71"`
   (profile iQ-R) selects vendor-manual-derived Ethernet factory settings.
   `ethernet_overrides` accepts validated `timers` (integer ms or count),
   `communication_data_code` (`binary`/`ascii`) and

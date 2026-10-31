@@ -33,6 +33,18 @@ _MODELS = {
         "timer_max_ms": 32767 * 500,
         "retry_max": 32767,
     },
+    "lj71e71": {
+        "profile": "L",
+        "editor": "GX Works2",
+        "manual": "SH-081105ENG",
+        "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081105eng/sh081105engg.pdf",
+        "timer_pages": "35",
+        "policy_pages": "36",
+        "ports": {"auto_open_udp": 5000},
+        "timer_step_ms": 500,
+        "timer_max_ms": 32767 * 500,
+        "retry_max": 32767,
+    },
     "rj71en71": {
         "profile": "iQ-R",
         "editor": "GX Works3",
@@ -62,7 +74,7 @@ def _timer_bound(model, spec, name):
         "ip_assembly_ms", "alive_start_ms", "alive_interval_ms"
     ) else 2 * step
     maximum = spec["timer_max_ms"]
-    if model == "qj71e71" and name == "ip_assembly_ms":
+    if model in ("qj71e71", "lj71e71") and name == "ip_assembly_ms":
         maximum = 32766 * step
     return minimum, maximum, step
 
