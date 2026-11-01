@@ -1,5 +1,16 @@
 # VirtualPLC — Design
 
+**PDF evidence chain-of-custody safeguard (PR #43):**
+Local offline manual-evidence reports reject duplicate input SHA-256
+across all edition roles and rehash each source after text extraction,
+failing closed if the original bytes changed. This ensures a report's
+captured digest is consistent with its source during extraction and
+prevents one document from masquerading as multiple revisions.
+It is not vendor authentication or a complete defense against
+concurrent filesystem modification; human clause review remains
+mandatory. The tool remains separate from the installed simulator.
+[PR #43](https://github.com/greatgc-flow/VirtualPLC/pull/43).
+
 **Developer-only offline manual PDF evidence candidate utility (PR #42):**
 `tools/manual_revision_evidence.py` is an independent stdlib-only
 local CLI, separate from the runnable simulator and manufacturer SSOT.

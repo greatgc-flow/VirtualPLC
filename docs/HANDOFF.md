@@ -1,3 +1,40 @@
+## 2026-11-01 local Mitsubishi PDF evidence integrity and next-chat continuity (PR #43)
+
+Latest verified starting main: `54e65cb3074187cd1adb2e006d28aeaf58948a2e`
+([CI #41271965936](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41271965936)
+9/9 PASS, Ubuntu3.11 7,094 tests). New focused
+[PR #43](https://github.com/greatgc-flow/VirtualPLC/pull/43),
+branch `fix/manual-evidence-source-integrity-20261101`, validates
+source chain of custody for the optional local manual PDF kit:
+duplicate source SHA-256 is rejected across PDF edition roles even
+when filenames differ, and each PDF is rehashed after extraction
+to detect same-length or length-changing in-place modifications.
+No new dependencies, API/report schema changes for valid inputs,
+runtime PLC/network changes, or source-SSOT promotion.
+
+Tests-only RED `7aab81d3d9c018f97f7cc82603b389b755d4d0ed`,
+[CI #41276732098](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41276732098):
+Ubuntu Py3.11 logged **7,095 pass and 4 expected fails** (no
+ValueError for duplicate PDF and mutation), genuine RED. Code
+implementation `8a545eb0eaeb94ec0de7e648cc9640be294a64fd`.
+Final PR and merged-main CI exact HEAD 9/9 must be checked
+**after** the latest change; never claim GREEN from earlier CI.
+[Runbook](research/RNCPU_MANUAL_PDF_EVIDENCE_KIT_20261101.md).
+
+Manufacturer current catalogue confirms Ethernet Application
+SH-081257ENG-AG (2026-10) and CPU Module SH-082488ENG-I
+(2026-08). Actual authentic PDF bytes were unavailable in
+this environment again (official reader/host failures); no
+AG-vs-AD or I-vs-E clause equality was established.
+Both `newer_revision_comparison` remain **NOT_VERIFIED**.
+Human next action: acquire authentic AD+AG and E+I PDF pairs,
+run the kit locally, retain PDF SHA/source URL, then inspect
+true manufacturer clause/tables and review with #14 and #2.
+
+For seamless continuity, read
+[dedicated next-chat prompt](handoff/START_NEW_CHAT_VIRTUALPLC_20261101.md)
+and fetch latest main/CI before modifying anything.
+
 ## 2026-11-01 offline Mitsubishi AD/AG and E/I manual PDF evidence kit (PR #42)
 
 Official [Mitsubishi R04CPU manual catalogue](https://www.mitsubishielectric.com/fa/products/faspec/download.page?category=ex&formNm=RnCPU_R04CPU_3322&id=spec&kisyu=%2Fplcr&lang=2)

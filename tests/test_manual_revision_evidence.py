@@ -177,3 +177,66 @@ def test_no_pdf_bytes_or_full_text_exported_in_report(kit, pdfs):
     assert "SECRET" * 50 not in payload
     assert len(report["pairs"]["ethernet"]["topics"][
         "external_device_configuration"]["older_examples"][0]) <= 180
+
+
+def test_same_pdf_path_cannot_masquerade_as_both_editions(kit, pdfs):
+    """Even if text extraction differs, a single source cannot be AD and AG."""
+    one = pdfs["ethernet_ad"]
+    with pytest.raises(ValueError, match="duplicate.*PDF"):
+        kit.generate_report(
+            {"ethernet": (one, one)},
+            extract=lambda path: "SH-081257ENG-AD\fExternal Device Configuration",
+        )
+
+
+def test_byte_identical_distinct_files_rejected_across_edition_pair(kit, pdfs):
+    """Two different names are not independent evidence when bytes match."""
+    pdfs["cpu_i"].write_bytes(pdfs["cpu_e"].read_bytes())
+    with pytest.raises(ValueError, match="duplicate.*PDF"):
+        kit.generate_report(
+            {"cpu": (pdfs["cpu_e"], pdfs["cpu_i"])},
+            extract=lambda path: "Opening Method A031H",
+        )
+
+
+def test_duplicate_evidence_rejected_even_when_manual_family_differs(kit, pdfs):
+    """An incorrectly reused source across manual families is not a valid pack."""
+    pdfs["cpu_e"].write_bytes(pdfs["ethernet_ad"].read_bytes())
+    with pytest.raises(ValueError, match="duplicate.*PDF"):
+        kit.generate_report({
+            "ethernet": (pdfs["ethernet_ad"], pdfs["ethernet_ag"]),
+            "cpu": (pdfs["cpu_e"], pdfs["cpu_i"]),
+        }, extract=lambda path: "Opening Method A031H")
+
+
+def test_pdf_replaced_during_extraction_rejects_even_equal_size(kit, pdfs):
+    """Recorded SHA must refer to the exact bytes used for extraction."""
+    source = pdfs["cpu_i"]
+    before = source.read_bytes()
+
+    def unsafe_extract(path):
+        if path == source:
+            payload = bytearray(before)
+            payload[-6] ^= 1  # Same byte length, different SHA-256
+            path.write_bytes(bytes(payload))
+        return "Opening Method A031H"
+
+    with pytest.raises(ValueError, match="changed during extraction"):
+        kit.generate_report(
+            {"cpu": (pdfs["cpu_e"], source)},
+            extract=unsafe_extract,
+        )
+    assert source.stat().st_size == len(before)
+
+
+def test_stable_sources_remain_read_only_and_not_verified(kit, pdfs):
+    """New checks must not mutate input or accidentally certify parity."""
+    original = {k: p.read_bytes() for k, p in pdfs.items()}
+    report = kit.generate_report({
+        "ethernet": (pdfs["ethernet_ad"], pdfs["ethernet_ag"]),
+        "cpu": (pdfs["cpu_e"], pdfs["cpu_i"]),
+    }, extract=lambda path: "Opening Method A031H")
+    assert report["manual_revision_equivalence"] == "NOT_VERIFIED"
+    assert report["physical_hardware_certified"] is False
+    assert set(report["pairs"]) == {"cpu", "ethernet"}
+    assert {k: p.read_bytes() for k, p in pdfs.items()} == original
