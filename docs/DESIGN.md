@@ -1,5 +1,23 @@
 # VirtualPLC — Design
 
+**Developer-only offline manual PDF evidence candidate utility (PR #42):**
+`tools/manual_revision_evidence.py` is an independent stdlib-only
+local CLI, separate from the runnable simulator and manufacturer SSOT.
+It requires locally obtained PDF edition **pairs** (Ethernet AD+AG,
+CPU E+I) and optional local `pdftotext`; it does not download or
+publish source PDFs, access a PLC, or update `ethernet_reference.py`.
+It fingerprints each PDF with SHA-256, checks a weak edition label,
+and emits bounded, 1-based *PDF-page* keyword candidates for manual
+clause comparison. Identical keyword counts cannot certify that
+pages/clauses or hardware behavior are equivalent: output status
+remains `SOURCE_CLAUSE_REVIEW_REQUIRED`,
+`manual_revision_equivalence=NOT_VERIFIED`, and
+`physical_hardware_certified=false`. GitHub CI uses synthetic
+PDF headers/text rather than proprietary source PDFs. Manual review
+and source provenance evidence are still required to lift a gate.
+[Runbook](research/RNCPU_MANUAL_PDF_EVIDENCE_KIT_20261101.md),
+[PR #42](https://github.com/greatgc-flow/VirtualPLC/pull/42).
+
 **Two independently revision-gated R04CPU manual sources (PR #41):**
 `inspect_reference_r04cpu_configuration` keeps the existing
 `manual_revision` input for Ethernet Application `SH-081257ENG-AD`
