@@ -240,3 +240,81 @@ def test_stable_sources_remain_read_only_and_not_verified(kit, pdfs):
     assert report["physical_hardware_certified"] is False
     assert set(report["pairs"]) == {"cpu", "ethernet"}
     assert {k: p.read_bytes() for k, p in pdfs.items()} == original
+
+
+def _mock_pdf_extract_for_atomic_output(kit, monkeypatch):
+    """Local-only fixture; never touches network, real manuals or a PLC."""
+    monkeypatch.setattr(
+        kit, "extract_pdf_text",
+        lambda path, executable="pdftotext": "SH-082488ENG-"
+        + ("E" if path.stem == "cpu_e" else "I")
+        + "\\fOpening Method A031H",
+    )
+
+
+def test_atomic_output_preserves_prior_evidence_if_publish_fails(
+        kit, pdfs, tmp_path, monkeypatch, capsys):
+    """A failing atomic replacement must not truncate an existing report."""
+    import os
+    _mock_pdf_extract_for_atomic_output(kit, monkeypatch)
+    output = tmp_path / "evidence.json"
+    output.write_text("previous verified evidence\\n", encoding="utf-8")
+
+    def deny_replace(source, destination):
+        raise OSError("simulated replace failure")
+
+    monkeypatch.setattr(os, "replace", deny_replace)
+    with pytest.raises(SystemExit) as exc:
+        kit.main(["--cpu-e", str(pdfs["cpu_e"]), "--cpu-i", str(pdfs["cpu_i"]),
+                  "--output", str(output), "--overwrite"])
+    assert exc.value.code == 2
+    assert output.read_text(encoding="utf-8") == "previous verified evidence\\n"
+    assert capsys.readouterr().out == ""
+    assert list(tmp_path.glob(".evidence.json.*.tmp")) == []
+
+
+def test_atomic_success_commits_complete_stdout_identical_json(
+        kit, pdfs, tmp_path, monkeypatch, capsys):
+    """Report becomes visible in one replacement, identical to console proof."""
+    import os
+    _mock_pdf_extract_for_atomic_output(kit, monkeypatch)
+    output = tmp_path / "evidence.json"
+    output.write_text("old report\\n", encoding="utf-8")
+    real_replace = os.replace
+    calls = []
+
+    def record_replace(source, destination):
+        calls.append((Path(source), Path(destination)))
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", record_replace)
+    assert kit.main(["--cpu-e", str(pdfs["cpu_e"]), "--cpu-i", str(pdfs["cpu_i"]),
+                     "--output", str(output), "--overwrite"]) == 0
+    shown = capsys.readouterr().out
+    assert shown == output.read_text(encoding="utf-8")
+    assert json.loads(shown)["manual_revision_equivalence"] == "NOT_VERIFIED"
+    assert len(calls) == 1
+    assert calls[0][1] == output
+    assert calls[0][0].parent == tmp_path
+    assert list(tmp_path.glob(".evidence.json.*.tmp")) == []
+
+
+def test_atomic_new_report_refuses_concurrent_destination_creation(
+        kit, pdfs, tmp_path, monkeypatch, capsys):
+    """No --overwrite must never replace a concurrent writer's report."""
+    import os
+    _mock_pdf_extract_for_atomic_output(kit, monkeypatch)
+    output = tmp_path / "evidence.json"
+
+    def concurrent_create(source, destination):
+        output.write_text("another writer\\n", encoding="utf-8")
+        raise FileExistsError("destination created concurrently")
+
+    monkeypatch.setattr(os, "link", concurrent_create)
+    with pytest.raises(SystemExit) as exc:
+        kit.main(["--cpu-e", str(pdfs["cpu_e"]), "--cpu-i", str(pdfs["cpu_i"]),
+                  "--output", str(output)])
+    assert exc.value.code == 2
+    assert output.read_text(encoding="utf-8") == "another writer\\n"
+    assert capsys.readouterr().out == ""
+    assert list(tmp_path.glob(".evidence.json.*.tmp")) == []
