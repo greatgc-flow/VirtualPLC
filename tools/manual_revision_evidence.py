@@ -8,10 +8,12 @@ stdlib-only, and this utility never accesses any network or PLC.
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
 
 
 PAIRS = {
@@ -224,6 +226,42 @@ def generate_report(pairs, extract=None, max_hits=12, executable="pdftotext"):
     }
 
 
+def write_report_atomic(output, payload, overwrite=False):
+    """Publish complete JSON or leave the previous report untouched.
+
+    Staging is in the destination directory. With --overwrite, os.replace
+    atomically replaces the destination. Without it, os.link atomically
+    claims an absent name and refuses races with another writer.
+    Unsupported hard-link filesystems fail closed; no partial JSON is
+    published. fsync flushes staging data, not the parent directory.
+    """
+    output = Path(output)
+    if output.exists() and not overwrite:
+        raise ValueError("output already exists; pass --overwrite explicitly")
+    staging = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", newline="\n",
+                prefix="." + output.name + ".", suffix=".tmp",
+                dir=str(output.parent), delete=False) as stream:
+            staging = stream.name
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        if overwrite:
+            os.replace(staging, output)
+        else:
+            try:
+                os.link(staging, output)
+            except FileExistsError as exc:
+                raise ValueError(
+                    "output already exists; pass --overwrite explicitly"
+                ) from exc
+    finally:
+        if staging is not None and os.path.exists(staging):
+            os.unlink(staging)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Offline Mitsubishi manual PDF evidence; always NOT_VERIFIED."
@@ -255,9 +293,7 @@ def main(argv=None):
             output = Path(args.output)
             if any(output.resolve() == p.resolve() for pair in pairs.values() for p in pair):
                 raise ValueError("output must not overwrite a source PDF")
-            if output.exists() and not args.overwrite:
-                raise ValueError("output already exists; pass --overwrite explicitly")
-            output.write_text(payload, encoding="utf-8")
+            write_report_atomic(output, payload, overwrite=args.overwrite)
         sys.stdout.write(payload)
     except (OSError, ValueError) as exc:
         parser.error(str(exc))

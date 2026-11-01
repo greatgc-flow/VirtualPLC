@@ -1,3 +1,24 @@
+## 2026-11-01 developer-only manual evidence atomic JSON output (PR #44)
+
+Session starting main: `4a3e4083584136e27e0fe1aaa063cfae2fb1f438`,
+[main CI #41277321048](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41277321048)
+9/9 PASS, Ubuntu3.11 7,099 PASS.
+Tests-first RED commit `d3719c1aaf7c001f64897b02f9ddabe878cdbf70`
+in [PR #44](https://github.com/greatgc-flow/VirtualPLC/pull/44);
+[RED CI #41282058680](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41282058680)
+Windows Python3.13: **7,103 PASS, 3 expected FAIL** for direct
+overwrite, missing atomic publication and no-overwrite race.
+Implementation `c99d9bd6316b488bedfafb41e6b360bf5e716e41`
+stages a same-directory tempfile, flushes/fsyncs it, atomically
+replaces with explicit --overwrite or exclusively links without it.
+On publication failure the old report remains and temporary file is
+removed. Unsupported hard-link filesystems fail closed.
+No runtime/socket/CLI schema changes, dependencies, manufacturer PDF
+redistribution, real PLC or PyPI. Official AG/I catalogue publication
+still does not establish AD↔AG or E↔I clause equivalence: NOT_VERIFIED.
+Before claiming GREEN, verify final candidate PR CI exactly 9/9,
+then squash merge and verify independent main push CI exactly 9/9.
+
 ## 2026-11-01 local Mitsubishi PDF evidence integrity and next-chat continuity (PR #43)
 
 Latest verified starting main: `54e65cb3074187cd1adb2e006d28aeaf58948a2e`
