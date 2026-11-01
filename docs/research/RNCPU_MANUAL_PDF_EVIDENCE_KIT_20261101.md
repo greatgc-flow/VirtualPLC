@@ -44,6 +44,18 @@ Only one complete pair may be supplied (omit both flags for the other
 family). `--max-hits 12` (default) controls bounded page candidates;
 `--overwrite` must be explicit before replacing an existing report.
 The JSON written to `--output` is exactly the JSON printed to stdout.
+
+**Output file integrity (PR #44):** The CLI stages JSON in the output
+directory, flushes/fsyncs it, then atomically publishes a complete report.
+Existing output is replaced only with `--overwrite`, preserving the old
+report if publication fails. Without `--overwrite`, exclusive hard-link
+creation refuses a concurrent writer's destination. On filesystems
+without hard-link support, publication fails safely; it does not fall
+back to a partial write. Temporary staging files are cleaned on errors.
+This is atomic visibility on supported filesystems, not power-loss
+durability (parent directory not fsynced), proof of manufacturer PDF
+authenticity or evidence that AD/AG and E/I clauses are equal.
+
 The script refuses to overwrite any supplied source PDF.
 
 Example on POSIX/Linux:
