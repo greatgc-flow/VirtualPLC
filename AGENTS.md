@@ -19,8 +19,12 @@ This file is for agents developing this repository. For product usage, run
 - `virtual_plc/__main__.py:build_parser` owns CLI flags, defaults and help.
 - `virtual_plc/profiles.py` and command dispatch tables own profile/device/command data.
 - Offline-only oracle: `virtual_plc/oracle.py`; no network/control/certification (`docs/PHYSICAL_ORACLE.md`).
-- `virtual_plc/ethernet.py` owns runnable defaults and reference-only
-  FX5/RnCPU facts/unknowns; `guide ethernet --json` projects both.
+- `virtual_plc/ethernet.py` owns **runnable** Q/L/iQ-R Ethernet defaults,
+  configuration and legacy reference import re-exports.
+- `virtual_plc/ethernet_reference.py` exclusively owns **offline-only**
+  FX5/RnCPU manufacturer reference facts/UNKNOWNs and inspectors; it must not
+  import runnable EthernetSettings. `guide ethernet --json` projects both.
+  Keep vendor source data single-owned; preserve legacy imports.
 - [VerySimpleGuide](https://github.com/greatgc-flow/VerySimpleGuide):
   prefer minimal CLI, explicit overrides and verifiable behavior.
 - `virtual_plc/guide.py` owns compact English usage prose; tables are generated.
