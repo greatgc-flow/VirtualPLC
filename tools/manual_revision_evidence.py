@@ -140,6 +140,9 @@ def generate_report(pairs, extract=None, max_hits=12, executable="pdftotext"):
             return extract_pdf_text(path, executable=executable)
 
     pair_reports = {}
+    # A source hash must identify exactly one edition role across the report.
+    # Different filenames are not independent sources when their bytes match.
+    seen_sources = {}
     for kind in sorted(pairs):
         paths = pairs[kind]
         if type(paths) is not tuple or len(paths) != 2 or any(p is None for p in paths):
@@ -149,7 +152,25 @@ def generate_report(pairs, extract=None, max_hits=12, executable="pdftotext"):
         for label, raw_path in zip(("older", "newer"), paths):
             path = Path(raw_path)
             metadata = fingerprint_pdf(path)
+            digest = metadata["sha256"]
+            role = "{}/{}".format(kind, label)
+            if digest in seen_sources:
+                raise ValueError(
+                    "duplicate PDF bytes for {} and {}; each revision needs "
+                    "independent source evidence".format(seen_sources[digest], role)
+                )
+            seen_sources[digest] = role
+
             text = extract(path)
+            # The digest in the report must identify the bytes from which
+            # text was extracted. Local PDFs may be replaced during review.
+            verified = fingerprint_pdf(path)
+            if (metadata["sha256"] != verified["sha256"] or
+                    metadata["bytes"] != verified["bytes"]):
+                raise ValueError(
+                    "PDF changed during extraction: {}; rerun on stable "
+                    "originals".format(path)
+                )
             if type(text) is not str or not text.strip():
                 raise ValueError("extracted manual text is absent: {}".format(path))
             pages = split_pages(text)
