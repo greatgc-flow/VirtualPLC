@@ -1,3 +1,5 @@
+# VirtualPLC — Design
+
 **Atomic offline evidence report publication (PR #44):**
 The developer-only PDF evidence kit stages JSON in the destination
 directory, flushes/fsyncs the staging file, and publishes via atomic
@@ -8,8 +10,6 @@ Console/JSON output, source-revision `NOT_VERIFIED` gates and simulator
 runtime semantics remain unchanged. This is not vendor PDF authentication
 or guaranteed power-loss durability (parent directory not fsynced).
 [PR #44](https://github.com/greatgc-flow/VirtualPLC/pull/44).
-
-# VirtualPLC — Design
 
 **PDF evidence chain-of-custody safeguard (PR #43):**
 Local offline manual-evidence reports reject duplicate input SHA-256
