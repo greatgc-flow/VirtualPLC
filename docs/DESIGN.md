@@ -1,5 +1,23 @@
 # VirtualPLC — Design
 
+**Two independently revision-gated R04CPU manual sources (PR #41):**
+`inspect_reference_r04cpu_configuration` keeps the existing
+`manual_revision` input for Ethernet Application `SH-081257ENG-AD`
+(new manufacturer-listed AG, clauses **NOT_VERIFIED**) and now accepts
+optional `cpu_manual_revision` for CPU Module `SH-082488ENG-E`
+(new manufacturer-listed I 2026-08, clauses **NOT_VERIFIED**).
+Only CPU opening-method `A031H` uses the CPU manual gate; Ethernet
+A038H timer and external-device port/slot checks remain independently
+AD-scoped. An explicitly newer/unverified CPU edition blocks
+`REFERENCE_CHECKS_ONLY` if the Opening Method was supplied; omitted
+CPU edition preserves legacy status, and missing Opening Method is
+not replaced by invented default settings. Both revision gates derive
+from the one `ethernet_reference.py` vendor registry. Exact specs and
+strict input semantics:
+[dual-manual source evidence](research/RNCPU_R04CPU_DUAL_MANUAL_REVISION_GATES_20261101.md).
+This does not certify GX Works3, manufacturer edition parity or real PLC
+behavior. [PR #41](https://github.com/greatgc-flow/VirtualPLC/pull/41).
+
 **Runnable vs offline manufacturer-reference ownership (PR #40):**
 `virtual_plc/ethernet.py` owns only runnable Q/L/iQ-R Ethernet settings
 and validates effective overrides; `virtual_plc/ethernet_reference.py`
