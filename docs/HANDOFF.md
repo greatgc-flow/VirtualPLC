@@ -1,3 +1,27 @@
+## 2026-11-01 VerySimpleGuide refactor: UDP dispatch boundary (PR #39)
+
+Introduced private `Server._udp_response(packet)` to separate UDP
+datagram transport I/O and shutdown from 1E/3E/4E complete-frame parsing,
+shared-lock command dispatch, single post-dispatch response hook and 8KB
+response cap. The UDP loop still rejects empty/oversized input before
+dispatch and keeps existing drop/log/exception policy. Source-backed
+manufacturer settings, public CLI, TCP/UDP ports, one-PLC-per-process
+ownership and PyPI are unchanged.
+
+Test-only RED [PR #39](https://github.com/greatgc-flow/VirtualPLC/pull/39):
+first tests-only build had a pytest reserved-argument collection error
+(corrected before claiming RED). Corrected tests-only SHA
+`8be7fd351d871550b1a811b2e73a507fbb8dfd2f` showed
+**7,007 existing PASS + 24 expected missing-method failures** on
+Ubuntu Python3.11. Implementation SHA `523c85f3e4fa5c4abc5d28bc4116d55696f0084d`.
+Read current exact PR candidate CI and main after any eventual merge;
+do not claim GREEN until 9/9 and independent postmerge main CI.
+
+Next maintainability review and deferred high-risk splitting are tracked
+in [issue #7](https://github.com/greatgc-flow/VirtualPLC/issues/7);
+in particular, do not split `ethernet.py` source metadata or mix
+1E and 3E/4E parsers without a measured coupling/compatibility benefit.
+
 ## 2026-11-01 R04CPU CPU built-in composite offline preflight (PR #38)
 
 `virtual_plc.rncpu_reference.inspect_reference_r04cpu_configuration`
