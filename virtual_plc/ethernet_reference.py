@@ -1,0 +1,900 @@
+"""Manufacturer source-scoped OFFLINE reference data and inspections.
+
+Research-only FX5/FX5-ENET/RnCPU contracts; these are NOT runnable Ethernet
+presets. No host socket, runtime PLC protocol, or physical device is changed.
+This is the single owner of reference-only source tables and inspect APIs;
+virtual_plc.ethernet re-exports the existing names for compatibility.
+"""
+
+from copy import deepcopy
+
+
+# Model-scoped firmware support for the FX5 built-in Ethernet CPU's separate
+# simple CPU communication function. Official Mitsubishi FAQs #39316 and
+# #44329; do not inherit this on FX5-ENET, RnCPU or the SLMP server.
+_FX5_SIMPLE_CPU_FIRMWARE_REFERENCE = {
+    "models": {
+        "FX5U": {"minimum_version": "1.110"},
+        "FX5UC": {"minimum_version": "1.110"},
+        "FX5UJ": {"from_first": True},
+        "FX5S": {"from_first": True},
+    },
+    "source": {
+        "manual": "Mitsubishi FAQ #39316",
+        "page": "FAQ #39316, published 2023-02-14",
+        "url": "https://fa-faq.mitsubishielectric.com/faq/show/39316",
+    },
+}
+_FX5_SIMPLE_CPU_INTEROP_REFERENCE = {
+    "supported_path": [
+        "Ethernet port", "Application settings",
+        "Simple CPU communication settings",
+    ],
+    "legacy_path": [
+        "Ethernet port", "Basic settings",
+        "External device configuration",
+    ],
+    "destination_device_type": "SLMP-compatible device (QnA-compatible 3E frame)",
+    "source": {
+        "manual": "Mitsubishi FAQ #44329",
+        "page": "FAQ #44329, published 2024-03-20",
+        "url": "https://fa-faq.mitsubishielectric.com/faq/show/44329",
+    },
+}
+
+# Vendor FX5 host SLMP port setting. Port 0 is a simulator-only ephemeral
+# socket choice, NOT a GX Works3 setting. 1..1023 and 61440..65534 are
+# permitted by these manual tables, but are NOT recommended for SLMP.
+# SH-082625ENG-H p.100 (CPU); SH-082026ENG-H p.79 (ENET).
+_FX5_SLMP_PORT_REFERENCE = {
+    "vendor_port_ranges": [[1, 5548], [5570, 65534]],
+    "vendor_port_recommended_ranges": [[1024, 5548], [5570, 61439]],
+    "vendor_reserved_port_range": [5549, 5569],
+}
+
+# Model-specific FX5-ENET existence/alive-check parameters:
+# official SH-082026ENG-H printed p.70 (PDF p.71).
+# Timer selection is s OR ms; no additional 100-ms step is established
+# by this manual page. Values are only reference data, not host socket knobs.
+_FX5_ENET_ALIVE_TIMER_REFERENCE = {
+    "start": {"default": 600, "unit": "s",
+              "bounds": {"s": [1, 16383], "ms": [100, 16383000]}},
+    "interval": {"default": 10, "unit": "s",
+                 "bounds": {"s": [1, 16383], "ms": [100, 16383000]}},
+    "retry": {"default": 3, "unit": "count", "bounds": [1, 32767]},
+}
+
+# Reference-only hardware facts. Unsupported models never enter _MODELS, and
+# unknown module timers must never be borrowed from Q/L or RJ71EN71.
+# Independent CPU-built-in R04CPU example from SH-081257ENG-AD
+# pp.329-330 -> pp.396-397, not copied from RJ71EN71 _TIMER_DEFAULTS.
+# The p.396 table explicitly gives 100-ms increments for time units.
+_R04CPU_BUILTIN_DATA_TIMERS = {
+    name: {
+        "default": default_ms, "unit": "ms",
+        "min": 100, "max": 16383000, "step": 100,
+    }
+    for name, default_ms in (
+        ("tcp_ulp_ms", 30000),
+        ("tcp_zero_window_ms", 10000),
+        ("tcp_resend_ms", 10000),
+        ("tcp_end_ms", 20000),
+        ("ip_assembly_ms", 5000),
+        ("response_monitor_ms", 30000),
+        ("alive_start_ms", 600000),
+        ("alive_interval_ms", 10000),
+    )
+}
+_R04CPU_BUILTIN_DATA_TIMERS["alive_retries"] = {
+    "default": 3, "unit": "count", "min": 1, "max": 99999, "step": 1,
+}
+
+
+_REFERENCE_HARDWARE = {
+    "fx5_cpu_builtin": {
+        "implementation": "research_only",
+        "source": {
+            "manual": "Mitsubishi FAQ #22320 (FX5 built-in Ethernet)",
+            "page": "FAQ #22320, updated 2023-07-04",
+            "url": "https://fa-faq.mitsubishielectric.com/faq/show/22320",
+        },
+        "reference": {
+            "connection_limit": 8,
+            "connection_limit_scope": "SLMP/MELSOFT/MODBUS-TCP/socket/predefined-protocol combined; documented exclusions apply",
+            "slmp_server_frames": ["1E", "3E"],
+            **deepcopy(_FX5_SLMP_PORT_REFERENCE),
+        },
+        "port_source": {
+            "manual": "SH-082625ENG-H (FX5 CPU communication)",
+            "page": "100",
+            "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082625eng/sh082625engh.pdf",
+        },
+        # A target count for one *feature* is not an aggregate count of
+        # simultaneously open SLMP/server socket connections.
+        "service_specific_connection_reference": {
+            "feature": "simple_cpu_communication",
+            "target_limits": {
+                "FX5U": 16, "FX5UC": 16, "FX5UJ": 8, "FX5S": 8,
+            },
+            "scope": "not the total Ethernet SLMP/socket connection limit; simple CPU communication target count only",
+            "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
+            "source": {
+                "manual": "Mitsubishi FAQ #40032",
+                "page": "FAQ #40032, 2023-08-24",
+                "url": "https://fa-faq.mitsubishielectric.com/faq/show/40032",
+            },
+        },
+        "simple_cpu_firmware_reference": deepcopy(_FX5_SIMPLE_CPU_FIRMWARE_REFERENCE),
+        "simple_cpu_interop_reference": deepcopy(_FX5_SIMPLE_CPU_INTEROP_REFERENCE),
+        "unverified": [
+            "tcp_ulp_ms", "tcp_resend_ms", "response_monitor_ms",
+            "model/firmware-specific SLMP default host port", "RUN-write behavior",
+        ],
+    },
+    "fx5_enet": {
+        "implementation": "research_only",
+        "source": {
+            "manual": "SH-082026ENG-H (FX5-ENET)",
+            "page": "70, 79",
+            "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082026eng/sh082026engh.pdf",
+        },
+        "reference": {
+            "communication_data_code_default": "binary",
+            "communication_data_code_choices": ["binary", "ascii_x_y_octal", "ascii_x_y_hexadecimal"],
+            "opening_method_default": "do_not_open_by_program",
+            "default_slmp_host_port": "blank",
+            **deepcopy(_FX5_SLMP_PORT_REFERENCE),
+            "alive_start_ms": _FX5_ENET_ALIVE_TIMER_REFERENCE["start"]["default"] * 1000,
+            "alive_interval_ms": _FX5_ENET_ALIVE_TIMER_REFERENCE["interval"]["default"] * 1000,
+            "alive_retries": _FX5_ENET_ALIVE_TIMER_REFERENCE["retry"]["default"],
+            "slmp_server_frames": ["1E", "3E"],
+            "connection_limit": 32,
+            "ascii_xy_numbering_choices": ["octal", "hexadecimal"],
+        },
+        "protocol_source": {
+            "manual": "JY997D56001-K (FX5 SLMP)",
+            "page": "41-45, 66-67, 119-122",
+            "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/jy997d56001/jy997d56001k.pdf",
+        },
+        "port_source": {
+            "manual": "SH-082026ENG-H (FX5-ENET)",
+            "page": "79",
+            "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082026eng/sh082026engh.pdf",
+        },
+        "alive_timer_source": {
+            "manual": "SH-082026ENG-H (FX5-ENET)",
+            "page": "70",
+            "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plcf/sh082026eng/sh082026engh.pdf",
+        },
+        "alive_timer_reference": deepcopy(_FX5_ENET_ALIVE_TIMER_REFERENCE),
+        "unverified": [
+            "tcp_ulp_ms", "tcp_zero_window_ms", "tcp_resend_ms",
+            "tcp_end_ms", "ip_assembly_ms", "response_monitor_ms",
+            "RUN-write behavior", "MC device and frame compatibility",
+        ],
+    },
+    "rncpu_builtin": {
+        "implementation": "research_only",
+        "source": {
+            "manual": "SH-081257ENG-AD (iQ-R built-in Ethernet, system ports)",
+            "page": "Appendix 10",
+            "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf",
+        },
+        "reference": {
+            "auto_open_udp": 5005,
+            "melsoft_udp": 5006,
+            "melsoft_tcp": 5007,
+        },
+        # These are independent vendor FAQ *service* contracts, not
+        # SLMP TCP/UDP behavior or automatically opened simulator ports.
+        "service_connection_reference": {
+            "applicability": "rncpu_builtin_only",
+            "simulator_network_affected": False,
+            "physical_hardware_certified": False,
+            "simple_cpu_communication_partner": {
+                "transport": "udp",
+                "auto_open_udp": True,
+                "requires_additional_open_setting": False,
+                "role": "receiving_rncpu_builtin_ethernet_partner",
+                "status": "OFFICIAL_FAQ_REFERENCE_ONLY",
+                "source": {
+                    "faq_id": 20230,
+                    "url": "https://fa-faq.mitsubishielectric.co.jp/faq/show/20230",
+                },
+            },
+            "multiple_got": {
+                "scope": "multiple_got_to_one_rncpu_builtin_ethernet_port",
+                "status": "OFFICIAL_FAQ_REFERENCE_ONLY",
+                "by_transport": {
+                    "tcp": {
+                        "requires_external_device_configuration": True,
+                        "configure_each_got": True,
+                        "gxworks3_path": [
+                            "Navigation Window", "Parameter", "RnCPU", "Module parameter",
+                            "Basic Settings", "External Device Configuration",
+                            "Detail settings",
+                            "Ethernet configuration (built-in Ethernet port)",
+                        ],
+                    },
+                    "udp": {
+                        "requires_external_device_configuration": False,
+                        "configure_each_got": False,
+                        "gxworks3_path": None,
+                    },
+                },
+                "source": {
+                    "faq_id": 45267,
+                    "url": "https://fa-faq.mitsubishielectric.com/faq/show/45267",
+                },
+            },
+        },
+        # This CPU *built-in* Ethernet setting does not apply to RJ71EN71.
+        # Manufacturer recommends a remote-control choice, not a universal
+        # factory default. A031H denotes the CPU parameter group.
+        "remote_opening_reference": {
+            "recommended_opening_method": "do_not_open_by_program",
+            "factory_default": None,
+            "parameter_id": "A031H",
+            "gxworks3_path": [
+                "Module Parameter", "Basic Settings",
+                "Own Node Settings", "Opening Method",
+            ],
+            "source": {
+                "manual": "SH-082488ENG-E",
+                "page": "3, 684-685",
+                "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh082488eng/sh082488enge.pdf",
+            },
+        },
+        # R04CPU *CPU built-in* GX Works3 example points to the shared
+        # timer section: SH-081257ENG-AD pp.329-330 -> 396-397.
+        # SH-082488ENG-E p.685 independently identifies CPU A038H.
+        # Do not promote these settings to all RnCPU firmware or copy
+        # the RJ71EN71 network-module runtime profile.
+        "data_timer_reference": {
+            "parameter_id": "A038H",
+            "factory_model_scope": "R04CPU_GXWORKS3_EXAMPLE",
+            "default_change_set_timer_value": False,
+            "source": {
+                "manual": "SH-081257ENG-AD",
+                "page": "329-330, 396-397",
+                "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf",
+            },
+            "cpu_parameter_source": {
+                "manual": "SH-082488ENG-E",
+                "page": "685",
+                "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh082488eng/sh082488enge.pdf",
+            },
+            "parameters": deepcopy(_R04CPU_BUILTIN_DATA_TIMERS),
+        },
+        # SH-081257ENG-AD pp.324-326: GX Works3 configured USER slots
+        # are not the total live TCP connection count. R04CPU example.
+        # Appendix 10 p.554 lists *additional* reserved system ports
+        # within otherwise configurable numeric PLC-port ranges.
+        "external_device_configuration_reference": {
+            "factory_model_scope": "R04CPU_GXWORKS3_CPU_BUILTIN_EXAMPLE",
+            "connection_number_range": [1, 16],
+            "connection_range_scope": "gxworks3_configured_user_connection_numbers_not_tcp_client_capacity",
+            "plc_port_ranges": [[1, 4999], [5010, 65534]],
+            "plc_port_recommended_ranges": [[1024, 4999], [5010, 61439]],
+            "factory_plc_port": None,
+            "system_service_ports": {
+                "20": "ftp_server_data",
+                "21": "ftp_server_control",
+                "80": "web_server",
+                "123": "sntp_client",
+                "5001": "melsoft_udp",
+                "5005": "auto_open_udp",
+                "5006": "melsoft_udp",
+                "5007": "melsoft_tcp",
+                "5008": "melsoft_direct_udp",
+                "5009": "network_module_search_udp",
+                "61440": "iqss_data_udp",
+                "61441": "slmp_snd_udp",
+                "61442": "iqss_backup_restore_udp",
+                "61448": "dns_client_udp",
+                "61450": "cc_link_field_basic_udp",
+                "61461": "database_access_udp",
+            },
+            "system_port_ranges": [
+                {"start": 61696, "end": 61999,
+                 "service": "simple_cpu_communication_udp"},
+                {"start": 62000, "end": 65534,
+                 "service": "ftp_client_dynamic_tcp"},
+            ],
+            # Manufacturer currently publishes AG (2026-10), but a full
+            # AD-vs-AG clause diff has not been obtained. This source
+            # table is deliberately AD-scoped until confirmed.
+            "manual_revision_gate": {
+                "validated_reference_revision": "AD",
+                "newer_catalog_revision": "AG",
+                "newer_catalog_published": "2026-10",
+                "newer_revision_comparison": "NOT_VERIFIED",
+                "catalog_url": "https://www.mitsubishielectric.com/fa/download/search.page?kisyu=%2Fplcr&mode=manual",
+            },
+            "source": {
+                "manual": "SH-081257ENG-AD",
+                "page": "324-326",
+                "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf",
+            },
+            "system_port_source": {
+                "manual": "SH-081257ENG-AD",
+                "page": "554",
+                "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf",
+            },
+        },
+        "unverified": [
+            "tcp_ulp_ms", "tcp_resend_ms", "response_monitor_ms",
+            "per-CPU/firmware editable timer ranges", "RUN-write behavior",
+            "MC service parity and MELSOFT handshake",
+        ],
+    },
+}
+
+
+def reference_catalog():
+    """Read-only discovery; these hardware IDs are NOT runnable models."""
+    return deepcopy(_REFERENCE_HARDWARE)
+
+
+def inspect_reference_slmp_port(model, port):
+    """Classify one *vendor* FX5 SLMP host port without opening a socket.
+
+    This is an OFFLINE and reference-only GX Works3 preflight for either
+    FX5 CPU builtin or FX5-ENET. It never configures Server listeners.
+    A positive result is a documented setting-range check, NOT an
+    assertion that the real module/firmware will accept connections.
+    """
+    if type(model) is not str or model not in ("fx5_cpu_builtin", "fx5_enet"):
+        raise ValueError("FX5 SLMP reference check requires fx5_cpu_builtin or fx5_enet")
+    if type(port) is not int or not 0 <= port <= 65535:
+        raise ValueError("vendor SLMP port must be an integer 0..65535")
+    entry = _REFERENCE_HARDWARE[model]
+    reference = entry["reference"]
+
+    def contains(ranges):
+        return any(start <= port <= end for start, end in ranges)
+
+    if port == 0:
+        classification = "simulator_only_ephemeral"
+    elif contains([reference["vendor_reserved_port_range"]]):
+        classification = "vendor_system_reserved"
+    elif contains(reference["vendor_port_recommended_ranges"]):
+        classification = "recommended"
+    elif contains(reference["vendor_port_ranges"]):
+        classification = "permitted_not_recommended"
+    else:
+        classification = "outside_vendor_range"
+    return {
+        "model": model,
+        "port": port,
+        "classification": classification,
+        "permitted": classification in ("recommended", "permitted_not_recommended"),
+        "recommended": classification == "recommended",
+        "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
+        "source": deepcopy(entry["port_source"]),
+        "physical_hardware_certified": False,
+        "simulator_bind_affected": False,
+        "note": ("Vendor reference only; 5549..5569 are system-reserved. "
+                 "Port 0 is solely VirtualPLC ephemeral binding; "
+                 "1..1023 and 61440..65534 are permitted but not recommended. "
+                 "Does not inspect firmware or host operating-system port conflicts."),
+    }
+
+
+def inspect_reference_fx5_enet_alive_timers(overrides=None):
+    """Validate *reference-only* FX5-ENET existence-check timer settings.
+
+    Does not configure Server, host TCP timers or real Mitsubishi equipment.
+    Source: SH-082026ENG-H printed p.70. "Change/Set Timer Value" defaults
+    to No; explicit values require the caller to set the flag True.
+    """
+    allowed = {"change_set_timer_value", "start", "interval", "retry"}
+    if overrides is None:
+        overrides = {}
+    if type(overrides) is not dict or set(overrides) - allowed:
+        raise ValueError("FX5-ENET alive timer overrides must be a supported object")
+    change = overrides.get("change_set_timer_value", False)
+    if type(change) is not bool:
+        raise ValueError("change_set_timer_value requires a boolean")
+    if not change and any(name in overrides for name in ("start", "interval", "retry")):
+        raise ValueError("explicit alive timers require change_set_timer_value=True")
+
+    reference = _REFERENCE_HARDWARE["fx5_enet"]["alive_timer_reference"]
+    parameters = {}
+    for name in ("start", "interval", "retry"):
+        spec = reference[name]
+        overridden = name in overrides
+        if name == "retry":
+            value = overrides[name] if overridden else spec["default"]
+            low, high = spec["bounds"]
+            if type(value) is not int or not low <= value <= high:
+                raise ValueError("retry must be an integer 1..32767")
+            parameters[name] = {
+                "value": value, "unit": "count",
+                "default": spec["default"], "overridden": overridden,
+                "min": low, "max": high,
+            }
+            continue
+
+        option = overrides[name] if overridden else {
+            "value": spec["default"], "unit": spec["unit"],
+        }
+        if type(option) is not dict or set(option) != {"value", "unit"}:
+            raise ValueError("{} requires a value and a unit (s or ms)".format(name))
+        value = option["value"]
+        unit = option["unit"]
+        if type(unit) is not str or unit not in spec["bounds"]:
+            raise ValueError("{} unit must be s or ms".format(name))
+        low, high = spec["bounds"][unit]
+        if type(value) is not int or not low <= value <= high:
+            raise ValueError("{} {} must be an integer {}..{}".format(name, unit, low, high))
+        parameters[name] = {
+            "value": value, "unit": unit,
+            "milliseconds": value * 1000 if unit == "s" else value,
+            "default_milliseconds": spec["default"] * 1000,
+            "overridden": overridden, "min": low, "max": high,
+        }
+    return {
+        "model": "fx5_enet",
+        "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
+        "source": deepcopy(_REFERENCE_HARDWARE["fx5_enet"]["alive_timer_source"]),
+        "change_set_timer_value": change,
+        "physical_hardware_certified": False,
+        "simulator_network_affected": False,
+        "parameters": parameters,
+    }
+
+
+def inspect_reference_fx5_simple_cpu_communication(model, firmware_version=None):
+    """OFFLINE firmware/interop guidance for the *simple CPU* feature.
+
+    The FX5 CPU built-in Ethernet hardware family is reference-only;
+    this is NOT a SLMP server configuration or physical PLC test.
+    U/UC feature support begins at 1.110, UJ/S from the first release
+    (FAQ #39316). The old/new GX Works3 connection example (FAQ #44329)
+    is modeled only for U/UC, not guessed for early UJ/S revisions.
+    """
+    import re
+
+    support = _REFERENCE_HARDWARE["fx5_cpu_builtin"]["simple_cpu_firmware_reference"]
+    interop = _REFERENCE_HARDWARE["fx5_cpu_builtin"]["simple_cpu_interop_reference"]
+    if type(model) is not str or model not in support["models"]:
+        raise ValueError("model must be FX5U, FX5UC, FX5UJ, or FX5S")
+    firmware_tuple = None
+    if firmware_version is not None:
+        if (type(firmware_version) is not str or
+                re.fullmatch(r"[1-9][0-9]*\.[0-9]{3}", firmware_version) is None):
+            raise ValueError("firmware_version must use the vendor form 1.110")
+        major, revision = firmware_version.split(".")
+        firmware_tuple = (int(major), int(revision))
+
+    family_rule = support["models"][model]
+    if family_rule.get("from_first", False):
+        state = "SUPPORTED"
+        path = None  # The FAQ does not establish this for every early UJ/S firmware.
+        destination = None
+    elif firmware_tuple is None:
+        state, path, destination = "UNKNOWN_FIRMWARE", None, None
+    else:
+        threshold = tuple(int(x) for x in family_rule["minimum_version"].split("."))
+        modern = firmware_tuple >= threshold
+        state = "SUPPORTED" if modern else "NOT_SUPPORTED"
+        path = deepcopy(interop["supported_path"] if modern else interop["legacy_path"])
+        destination = interop["destination_device_type"] if modern else None
+
+    cpu = _REFERENCE_HARDWARE["fx5_cpu_builtin"]
+    return {
+        "model": model,
+        "firmware_version": firmware_version,
+        "support_status": state,
+        "gxworks3_configuration_path": path,
+        "destination_device_type": destination,
+        "target_limit": cpu["service_specific_connection_reference"]["target_limits"][model],
+        "target_limit_scope": "simple_cpu_communication_targets_not_slmp_sockets",
+        "external_ethernet_connection_limit": cpu["reference"]["connection_limit"],
+        "status": "OFFICIAL_FAQ_REFERENCE_ONLY",
+        "sources": [deepcopy(support["source"]), deepcopy(interop["source"])],
+        "physical_hardware_certified": False,
+        "simulator_network_affected": False,
+        "notes": [
+            "A simple CPU communication target is not an inbound SLMP socket.",
+            "GX Works3 paths apply only to the cited mixed-firmware CPU connection example.",
+            "Unknown firmware is not evidence that FX5U/FX5UC lack support.",
+            "No firmware data was read from physical equipment.",
+        ],
+    }
+
+
+def inspect_reference_rncpu_remote_opening(opening_method=None):
+    """Check RnCPU CPU-built-in remote control opening choice offline.
+
+    SH-082488ENG-E p.3: with Open by Program, remote STOP closes
+    the line and an external device cannot issue remote RUN on it.
+    Appendix 8 pp.684-685: Opening Method is parameter A031H.
+    No hardware reads, network binds or runtime service enablement.
+    """
+    spec = _REFERENCE_HARDWARE["rncpu_builtin"]["remote_opening_reference"]
+    if opening_method is not None and (
+        type(opening_method) is not str or
+        opening_method not in ("open_by_program", "do_not_open_by_program")
+    ):
+        raise ValueError(
+            "opening_method must be open_by_program, "
+            "do_not_open_by_program, or omitted (UNKNOWN)"
+        )
+    if opening_method is None:
+        risk = "UNKNOWN"
+        explanation = (
+            "Opening Method not supplied; no factory value or firmware "
+            "behavior can be inferred."
+        )
+    elif opening_method == "open_by_program":
+        risk = "DOCUMENTED_REMOTE_RUN_RECONNECT_FAILURE"
+        explanation = (
+            "Mitsubishi warns remote STOP can close the communication "
+            "line with Open by Program, so an external device cannot "
+            "subsequently issue remote RUN over that closed line."
+        )
+    else:
+        risk = "NO_SPECIFIC_OPENING_METHOD_RISK_DOCUMENTED"
+        explanation = (
+            "Do Not Open by Program is the documented manufacturer "
+            "recommendation for remote RUN/STOP. This does not guarantee "
+            "remote RUN after STOP; other conditions remain unverified."
+        )
+    return {
+        "model": "rncpu_builtin",
+        "opening_method": opening_method,
+        "reconnect_risk_status": risk,
+        "recommended_opening_method": spec["recommended_opening_method"],
+        "factory_default": spec["factory_default"],
+        "parameter_id": spec["parameter_id"],
+        "gxworks3_path": deepcopy(spec["gxworks3_path"]),
+        "source": deepcopy(spec["source"]),
+        "explanation": explanation,
+        "remote_run_after_stop_guaranteed": False,
+        "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
+        "physical_hardware_certified": False,
+        "simulator_network_affected": False,
+    }
+
+
+def inspect_reference_rncpu_data_timers(model="R04CPU", overrides=None):
+    """Validate R04CPU CPU-built-in A038H GUI timer settings OFFLINE.
+
+    Manufacturer SH-081257ENG-AD pp.329-330 explicitly links the R04CPU
+    built-in Ethernet GUI to the p.396-397 table. SH-082488ENG-E p.685
+    identifies the separate CPU parameter A038H. No RJ71EN71 reuse,
+    vendor port binding, host TCP tuning or hardware certification.
+
+    Optional overrides: {
+        "change_set_timer_value": True,
+        "timers": {"tcp_ulp_ms": {"value": 30, "unit": "s"},
+                   "alive_retries": 3}
+    }
+    Time fields use documented 1..16383 s or 100..16383000 ms,
+    step 100ms; count 1..99999. Preserve explicit overrides even
+    when equal to the default. Unverified per-firmware special cases
+    (e.g. zero-timer retry cancellation) are intentionally not modeled.
+    """
+    spec = _REFERENCE_HARDWARE["rncpu_builtin"]["data_timer_reference"]
+    if type(model) is not str or model != "R04CPU":
+        raise ValueError("only R04CPU built-in GUI example is independently sourced")
+    if overrides is None:
+        overrides = {}
+    if type(overrides) is not dict or set(overrides) - {
+        "change_set_timer_value", "timers"
+    }:
+        raise ValueError("timer overrides must be a supported object")
+    change = overrides.get(
+        "change_set_timer_value", spec["default_change_set_timer_value"]
+    )
+    if type(change) is not bool:
+        raise ValueError("change_set_timer_value requires a boolean")
+    requested = overrides.get("timers", {})
+    if type(requested) is not dict or set(requested) - set(spec["parameters"]):
+        raise ValueError("timers must contain only supported A038H entries")
+    if requested and not change:
+        raise ValueError("explicit timer values require change_set_timer_value=True")
+
+    parameters = {}
+    for name, item in spec["parameters"].items():
+        explicit = name in requested
+        if not explicit:
+            value = item["default"]
+        elif item["unit"] == "count":
+            value = requested[name]
+            if type(value) is not int:
+                raise ValueError("{} must be an integer count".format(name))
+        else:
+            supplied = requested[name]
+            if type(supplied) is not dict or set(supplied) != {"value", "unit"}:
+                raise ValueError("{} requires value and unit (s or ms)".format(name))
+            number, unit = supplied["value"], supplied["unit"]
+            if type(number) is not int or type(unit) is not str or unit not in ("s", "ms"):
+                raise ValueError("{} requires integer time and unit s or ms".format(name))
+            if unit == "s" and not 1 <= number <= 16383:
+                raise ValueError("{} seconds must be 1..16383".format(name))
+            value = number * 1000 if unit == "s" else number
+
+        if (type(value) is not int or not item["min"] <= value <= item["max"]
+                or value % item["step"] != 0):
+            raise ValueError("{} violates official A038H bounds or increment".format(name))
+        parameters[name] = {
+            "value": value,
+            "default": item["default"],
+            "unit": item["unit"],
+            "overridden": explicit,
+            "min": item["min"],
+            "max": item["max"],
+            "step": item["step"],
+        }
+
+    v = {name: p["value"] for name, p in parameters.items()}
+    # Printed p.397 uses >=, including equality at the lower boundary;
+    # do not import the older runnable RJ71EN71 policy of strict >.
+    if not (v["response_monitor_ms"] >= v["tcp_ulp_ms"]
+            >= v["tcp_end_ms"] >= v["tcp_resend_ms"]
+            >= v["ip_assembly_ms"]):
+        raise ValueError("response >= ULP >= end >= resend >= IP assembly required")
+    if v["tcp_resend_ms"] != v["tcp_zero_window_ms"]:
+        raise ValueError("TCP resend and zero-window timers must be equal")
+
+    return {
+        "interface": "rncpu_builtin",
+        "model": model,
+        "parameter_id": spec["parameter_id"],
+        "factory_model_scope": spec["factory_model_scope"],
+        "change_set_timer_value": change,
+        "parameters": parameters,
+        "source": deepcopy(spec["source"]),
+        "cpu_parameter_source": deepcopy(spec["cpu_parameter_source"]),
+        "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
+        "physical_hardware_certified": False,
+        "simulator_network_affected": False,
+        "notes": [
+            "R04CPU GX Works3 CPU built-in example only; other CPU/firmware applicability UNKNOWN.",
+            "Timers are manual reference values; this does not tune OS sockets or emulate firmware.",
+            "Special zero-time settings and physical retry/close timing are not certified.",
+            "No production equipment, network access or built-in Ethernet server is activated.",
+        ],
+    }
+
+
+def inspect_reference_rncpu_external_device(
+        model="R04CPU", connection_number=None, plc_port=None):
+    """Offline R04CPU CPU-built-in GX Works3 user-slot and own-port preflight.
+
+    SH-081257ENG-AD pp.324-326 and Appendix 10 p.554.
+    Connection numbers 1..16 describe *configured user slots*, not
+    total simultaneous TCP client capacity. For the PLC own-port,
+    vendor system reservations take precedence over otherwise valid
+    numeric ranges. The blank default is valid only as configuration
+    metadata, not a bound socket. This routine never accesses a PLC.
+    """
+    if type(model) is not str or model != "R04CPU":
+        raise ValueError("only R04CPU CPU-built-in GUI scope is documented")
+    if (connection_number is not None and
+            (type(connection_number) is not int or
+             not 1 <= connection_number <= 16)):
+        raise ValueError("R04CPU built-in user slot must be integer 1..16 or omitted")
+    if (plc_port is not None and
+            (type(plc_port) is not int or not 0 <= plc_port <= 65535)):
+        raise ValueError("PLC port must be integer 0..65535 or omitted")
+
+    spec = _REFERENCE_HARDWARE["rncpu_builtin"][
+        "external_device_configuration_reference"
+    ]
+
+    def in_ranges(value, ranges):
+        return any(low <= value <= high for low, high in ranges)
+
+    system_service = None
+    if plc_port is None:
+        classification = "blank_default"
+        configurable, recommended = True, False
+    elif plc_port == 0:
+        classification = "simulator_only_ephemeral"
+        configurable, recommended = False, False
+    else:
+        system_service = spec["system_service_ports"].get(str(plc_port))
+        if system_service is None:
+            for entry in spec["system_port_ranges"]:
+                if entry["start"] <= plc_port <= entry["end"]:
+                    system_service = entry["service"]
+                    break
+        if system_service is not None:
+            classification = "system_service_port_not_user_configurable"
+            configurable, recommended = False, False
+        elif in_ranges(plc_port, spec["plc_port_recommended_ranges"]):
+            classification = "recommended"
+            configurable, recommended = True, True
+        elif in_ranges(plc_port, spec["plc_port_ranges"]):
+            classification = "permitted_not_recommended"
+            configurable, recommended = True, False
+        else:
+            classification = "outside_vendor_configurable_range"
+            configurable, recommended = False, False
+
+    return {
+        "interface": "rncpu_builtin",
+        "model": model,
+        "connection_number": connection_number,
+        "connection_status": ("UNSPECIFIED" if connection_number is None
+                              else "CONFIGURATION_SLOT_VALID"),
+        "user_connection_number_range": deepcopy(spec["connection_number_range"]),
+        "connection_range_scope": spec["connection_range_scope"],
+        "not_a_simultaneous_tcp_socket_limit": True,
+        "plc_port": plc_port,
+        "factory_plc_port": spec["factory_plc_port"],
+        "plc_port_classification": classification,
+        "plc_port_configurable": configurable,
+        "plc_port_recommended": recommended,
+        "system_service": system_service,
+        "source": deepcopy(spec["source"]),
+        "system_port_source": deepcopy(spec["system_port_source"]),
+        "status": "OFFICIAL_MANUAL_REFERENCE_ONLY",
+        "physical_hardware_certified": False,
+        "simulator_bind_affected": False,
+        "note": (
+            "R04CPU GX Works3 configured user slot, not active socket count; "
+            "reserved system services override numeric port ranges. "
+            "No system ports are auto-bound and no RnCPU profile is enabled."
+        ),
+    }
+
+def inspect_reference_rncpu_external_device_batch(
+        entries=None, model="R04CPU", report_slot_gaps=True):
+    """Pure static review of multiple R04CPU built-in external-device rows.
+
+    Reuses the already official-source-backed single-row inspector
+    (SH-081257ENG-AD pp.324-326/554). Cross-row diagnostics (duplicate
+    setting numbers, optional gaps and possible own-port reuse) are
+    *our offline lint rules*, NOT Mitsubishi firmware error codes.
+    Without per-row transport/direction details, duplicate numeric ports
+    are only a review warning, never asserted to be a socket conflict.
+
+    entries: None (not supplied), [] (explicit empty), or a list of
+    {"connection_number": int 1..16, "plc_port": int|None}.
+    Never fills an unspecified field, binds a socket or reads a PLC.
+    """
+    if type(model) is not str or model != "R04CPU":
+        raise ValueError("batch preflight supports only R04CPU CPU built-in")
+    if type(report_slot_gaps) is not bool:
+        raise ValueError("report_slot_gaps must be a boolean")
+    spec = _REFERENCE_HARDWARE["rncpu_builtin"][
+        "external_device_configuration_reference"
+    ]
+    limit = spec["connection_number_range"][1]
+    if entries is None:
+        input_state = "NOT_PROVIDED"
+        raw_entries = []
+    elif type(entries) is list:
+        input_state = "EMPTY" if not entries else "PROVIDED"
+        raw_entries = entries
+    else:
+        raise ValueError("entries must be a list, or omitted (NOT_PROVIDED)")
+    if len(raw_entries) > limit:
+        raise ValueError("configuration contains more than 16 R04CPU user slots")
+
+    checked = []
+    used_slots = {}
+    used_ports = {}
+    for pos, entry in enumerate(raw_entries):
+        if (type(entry) is not dict or
+                set(entry) != {"connection_number", "plc_port"} or
+                entry["connection_number"] is None):
+            raise ValueError(
+                "each row requires an explicit connection_number and plc_port"
+            )
+        # Single-row inspector validates all types/ranges/known system
+        # reservations. Never duplicate its vendor truth table here.
+        report = inspect_reference_rncpu_external_device(
+            model, entry["connection_number"], entry["plc_port"]
+        )
+        checked.append(report)
+        used_slots.setdefault(report["connection_number"], []).append(pos)
+        if report["plc_port"] is not None:
+            used_ports.setdefault(report["plc_port"], []).append(pos)
+
+    diagnostics = []
+    for pos, report in enumerate(checked):
+        if not report["plc_port_configurable"]:
+            diagnostics.append({
+                "code": "VENDOR_PORT_NOT_CONFIGURABLE",
+                "severity": "error",
+                "positions": [pos],
+                "plc_port": report["plc_port"],
+                "classification": report["plc_port_classification"],
+                "explanation": (
+                    "This numeric PLC own port is not configurable "
+                    "according to the scoped AD manual single-row table."
+                ),
+            })
+
+    for number in sorted(used_slots):
+        positions = used_slots[number]
+        if len(positions) > 1:
+            diagnostics.append({
+                "code": "DUPLICATE_SETTING_NUMBER",
+                "severity": "error",
+                "connection_number": number,
+                "positions": positions[:],
+                "explanation": (
+                    "Duplicate GX Works3 user setting-number keys in the "
+                    "supplied rows; static collision, not a Mitsubishi "
+                    "protocol end code."
+                ),
+            })
+
+    for port in sorted(used_ports):
+        positions = used_ports[port]
+        if len(positions) > 1:
+            diagnostics.append({
+                "code": "POTENTIAL_OWN_PORT_REUSE",
+                "severity": "review",
+                "plc_port": port,
+                "positions": positions[:],
+                "explanation": (
+                    "Numeric PLC own port is reused. Review transport, "
+                    "connection mode and service separately; shared "
+                    "numeric port alone does not prove a socket conflict."
+                ),
+            })
+
+    if report_slot_gaps and checked:
+        # Advisory-only; manual error/rejection semantics for gaps are
+        # not independently confirmed in the current AG revision.
+        missing = [number for number in range(1, max(used_slots) + 1)
+                   if number not in used_slots]
+        if missing:
+            diagnostics.append({
+                "code": "SLOT_GAP_REVIEW",
+                "severity": "review",
+                "missing_slots": missing,
+                "positions": [],
+                "explanation": (
+                    "Configuration numbers have gaps before the highest "
+                    "selected slot. Advisory only; manufacturer rejection "
+                    "behavior is NOT VERIFIED."
+                ),
+            })
+
+    if input_state == "NOT_PROVIDED":
+        state = "NOT_PROVIDED"
+    elif input_state == "EMPTY":
+        state = "EMPTY"
+    elif any(d["severity"] == "error" for d in diagnostics):
+        state = "REJECTED_STATIC_SETTINGS"
+    elif diagnostics:
+        state = "REVIEW_REQUIRED"
+    else:
+        state = "NO_STATIC_ISSUES_FOUND"
+
+    revisions = spec["manual_revision_gate"]
+    return {
+        "model": model,
+        "interface": "rncpu_builtin",
+        "input_state": input_state,
+        "static_preflight_state": state,
+        "rows": checked,
+        "diagnostics": diagnostics,
+        "report_slot_gaps": report_slot_gaps,
+        "vendor_manual_revision": revisions["validated_reference_revision"],
+        "newer_manual_revision": revisions["newer_catalog_revision"],
+        "newer_manual_comparison": revisions["newer_revision_comparison"],
+        "source": deepcopy(spec["source"]),
+        "manual_revision_gate": deepcopy(revisions),
+        "status": "SOURCE_SCOPED_STATIC_LINT_NOT_VENDOR_CERTIFIED",
+        "vendor_end_code": None,
+        "not_a_simultaneous_tcp_socket_limit": True,
+        "physical_hardware_certified": False,
+        "simulator_network_affected": False,
+        "notes": [
+            "The scalar fields are sourced from SH-081257ENG-AD, not AG.",
+            "Duplicates/gaps/port-reuse are offline static lint decisions, "
+            "not Mitsubishi runtime error semantics.",
+            "No active TCP/UDP client count or socket binding is inferred.",
+            "No result certifies an editable GX Works3 project or real PLC.",
+        ],
+    }
