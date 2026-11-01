@@ -1,3 +1,30 @@
+## 2026-11-01 PDF full-pack source stability across editions (PR #45)
+
+Starting verified remote main: `42e52fd5d9781f4c44aad5ab15c3eae19221c49b`;
+[main CI #41282564326](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41282564326)
+completed 9/9, Ubuntu Python3.11 7,102 PASS.
+New [PR #45](https://github.com/greatgc-flow/VirtualPLC/pull/45) tests-only
+commit `d2d89f3725b4eb23020701b74a43cb93528b9dfc`:
+[RED CI #41301971183](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41301971183),
+Ubuntu3.11 **7,103 PASS, 2 expected FAIL** and Windows3.13
+**7,107 PASS, 2 expected FAIL** — late source mutation not rejected.
+The implementation `90e1ed5e354f562e0dea1cc5ba2d78f079d178ca`
+stores each pre-extraction source fingerprint, retains the post-extract
+check and checks every input PDF once again after *all* editions/families
+have finished extraction, before reporting. No reported schema change,
+runtime code, vendor value, dependencies, physical PLC or PyPI changed.
+This is not protection against every TOCTOU race nor vendor authentication.
+
+Official fresh R04CPU manufacturer page lists Ethernet AG (2026-10)
+and CPU I (2026-08); some stale crawled snapshots list AF (2026-04).
+Research-only catalogue note: [issue #14](https://github.com/greatgc-flow/VirtualPLC/issues/14#issuecomment-6557323167).
+Do not infer a scope difference from mixed-age snapshots.
+Authentic AD+AG and E+I original PDFs still unavailable; actual
+clause parity remains `NOT_VERIFIED`.
+**Before calling GREEN or merging:** verify final exact PR head
+CI completed 9/9 (build plus Ubuntu/Windows Python3.10–3.13),
+squash merge and verify independent exact-sha main push CI 9/9.
+
 ## 2026-11-01 developer-only manual evidence atomic JSON output (PR #44)
 
 Session starting main: `4a3e4083584136e27e0fe1aaa063cfae2fb1f438`,

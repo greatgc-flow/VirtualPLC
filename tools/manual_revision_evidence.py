@@ -145,6 +145,7 @@ def generate_report(pairs, extract=None, max_hits=12, executable="pdftotext"):
     # A source hash must identify exactly one edition role across the report.
     # Different filenames are not independent sources when their bytes match.
     seen_sources = {}
+    source_fingerprints = []
     for kind in sorted(pairs):
         paths = pairs[kind]
         if type(paths) is not tuple or len(paths) != 2 or any(p is None for p in paths):
@@ -187,6 +188,7 @@ def generate_report(pairs, extract=None, max_hits=12, executable="pdftotext"):
             })
             sources[label] = metadata
             scanned[label] = find_topics(pages, kind, max_hits=max_hits)
+            source_fingerprints.append((path, metadata))
 
         topics = {}
         for name in spec["topics"]:
@@ -211,6 +213,17 @@ def generate_report(pairs, extract=None, max_hits=12, executable="pdftotext"):
                 "printed page numbers and clause equivalence require human review."
             ),
         }
+
+    # Later extractions can replace sources scanned earlier. Check every
+    # original once more after the entire multi-edition scan completes.
+    for path, baseline in source_fingerprints:
+        latest = fingerprint_pdf(path)
+        if (latest["sha256"] != baseline["sha256"] or
+                latest["bytes"] != baseline["bytes"]):
+            raise ValueError(
+                "PDF changed before final report: {}; rerun on stable "
+                "originals".format(path)
+            )
 
     return {
         "status": "SOURCE_CLAUSE_REVIEW_REQUIRED",

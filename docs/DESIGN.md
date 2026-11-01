@@ -1,5 +1,15 @@
 # VirtualPLC — Design
 
+**Final cross-source evidence integrity audit (PR #45):**
+The optional offline PDF kit re-fingerprints *all* originals after scanning
+every supplied edition and family. The previous per-file post-extraction
+checks remain in place. A later extraction that alters an earlier PDF now
+invalidates the entire report rather than retaining an obsolete SHA-256.
+This does not establish publisher authenticity, preserve PDFs through all
+concurrent filesystem races, verify AD/AG or E/I clause parity, or affect
+runnable PLC networking. The report schema and tool dependencies stay fixed.
+[PR #45](https://github.com/greatgc-flow/VirtualPLC/pull/45).
+
 **Atomic offline evidence report publication (PR #44):**
 The developer-only PDF evidence kit stages JSON in the destination
 directory, flushes/fsyncs the staging file, and publishes via atomic
