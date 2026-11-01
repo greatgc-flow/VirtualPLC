@@ -25,7 +25,9 @@ def inspect_reference_r04cpu_configuration(
     configuration : dict or None, optional
         None means no configuration was supplied; an empty object is an
         explicitly empty selection. Supported optional keys:
-          manual_revision: e.g. "AD" or "AG". Unknown/AG stays UNVERIFIED.
+          manual_revision: Ethernet manual "AD" or "AG"; AG unverified.
+          cpu_manual_revision: CPU module "E" or "I"; I unverified.
+            Only gates the supplied opening_method section (A031H).
           opening_method: None, "open_by_program" or "do_not_open_by_program".
           data_timers: A038H override dict; explicit None is INVALID.
           external_devices: None (unknown), [] (empty), or strict rows of
@@ -59,32 +61,47 @@ def inspect_reference_r04cpu_configuration(
         raise ValueError("configuration must be an object or omitted")
 
     supported = {
-        "manual_revision", "opening_method", "data_timers", "external_devices",
+        "manual_revision", "cpu_manual_revision", "opening_method",
+        "data_timers", "external_devices",
     }
     if set(supplied) - supported:
         raise ValueError("unsupported R04CPU configuration key")
 
+    # The Ethernet Application manual and CPU Module manual are separate
+    # source contracts. Validate their edition strings independently.
+    for name in ("manual_revision", "cpu_manual_revision"):
+        if name in supplied and (
+                type(supplied[name]) is not str or
+                re.fullmatch(r"[A-Z]{1,2}", supplied[name]) is None):
+            raise ValueError(
+                "{} requires one or two uppercase ASCII letters".format(name)
+            )
     requested_revision = supplied.get("manual_revision")
-    if "manual_revision" in supplied:
-        if (type(requested_revision) is not str or
-                re.fullmatch(r"[A-Z]{1,2}", requested_revision) is None):
-            raise ValueError("manual_revision requires one or two uppercase ASCII letters")
+    requested_cpu_revision = supplied.get("cpu_manual_revision")
     if "data_timers" in supplied and type(supplied["data_timers"]) is not dict:
         raise ValueError("explicit data_timers must be an object, not null")
 
     # Derived from the existing SSOT: never duplicate edition labels or
     # elevate manufacturer-listed AG to equivalent-to-AD without a clause diff.
-    spec = reference_catalog()["rncpu_builtin"][
-        "external_device_configuration_reference"
-    ]
+    catalog = reference_catalog()["rncpu_builtin"]
+    spec = catalog["external_device_configuration_reference"]
+    cpu_spec = catalog["remote_opening_reference"]
     revision_gate = spec["manual_revision_gate"]
+    cpu_revision_gate = cpu_spec["manual_revision_gate"]
     reference_revision = revision_gate["validated_reference_revision"]
+    cpu_reference_revision = cpu_revision_gate["validated_reference_revision"]
     if requested_revision is None:
         revision_state = "UNKNOWN_REQUESTED_REVISION"
     elif requested_revision == reference_revision:
         revision_state = "AD_REFERENCE_ONLY"
     else:
         revision_state = "UNVERIFIED_MANUAL_REVISION"
+    if requested_cpu_revision is None:
+        cpu_revision_state = "UNKNOWN_REQUESTED_REVISION"
+    elif requested_cpu_revision == cpu_reference_revision:
+        cpu_revision_state = "E_REFERENCE_ONLY"
+    else:
+        cpu_revision_state = "UNVERIFIED_MANUAL_REVISION"
 
     checks = {
         "opening_method": (
@@ -116,7 +133,9 @@ def inspect_reference_r04cpu_configuration(
         overall = input_state
     elif batch_state == "REJECTED_STATIC_SETTINGS":
         overall = "REJECTED_STATIC_SETTINGS"
-    elif revision_state != "AD_REFERENCE_ONLY":
+    elif (revision_state != "AD_REFERENCE_ONLY" or
+          ("opening_method" in supplied and requested_cpu_revision is not None and
+           cpu_revision_state != "E_REFERENCE_ONLY")):
         overall = "SOURCE_REVISION_NOT_VERIFIED"
     elif (batch_state == "REVIEW_REQUIRED" or
           opening_state in ("UNKNOWN", "DOCUMENTED_REMOTE_RUN_RECONNECT_FAILURE")):
@@ -137,6 +156,16 @@ def inspect_reference_r04cpu_configuration(
             "source": spec["source"],
             "catalog_url": revision_gate["catalog_url"],
         },
+        "cpu_manual_revision_check": {
+            "requested_revision": requested_cpu_revision,
+            "reference_revision": cpu_reference_revision,
+            "listed_newer_revision": cpu_revision_gate["newer_catalog_revision"],
+            "newer_revision_comparison": cpu_revision_gate["newer_revision_comparison"],
+            "affects_supplied_opening_method": "opening_method" in supplied,
+            "status": cpu_revision_state,
+            "source": cpu_spec["source"],
+            "catalog_url": cpu_revision_gate["catalog_url"],
+        },
         "checks": checks,
         "overall_static_review": overall,
         "status": "OFFLINE_SOURCE_SCOPED_COMPOSITION_NOT_VENDOR_CERTIFIED",
@@ -146,6 +175,7 @@ def inspect_reference_r04cpu_configuration(
         "notes": [
             "AD facts are scoped to the R04CPU CPU built-in manual example.",
             "Manufacturer AG edition has not been clause-compared with AD.",
+            "CPU Module I edition has not been clause-compared with E.",
             "Missing sections do not describe real PLC factory/active settings.",
             "Only existing offline inspectors own vendor tables and diagnostics.",
             "No runtime TCP/UDP, GX Works3 native-project validation, "
