@@ -1,3 +1,20 @@
+## 2026-11-01 R04CPU CPU built-in composite offline preflight (PR #38)
+
+`virtual_plc.rncpu_reference.inspect_reference_r04cpu_configuration`
+composes the three already independent reference-only inspectors:
+CPU built-in Opening Method (remote STOP/RUN reconnect risk), R04CPU
+A038H timer settings and GX Works3 external-device user slots/ports.
+No duplicated Mitsubishi lookup tables, new network listeners, real
+PLC calls or PyPI release. Missing vs empty vs explicit null, strict
+keys/models, invalid own-port rows and source revision provenance are
+tested. Manufacturer current catalogue lists SH-081257ENG-AG
+(2026-10), but **AG-vs-AD clauses are NOT_VERIFIED**; results only
+reference sourced SH-081257ENG-AD R04CPU examples. See
+[implementation and negative contracts](research/RNCPU_R04CPU_COMPOSITE_PREFLIGHT_20261101.md)
+and [PR #38](https://github.com/greatgc-flow/VirtualPLC/pull/38).
+Read the PR and exact CI before declaring complete; all outputs are
+offline synthetic diagnostics and **not** GX Works3 or hardware certification.
+
 ## 2026-11-01 R04CPU CPU built-in multi-entry configuration lint and AG source gate (PR #37)
 
 Newest manufacturer catalogue lists SH-081257ENG-AG

@@ -1,5 +1,19 @@
 # VirtualPLC — Design
 
+**R04CPU CPU built-in complete *offline* settings review:**
+`virtual_plc.rncpu_reference.inspect_reference_r04cpu_configuration`
+composes the existing R04CPU opening-method, A038H timer and multi-entry
+external-device inspectors without duplicating their vendor SSOT.
+Input sections are explicitly optional, missing/null/empty are distinct,
+and the caller's manual revision is gated against the reviewed
+SH-081257ENG-AD (newer AG: **NOT_VERIFIED**, not assumed equivalent).
+It checks only manually transcribed source-scoped settings and returns
+independent diagnostics, never a GX Works3 native-project verdict,
+SLMP/OS timing claim, active client count or physical PLC certification.
+Only `R04CPU` CPU **built-in** is accepted; RJ71EN71 remains separate.
+See [composite preflight](research/RNCPU_R04CPU_COMPOSITE_PREFLIGHT_20261101.md)
+and [PR #38](https://github.com/greatgc-flow/VirtualPLC/pull/38).
+
 Status: implemented M0–M7. Public behavior is documented in [BEHAVIOR](BEHAVIOR.md),
 response faults in [FAULTS](FAULTS.md), and installation/safety in [README](../README.md).
 Purpose: a local Mitsubishi MC-protocol PLC simulator compatible with the wire-visible
