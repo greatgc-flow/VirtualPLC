@@ -1,3 +1,37 @@
+## 2026-11-01 offline Mitsubishi AD/AG and E/I manual PDF evidence kit (PR #42)
+
+Official [Mitsubishi R04CPU manual catalogue](https://www.mitsubishielectric.com/fa/products/faspec/download.page?category=ex&formNm=RnCPU_R04CPU_3322&id=spec&kisyu=%2Fplcr&lang=2)
+confirms Ethernet `SH-081257ENG-AG` 2026-10 (19.23MB) and CPU
+`SH-082488ENG-I` 2026-08 (18.39MB). **Real original PDF source
+clauses were still inaccessible in this execution environment**:
+AG URL unavailable; I/AD/E too large for web extraction, and local
+manufacturer host DNS failed. No SHA or original source PDFs were
+obtained; **AD→AG and E→I clause parity remains NOT_VERIFIED**.
+
+New developer-only `tools/manual_revision_evidence.py` with
+`tools/__init__.py` provides a reproducible local workflow when
+genuine edition pairs are downloaded. Its report screens PDF magic,
+computes SHA256 over original local bytes, checks weak first-page
+edition hints and gathers limited page/term candidates. It explicitly
+does **not** claim real PDF authentication, unchanged clauses or
+physical PLC parity. All outputs keep `NOT_VERIFIED` and require
+human review; none of this changes `virtual_plc/ethernet_reference.py`,
+runnable `Server`, network/CLI runtime, PyPI or production equipment.
+Instructions, optional local Poppler dependency, correct Windows
+CMD/PowerShell 2.x command and acceptance guide:
+[offline runbook](research/RNCPU_MANUAL_PDF_EVIDENCE_KIT_20261101.md).
+
+Tests-first RED commit
+`67aff10a7fa177b62ba96f6a8eb4d238def9cd75` on
+[CI #41271434991](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41271434991)
+Ubuntu Python3.11: **7,079 preexisting PASS; 15 expected new fixture
+errors** because the tools module was absent. Implementation
+commit `b8a3975a44b810c3dc1153ff998d06a6d698b05e`,
+and explicit developer tools package and doc/runbook follow.
+**Check exact PR #42 and independent postmerge main 9/9 before
+reporting GREEN.** Do not create manufacturer parity results without
+the authentic PDF source evidence.
+
 ## 2026-11-01 R04CPU independent Ethernet AD/AG and CPU E/I revision gates (PR #41)
 
 Live manufacturer catalogue independently confirms Ethernet
