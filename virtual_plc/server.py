@@ -281,8 +281,49 @@ class Server:
             connection.close()
             worker.join()
 
+    def _udp_response(self, packet):
+        """Process one complete UDP datagram without socket I/O.
+
+        Returns None for an incomplete/concatenated frame, incompatible
+        data-code, or oversized response. Malformed headers raise ValueError,
+        which the caller drops. Both wire families retain their own framing
+        and dispatcher, sharing one PLC Memory and request lock.
+
+        The response hook runs once, outside the request lock, as before.
+        UDP has no authenticated TCP requester/STOP ownership identity.
+        """
+        size = frame_size_1e(packet) if self.slmp_1e else frame_size(packet)
+        if size != len(packet):
+            self._log("UDP drop: incomplete or concatenated frame")
+            return None
+
+        if self.slmp_1e:
+            with self._request_lock:
+                response = dispatch_1e(packet, self.memory, self._max_points,
+                                       control=self, requester=None)
+        else:
+            request = decode_request(packet)
+            if (self.ethernet is not None and
+                    request.wire != self.ethernet.values["communication_data_code"]):
+                self._log("UDP drop: communication data code mismatch")
+                return None
+            with self._request_lock:
+                end_code, data = dispatch(request, self.memory, self._max_points, self)
+            self._log("UDP %s %s command=%04X sub=%04X end=%04X",
+                      request.frame, request.wire, request.command,
+                      request.subcommand, end_code)
+            response = encode_response(request, end_code, data,
+                                       ascii_dword_order=self.ascii_dword_order)
+
+        if self._hook is not None:
+            response = self._hook(response)
+        if len(response) > MAX_UDP_DATAGRAM:
+            self._log("UDP drop: oversized %sresponse", "1E " if self.slmp_1e else "")
+            return None
+        return response
+
     def _udp_loop(self, listener):
-        """One exact 3E/4E binary/ASCII request per datagram, sharing the TCP lock."""
+        """UDP socket lifecycle: receive, validate, respond, or drop one datagram."""
         while not self._stopping.is_set():
             try:
                 # Receive the full OS datagram before enforcing our smaller cap:
@@ -296,37 +337,8 @@ class Server:
                 self._log("UDP drop: empty or oversized datagram")
                 continue
             try:
-                if (frame_size_1e(packet) if self.slmp_1e else frame_size(packet)) != len(packet):
-                    self._log("UDP drop: incomplete or concatenated frame")
-                    continue
-                if self.slmp_1e:
-                    with self._request_lock:
-                        response = dispatch_1e(packet, self.memory, self._max_points,
-                                               control=self, requester=None)
-                    if self._hook is not None:
-                        response = self._hook(response)
-                    if len(response) > MAX_UDP_DATAGRAM:
-                        self._log("UDP drop: oversized 1E response")
-                        continue
-                    if not self._stopping.is_set():
-                        listener.sendto(response, peer)
-                    continue
-                request = decode_request(packet)
-                if self.ethernet is not None and request.wire != self.ethernet.values["communication_data_code"]:
-                    self._log("UDP drop: communication data code mismatch")
-                    continue
-                with self._request_lock:
-                    end_code, data = dispatch(request, self.memory, self._max_points, self)
-                self._log("UDP %s %s command=%04X sub=%04X end=%04X",
-                          request.frame, request.wire, request.command, request.subcommand, end_code)
-                response = encode_response(request, end_code, data,
-                                           ascii_dword_order=self.ascii_dword_order)
-                if self._hook is not None:
-                    response = self._hook(response)
-                if len(response) > MAX_UDP_DATAGRAM:
-                    self._log("UDP drop: oversized response")
-                    continue
-                if not self._stopping.is_set():
+                response = self._udp_response(packet)
+                if response is not None and not self._stopping.is_set():
                     listener.sendto(response, peer)
             except (ValueError, OSError) as error:
                 self._log("UDP drop: %s", error)

@@ -1,5 +1,18 @@
 # VirtualPLC — Design
 
+**UDP transport/dispatch boundary (behavior-preserving refactor, PR #39):**
+`Server._udp_loop` owns OS datagram receive/drop, socket send and shutdown;
+private `Server._udp_response(packet)` owns exactly-one-frame validation,
+1E or 3E/4E source-specific dispatch under the existing shared request
+lock, post-dispatch response_hook once, and response-size gating.
+The caller continues to reject empty or >8192-byte UDP datagrams before
+dispatch, preserve malformed-frame drop and catch behavior, and suppress
+response sends during shutdown. No TCP framing/fault changes, real PLC
+network access, public CLI options or hardware parity claim.
+Characterization is in `tests/test_udp_dispatch_refactor.py`, while the
+existing socket integration suites retain on-wire parity coverage.
+See [PR #39](https://github.com/greatgc-flow/VirtualPLC/pull/39).
+
 **R04CPU CPU built-in complete *offline* settings review:**
 `virtual_plc.rncpu_reference.inspect_reference_r04cpu_configuration`
 composes the existing R04CPU opening-method, A038H timer and multi-entry
