@@ -235,6 +235,16 @@ _REFERENCE_HARDWARE = {
             "recommended_opening_method": "do_not_open_by_program",
             "factory_default": None,
             "parameter_id": "A031H",
+            # The manufacturer's current CPU manual is I (2026-08), but
+            # E->I opening-method/A031H clauses have NOT been compared.
+            # This is a CPU manual gate, independent from Ethernet AD->AG.
+            "manual_revision_gate": {
+                "validated_reference_revision": "E",
+                "newer_catalog_revision": "I",
+                "newer_catalog_published": "2026-08",
+                "newer_revision_comparison": "NOT_VERIFIED",
+                "catalog_url": "https://www.mitsubishielectric.com/fa/download/search.page?kisyu=%2Fplcr&mode=manual",
+            },
             "gxworks3_path": [
                 "Module Parameter", "Basic Settings",
                 "Own Node Settings", "Opening Method",
