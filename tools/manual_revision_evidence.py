@@ -226,7 +226,6 @@ def generate_report(pairs, extract=None, max_hits=12, executable="pdftotext"):
     }
 
 
-
 def write_report_atomic(output, payload, overwrite=False):
     """Publish complete JSON or leave the previous report untouched.
 
