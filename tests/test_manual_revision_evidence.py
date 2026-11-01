@@ -248,7 +248,7 @@ def _mock_pdf_extract_for_atomic_output(kit, monkeypatch):
         kit, "extract_pdf_text",
         lambda path, executable="pdftotext": "SH-082488ENG-"
         + ("E" if path.stem == "cpu_e" else "I")
-        + "\\fOpening Method A031H",
+        + "\fOpening Method A031H",
     )
 
 
@@ -258,7 +258,7 @@ def test_atomic_output_preserves_prior_evidence_if_publish_fails(
     import os
     _mock_pdf_extract_for_atomic_output(kit, monkeypatch)
     output = tmp_path / "evidence.json"
-    output.write_text("previous verified evidence\\n", encoding="utf-8")
+    output.write_text("previous verified evidence\n", encoding="utf-8")
 
     def deny_replace(source, destination):
         raise OSError("simulated replace failure")
@@ -268,7 +268,7 @@ def test_atomic_output_preserves_prior_evidence_if_publish_fails(
         kit.main(["--cpu-e", str(pdfs["cpu_e"]), "--cpu-i", str(pdfs["cpu_i"]),
                   "--output", str(output), "--overwrite"])
     assert exc.value.code == 2
-    assert output.read_text(encoding="utf-8") == "previous verified evidence\\n"
+    assert output.read_text(encoding="utf-8") == "previous verified evidence\n"
     assert capsys.readouterr().out == ""
     assert list(tmp_path.glob(".evidence.json.*.tmp")) == []
 
@@ -279,7 +279,7 @@ def test_atomic_success_commits_complete_stdout_identical_json(
     import os
     _mock_pdf_extract_for_atomic_output(kit, monkeypatch)
     output = tmp_path / "evidence.json"
-    output.write_text("old report\\n", encoding="utf-8")
+    output.write_text("old report\n", encoding="utf-8")
     real_replace = os.replace
     calls = []
 
@@ -307,7 +307,7 @@ def test_atomic_new_report_refuses_concurrent_destination_creation(
     output = tmp_path / "evidence.json"
 
     def concurrent_create(source, destination):
-        output.write_text("another writer\\n", encoding="utf-8")
+        output.write_text("another writer\n", encoding="utf-8")
         raise FileExistsError("destination created concurrently")
 
     monkeypatch.setattr(os, "link", concurrent_create)
@@ -315,6 +315,6 @@ def test_atomic_new_report_refuses_concurrent_destination_creation(
         kit.main(["--cpu-e", str(pdfs["cpu_e"]), "--cpu-i", str(pdfs["cpu_i"]),
                   "--output", str(output)])
     assert exc.value.code == 2
-    assert output.read_text(encoding="utf-8") == "another writer\\n"
+    assert output.read_text(encoding="utf-8") == "another writer\n"
     assert capsys.readouterr().out == ""
     assert list(tmp_path.glob(".evidence.json.*.tmp")) == []
