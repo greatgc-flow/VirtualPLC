@@ -78,6 +78,14 @@ python tools/manual_revision_evidence.py --cpu-e /manuals/sh082488enge.pdf --cpu
   (copy to a read-only workspace before running). This detects common
   duplicate/mid-extraction source drift, **not** cryptographic publisher
   authentication or all concurrent filesystem races.
+- Full-pack source-integrity gate ([PR #45](https://github.com/greatgc-flow/VirtualPLC/pull/45)):
+  after all supplied PDF editions and manual families are processed,
+  each original is SHA-256/size checked again. A later extraction
+  changing a previously scanned source invalidates the entire report.
+  This supplements immediate post-extraction checks; it cannot
+  establish genuine publisher identity, prevent all rapid replace-and-
+  restore races, or guarantee that originals remain unchanged after
+  final verification.
 - `front_matter_edition_candidate` searches the first eight extracted
   PDF pages for the expected document/edition label. It is a **weak
   candidate**, not authentication (edition history may include older
