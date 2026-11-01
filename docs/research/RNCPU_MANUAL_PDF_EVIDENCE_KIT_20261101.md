@@ -58,6 +58,14 @@ python tools/manual_revision_evidence.py --cpu-e /manuals/sh082488enge.pdf --cpu
   file length (max 100 MiB), and **SHA-256 over its original bytes**.
   The header is not a cryptographic certificate or confirmation that
   the manufacturer supplied the PDF.
+- Source-integrity gate ([PR #43](https://github.com/greatgc-flow/VirtualPLC/pull/43)):
+  the same PDF **bytes** cannot fill multiple edition roles, even under
+  different filenames. Each input is SHA-256 fingerprinted again
+  immediately after local text extraction; if content or length changes,
+  the entire report fails closed. Keep manufacturer originals stable
+  (copy to a read-only workspace before running). This detects common
+  duplicate/mid-extraction source drift, **not** cryptographic publisher
+  authentication or all concurrent filesystem races.
 - `front_matter_edition_candidate` searches the first eight extracted
   PDF pages for the expected document/edition label. It is a **weak
   candidate**, not authentication (edition history may include older
