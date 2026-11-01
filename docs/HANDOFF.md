@@ -1,3 +1,39 @@
+## 2026-11-01 R04CPU independent Ethernet AD/AG and CPU E/I revision gates (PR #41)
+
+Live manufacturer catalogue independently confirms Ethernet
+`SH-081257ENG-AG` **2026-10** and CPU `SH-082488ENG-I`
+**2026-08**. Actual large PDF clauses could not be retrieved:
+**AD→AG and E→I clause parity both NOT_VERIFIED**. Existing
+reference-only AD slots/own-ports/A038H timers and CPU E A031H
+opening-method warning remain unchanged. New opt-in
+`cpu_manual_revision` and separate `cpu_manual_revision_check`
+prevent an explicit newer CPU I source from being silently treated
+as reviewed E when `opening_method` is supplied. Missing CPU
+revision keeps legacy overall report semantics. CPU E/I source
+uncertainty does not block an unrelated AD-only external-port/timer
+preflight; static invalid slots/ports still take priority.
+
+New `remote_opening_reference.manual_revision_gate` shares the
+existing `reference_catalog()` single manufacturer metadata SSOT
+with the separate Ethernet AD/AG gate. Tests-first RED branch
+`feat/r04cpu-cpu-manual-revision-gate-20261101`,
+test-only SHA `2f3e2928dcb24c327ab95979849ca7af142cfe0d`:
+[CI #41265169171](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41265169171)
+Windows Python3.11 job independently logged **7,053 prior tests PASS**,
+4 new validation cases PASS and **26 expected new cases FAIL** because
+source CPU revision key/result were not implemented. Implementation:
+`77047e7c8fdfb1ca7fffb8d5082c1b6bc109da86` (registry) and
+`de42a86f07c1adc319285187df36307f8d0de928` (composite).
+
+**Verify current PR #41 exact candidate CI then independent merged main
+CI 9/9 before claiming GREEN.** No runtime sockets, CLI, SLMP network
+semantics, physical equipment or PyPI changed.
+[Source matrix and examples](research/RNCPU_R04CPU_DUAL_MANUAL_REVISION_GATES_20261101.md),
+[official evidence/limits in issue #14](https://github.com/greatgc-flow/VirtualPLC/issues/14#issuecomment-6552328065),
+[PR #41](https://github.com/greatgc-flow/VirtualPLC/pull/41).
+Pending authenticated vendor PDFs and manual clause diff; never
+auto-promote AG/I parity based on catalogue publication.
+
 ## 2026-11-01 VerySimpleGuide Ethernet reference-ownership refactor (PR #40)
 
 Separated two non-overlapping scopes from former `ethernet.py`:
