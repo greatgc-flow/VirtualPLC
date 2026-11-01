@@ -318,3 +318,45 @@ def test_atomic_new_report_refuses_concurrent_destination_creation(
     assert output.read_text(encoding="utf-8") == "another writer\n"
     assert capsys.readouterr().out == ""
     assert list(tmp_path.glob(".evidence.json.*.tmp")) == []
+
+
+
+def test_cross_source_late_mutation_invalidates_earlier_pdf(kit, pdfs):
+    """Later edition extraction must not invalidate an earlier hashed source."""
+    older, newer = pdfs["cpu_e"], pdfs["cpu_i"]
+
+    def extract(path):
+        if path == newer:
+            older.write_bytes(older.read_bytes() + b"changed after prior extraction")
+        return "SH-082488ENG-E Opening Method A031H"
+
+    with pytest.raises(ValueError, match="PDF changed"):
+        kit.generate_report({"cpu": (older, newer)}, extract=extract)
+
+
+def test_cross_family_late_mutation_invalidates_prior_pdf(kit, pdfs):
+    """The final audit also spans both separate manual families."""
+    earlier, later = pdfs["cpu_e"], pdfs["ethernet_ag"]
+
+    def extract(path):
+        if path == later:
+            earlier.write_bytes(earlier.read_bytes() + b"late cross-family mutation")
+        return "R04CPU External Device Configuration"
+
+    with pytest.raises(ValueError, match="PDF changed"):
+        kit.generate_report({
+            "cpu": (pdfs["cpu_e"], pdfs["cpu_i"]),
+            "ethernet": (pdfs["ethernet_ad"], pdfs["ethernet_ag"]),
+        }, extract=extract)
+
+
+def test_cross_source_final_audit_keeps_stable_json_and_originals(kit, pdfs):
+    """The new audit must not alter the report schema or original PDFs."""
+    original = {key: path.read_bytes() for key, path in pdfs.items()}
+    report = kit.generate_report({
+        "cpu": (pdfs["cpu_e"], pdfs["cpu_i"]),
+        "ethernet": (pdfs["ethernet_ad"], pdfs["ethernet_ag"]),
+    }, extract=lambda _: "Opening Method A031H R04CPU")
+    assert report["manual_revision_equivalence"] == "NOT_VERIFIED"
+    assert set(report["pairs"]) == {"cpu", "ethernet"}
+    assert {key: path.read_bytes() for key, path in pdfs.items()} == original
