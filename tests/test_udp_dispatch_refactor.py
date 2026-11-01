@@ -46,15 +46,15 @@ def test_standard_udp_dispatch_write_commits_once(frame, wire):
     assert server.memory.read_words("D", 0, 1) == [0x1234]
 
 
-@pytest.mark.parametrize("request,expected", [
+@pytest.mark.parametrize("frame_bytes,expected", [
     (READ_D100, RESP_D100), (READ_D100_ASCII, RESP_D100_ASCII),
 ])
-def test_1e_udp_dispatch_has_one_hook_and_raw_reply(request, expected):
+def test_1e_udp_dispatch_has_one_hook_and_raw_reply(frame_bytes, expected):
     seen = []
     server = Server(slmp_1e=True, listeners=[("udp", 0)],
                     response_hook=lambda data: (seen.append(data) or data))
     server.memory.write_words("D", 100, [0x1234, 5, 0x6789])
-    assert server._udp_response(request) == expected
+    assert server._udp_response(frame_bytes) == expected
     assert seen == [expected]
 
 
