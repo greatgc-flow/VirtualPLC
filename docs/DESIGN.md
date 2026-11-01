@@ -1,5 +1,22 @@
 # VirtualPLC — Design
 
+**Runnable vs offline manufacturer-reference ownership (PR #40):**
+`virtual_plc/ethernet.py` owns only runnable Q/L/iQ-R Ethernet settings
+and validates effective overrides; `virtual_plc/ethernet_reference.py`
+owns the FX5/FX5-ENET/RnCPU official-source-scoped **offline** reference
+registry and all seven reference inspectors plus `reference_catalog`.
+The legacy `virtual_plc.ethernet` re-exports the exact same function/data
+objects (no wrapper or second vendor table). The dependency is one-way:
+runnable module -> offline-only reference; not vice versa. The source registry
+was moved byte-for-byte unchanged apart from new module header/import.
+Reference-only models never become executable `EthernetSettings` presets.
+No new runtime API, network behavior, manuals/source equivalence claims or
+physical hardware certification. Revision AG vs reviewed AD remains
+**NOT_VERIFIED**. Structural/parity tests: `tests/test_ethernet_reference_boundary.py`;
+existing run/client/CLI/source tests are unchanged. See
+[PR #40](https://github.com/greatgc-flow/VirtualPLC/pull/40) and
+[VerySimpleGuide](https://github.com/greatgc-flow/VerySimpleGuide).
+
 **UDP transport/dispatch boundary (behavior-preserving refactor, PR #39):**
 `Server._udp_loop` owns OS datagram receive/drop, socket send and shutdown;
 private `Server._udp_response(packet)` owns exactly-one-frame validation,

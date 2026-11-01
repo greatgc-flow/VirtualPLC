@@ -1,3 +1,35 @@
+## 2026-11-01 VerySimpleGuide Ethernet reference-ownership refactor (PR #40)
+
+Separated two non-overlapping scopes from former `ethernet.py`:
+runnable Q/L/iQ-R EthernetSettings, timer/model defaults and CLI catalogue
+remain in `virtual_plc/ethernet.py` (now ~198 lines); the manufacturer
+FX5/FX5-ENET/RnCPU reference-only registry and its 8 discovery/inspection
+functions live in `virtual_plc/ethernet_reference.py` (~900 lines).
+Manufacturer fact block moved **unchanged**; legacy `ethernet` module
+re-exports same functions and private registries, with no wrappers,
+duplicated tables, runtime reverse imports or new dependencies.
+`virtual_plc/rncpu_reference.py` and `virtual_plc/guide.py` use their
+existing imports, so CLI/JSON and source revision gates remain stable.
+
+Observed tests-first RED: `e5d7ad9b336c173487f393dad591e4700b298338`,
+[CI #41263480811](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41263480811):
+on Ubuntu Python3.11 **7,031 pre-existing PASS; 22 new expected
+ModuleNotFoundError setup errors** because `ethernet_reference` was
+deliberately absent. This is an architecture characterization test,
+not a report of a runtime defect. Implementation extracted in
+`62223551b838d7136fb2165e2ddf06fc988b83ba`; legacy facade
+applied in `fca962e8c8dd3c65daa7b4bc3adda9d093756516`.
+
+**After this handoff check exact HEAD candidate PR CI and postmerge main
+CI before claiming GREEN**: build plus Ubuntu/Windows Python3.10–3.13,
+9/9 jobs, and no client/guide/oracle regression. No real PLC/production
+network, PyPI, physical-vendor acceptance, SLMP wire or simulator
+socket behavior was changed. Vendor SH-081257ENG-AG vs AD clauses
+remain **NOT_VERIFIED**, not inferred from this refactor.
+Related [PR #40](https://github.com/greatgc-flow/VirtualPLC/pull/40),
+[issue #7](https://github.com/greatgc-flow/VirtualPLC/issues/7),
+[issue #14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
+
 ## 2026-11-01 VerySimpleGuide refactor: UDP dispatch boundary (PR #39)
 
 Introduced private `Server._udp_response(packet)` to separate UDP
