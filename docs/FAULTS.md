@@ -138,3 +138,44 @@ the peer's precise EOF/reset exception are OS-dependent; RST tests verify the
 actual platform linger setting (Windows ushort pair, POSIX int pair). No precise
 packet timing or physical PLC behavior is asserted. Ranges, native stride, SD203 and
 error semantics remain unverified; see [behavior](BEHAVIOR.md).
+
+## UDP datagram response faults (opt-in)
+
+UDP uses an independent UdpFaultPlan(steps) or --udp-fault-plan FILE;
+the TCP FaultPlan (which includes RST, close and partial_send) remains
+rejected on all UDP listeners. The option defaults to None (no effect).
+An empty UDP plan is valid. Example udp.json:
+
+```json
+{"steps":[{"match":{"command":"0x1401","nth":1,"peer":"127.0.0.1"},
+           "action":{"type":"drop"}},
+          {"times":2,"action":{"type":"delay","seconds":0.25}}]}
+```
+
+```text
+virtual-plc --listen udp:5000 --udp-fault-plan udp.json
+```
+
+Python: from virtual_plc import Server, UdpFaultPlan; construct
+Server(listeners=[('udp',0)], udp_fault_plan=UdpFaultPlan(steps)).
+An explicitly supplied UDP plan with TCP-only listeners raises ValueError
+before binding. Use of a TCP FaultPlan with any UDP listener remains invalid.
+
+Each step has required action and optional match/times (default times=1).
+Allowed match fields: command (uint16 number or 0x-prefixed string),
+nth (positive ordinal of eligible UDP responses, global across the plan,
+not per peer/port), peer (numeric IPv4 or IPv6 source address, no port).
+All match fields must match; first eligible step wins, counts reserved
+atomically. Malformed/oversized/empty UDP packets do not count.
+Counters and reservations persist across stop/start with the same plan.
+Plan configuration is deep copied; all unknown fields are rejected.
+
+Actions: drop = discard the full UDP response datagram; delay = wait
+finite nonnegative seconds before sending one complete response.
+Server.stop() cancels pending delays. Both actions occur AFTER the
+original dispatch and after response_hook; a write may have committed
+even when the response is lost. Delay holds just that UDP listener
+worker (outside the PLC request lock), not TCP or other UDP listeners.
+No retransmission, streaming, malformed frame injection, duplicate,
+corruption, reorder, authentication or timing guarantee is implied.
+No actual PLC or production network should be used.

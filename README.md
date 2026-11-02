@@ -111,6 +111,16 @@ Nonlocal network binds continue to require `--allow-nonlocal` and
 There is no authentication or UDP rate limiting. Run on loopback or on
 an isolated, trusted **test** network only; never connect to production PLCs.
 
+## UDP response faults (optional, unreleased)
+
+The existing TCP --fault-plan remains forbidden with UDP listeners.
+Use --udp-fault-plan FILE with --listen udp:PORT for an independent
+datagram-native plan. Python: from virtual_plc import UdpFaultPlan;
+Server(listeners=[('udp', 0)], udp_fault_plan=UdpFaultPlan(steps)).
+Only response drop/delay are supported; writes execute before fault
+selection. No plan means unchanged responses. TCP is unaffected in a
+mixed TCP/UDP process. See docs/FAULTS.md for strict JSON and selectors.
+
 ## CLI reference
 
 Run `virtual-plc guide options` for the option/default/meaning table generated

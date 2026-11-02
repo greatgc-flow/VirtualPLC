@@ -199,3 +199,25 @@ def test_udp_fault_cli_plan_option_and_invalid_file(tmp_path, monkeypatch, capsy
         cli.main(["--listen", "udp:0", "--udp-fault-plan", str(bad)])
     assert error.value.code == 2
     assert "guide faults" in capsys.readouterr().err
+
+
+def test_udp_plan_atomic_selection_across_threads():
+    from concurrent.futures import ThreadPoolExecutor
+    faults = plan([{"times": 9, "action": {"type": "drop"}}])
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        actions = list(pool.map(
+            lambda i: faults.select(0x0401, peer="127.0.0.1"),
+            range(60)))
+    assert sum(item == {"type": "drop"} for item in actions) == 9
+
+
+@pytest.mark.parametrize("document", [
+    "[]", "{}", '{"steps":[],"extra":1}',
+    '{"steps":"bad"}', '{"steps":[null]}',
+])
+def test_udp_json_schema_is_strict(tmp_path, document):
+    from virtual_plc.udp_faults import UdpFaultPlan
+    path = tmp_path / "udp.json"
+    path.write_text(document, encoding="utf-8")
+    with pytest.raises(ValueError):
+        UdpFaultPlan.from_file(path)

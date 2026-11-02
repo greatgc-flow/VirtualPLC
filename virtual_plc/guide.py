@@ -296,6 +296,7 @@ Memory API: read_words/write_words/read_bits/write_bits(device, head, ...), load
 Live state: server.state ("RUN"/"STOP"/"PAUSE"), server.set_state(s), server.reset_count, server.locked.
 Memory calls are not synchronized with wire requests: never load, mutate or dump while serving; use a client.
 FaultPlan(steps) or FaultPlan.from_file(path) -> Server(fault_plan=...); schema: virtual-plc guide faults.
+UdpFaultPlan(steps) -> Server(listeners=[('udp', 0)], udp_fault_plan=...); drop/delay only.
 response_hook(bytes) -> bytes transforms every complete reply before it is sent.
 pytest fixture:
   import pytest

@@ -122,7 +122,10 @@ See the [canonical CLI reference](../README.md#cli-reference),
   the shared request-lock boundary checks the flag again before starting
   1E or 3E/4E dispatch. An already-started dispatch may finish; no
   rollback or physical-PLC guarantee is implied. No late response is sent. A UDP listener cannot be combined with
-  TCP-only `FaultPlan` actions. `max_clients` and `idle_timeout` govern TCP
+  TCP-only `FaultPlan` actions. Separate opt-in UdpFaultPlan drop/delay
+  applies only to UDP replies after dispatch; no plan means no extra
+  matching or delay. Selectors: command, global response nth, source IP;
+  duplicate/reorder/stream close are deliberately not modeled. `max_clients` and `idle_timeout` govern TCP
   sessions only; the nonlocal bind guard still requires both explicit permission
   and an idle timeout option, even for UDP-only configurations.
 - All requested sockets bind before any listener starts processing. Failure
