@@ -433,6 +433,11 @@ class Server:
                 return "EOF"
             buffer += chunk
             while True:
+                # A recv may contain multiple pipelined frames. Stop must
+                # not begin dispatching the next frame after shutdown starts.
+                # An already executing dispatch still finishes normally.
+                if self._stopping.is_set():
+                    return "server shutdown"
                 try:
                     size = frame_size_1e(buffer) if self.slmp_1e else frame_size(buffer)
                     if size is None or len(buffer) < size:
