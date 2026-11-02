@@ -143,7 +143,11 @@ See the [canonical CLI reference](../README.md#cli-reference),
   shutdown/delay cancellation does not imply request failure or rollback.
   They aggregate all UDP listeners, persist across restart on the same
   Server, use a separate short lock, and never store peer/payload data.
-  No CLI flag, external endpoint, retry or production network support.
+  An explicitly configured UDP `response_hook` returning a non-bytes-like
+  value (such as `None` or `str`) yields no reply and counts as `rejected`;
+  existing bytes, bytearray and memoryview replies remain supported.
+  Previously executed writes are not rolled back. No CLI flag, external
+  endpoint, retry or production network support.
 - All requested sockets bind before any listener starts processing. Failure
   to bind or set the timeout on any listener closes that just-created socket
   and all previously bound endpoints without serving requests. The same
