@@ -85,6 +85,16 @@ PLC with different memory, start another process. `--listen` replaces the
 legacy `--port` option and may not be combined with it; `--host` applies
 to every endpoint.
 
+For opt-in **IPv6 loopback** on an IPv6-capable host, specify a numeric
+address rather than `localhost`: `virtual-plc --host ::1 --listen tcp:5000
+--listen udp:5000`. Both listeners use IPv6 sockets and share one PLC state;
+they do not automatically bind IPv4 or provide dual-stack access. The stock
+pinned `pymcprotocol` oracle and `examples/udp_read_d0.py` are not IPv6
+client compatibility claims; the latter explicitly targets IPv4 only.
+IPv6 availability depends on the operating system. CI covers real IPv6
+loopback TCP/UDP 3E/4E binary/ASCII exchanges and skips the IPv6-only
+integration tests if the runner cannot bind `::1`. No real PLC is involved.
+
 The same topology is available to embedded Python programs:
 
 ```python
