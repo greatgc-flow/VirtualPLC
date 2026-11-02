@@ -229,6 +229,13 @@ network protocol, CLI recovery flag, or concurrent lock hierarchy.
 
 ## Optional multi-listener transport extension
 
+Accepted TCP peers are configured with `TCP_NODELAY` and `idle_timeout`
+independently of the listener lifecycle. A socket-configuration `OSError`
+closes only the failed accepted peer; the accept worker continues processing
+future peers, without allocating a worker or reserving a global client slot
+for the failed connection. This fail-isolated behavior is tested for both
+socket options under issue #13; no UDP, wire, vendor or release changes.
+
 `Server(listeners=[("tcp", 5000), ("udp", 5000)])` optionally binds
 several protocol/port pairs in one process; the CLI equivalent is repeatable
 `--listen`. Omitted means the legacy single TCP port. The listener collection
