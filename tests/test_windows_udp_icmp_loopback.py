@@ -125,3 +125,28 @@ def test_real_windows_loopback_icmp_10054_and_explicit_recovery():
     assert failures == [10054], (
         "Unexpected native Windows UDP recvfrom failure, not 10054: "
         + repr(failures))
+
+
+def test_dead_udp_worker_does_not_rebind_until_explicit_stop():
+    """A dead worker is not repaired by another start() on a bound Server.
+
+    An OS-level socket failure is simulated by closing a real loopback
+    socket while its worker is polling. The public recovery operation
+    is an explicit stop() followed by start(); never create a second
+    worker just because start() was called twice.
+    """
+    server = Server(listeners=[("udp", 0)])
+    try:
+        server.start()
+        stale_socket = server._listener
+        stale_worker = server._listener_threads[0]
+        stale_socket.close()
+        stale_worker.join(3)
+        assert not stale_worker.is_alive(), "closed UDP socket worker still active"
+        server.start()  # no-op while Server still owns the old listener
+        assert server._listener is stale_socket
+        assert server._listener_threads == [stale_worker]
+        server.stop()
+        _verify_manual_restart(server, packet("3E", "binary"))
+    finally:
+        server.stop()

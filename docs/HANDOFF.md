@@ -1,3 +1,25 @@
+## 2026-11-03 #13 genuine Windows loopback UDP ICMP 10054 evidence (PR #59)
+
+Independent [PR #59](https://github.com/greatgc-flow/VirtualPLC/pull/59),
+branch `test/windows-udp-icmp-loopback-evidence-20261103`, based on
+unchanged main `069af7aa5e192b3b3b0b2d5040a7d9061135a415`.
+Actual OS socket test-only SHA
+`c730b48db30925d783bbdf07c4b58c0888d7c814`:
+[CI #41474184069](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41474184069)
+**9/9 SUCCESS**. Windows Python3.10–3.13 each **7,186 PASS,
+0 SKIP**: the test observed actual recvfrom error 10054 after the
+server replied to a deliberately closed UDP client loopback port.
+Ubuntu 3.10–3.13 each 7,181 PASS and one explicit Windows-only SKIP.
+No fake socket failure in the native Windows case, no special
+SIO_UDP_CONNRESET change, nonloopback address or raw ICMP socket.
+A cross-platform test verifies explicit manual stop/start on a real
+loopback reply. Further lifecycle guard test and detailed evidence:
+`docs/research/WINDOWS_UDP_ICMP_LOOPBACK_20261103.md` (read PR #59
+head, not main). Final exact HEAD CI still required after docs/test
+changes. Actual Windows build/firewall differences remain unverified.
+User prohibits main merges: preserve #56/#57/#58/#59 OPEN, no tags,
+PyPI, real PLC/factory network. #54 protection still absent.
+
 ## 2026-11-02 #13 UDP client example and governance #54 (PR #55)
 
 New bounded source-only UDP client example for one MC3E binary D0 read:
