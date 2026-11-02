@@ -322,7 +322,7 @@ def test_second_listener_timeout_failure_rolls_back_all_and_allows_restart(
                 if transport == "tcp":
                     with socket.create_connection((host, port), timeout=2) as client:
                         assert exchange(client, request(data=device_data())) == (
-                            0, b"\x5cx00\x5cx00")
+                            0, b"\x00\x00")
                 else:
                     read = packet("3E", "binary")
                     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
@@ -331,4 +331,4 @@ def test_second_listener_timeout_failure_rolls_back_all_and_allows_restart(
                         response, source = client.recvfrom(8192)
                     assert source[1] == port
                     assert response == encode_response(
-                        decode_request(read), data=b"\x5cx00\x5cx00")
+                        decode_request(read), data=b"\x00\x00")
