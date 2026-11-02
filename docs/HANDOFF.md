@@ -1,3 +1,19 @@
+## 2026-11-02 #13 UDP invalid response-hook result metrics regression (PR #57)
+
+Follow-up test-only commit `ef7c2c14994033ff7b5a05b0b31bdf6a3ff6de62`
+showed a genuine [RED CI #41468869531](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41468869531):
+Ubuntu3.11 **7,197 PASS + 3 expected FAIL**, Windows3.12
+**7,201 PASS + 3 expected FAIL**, only the invalid callback output cases.
+Two new compatibility checks for valid bytearray/memoryview UDP replies PASS.
+Cause: invalid hook output (None, string, number) bypassed the ValueError
+path and therefore the optional UDP `rejected` metric, while the
+worker printed a generic exception and continued. Minimal code fix
+`e18eff04bd02c7481f533e3a6de3b5020bf4bf75` checks buffer protocol
+after an explicit UDP hook, converting unsupported output to ValueError;
+existing buffer objects remain accepted and committed writes do not roll back.
+Updated README/BEHAVIOR/FAULTS/DESIGN, plus handoff. Verify *latest exact*
+PR HEAD and full 9-job CI before calling GREEN. Do not merge `main`.
+
 ## 2026-11-02 #13 opt-in UDP health counters (PR #57, UNMERGED)
 
 Separate feature branch `feat/udp-metrics-optin-20261102`, PR #57.
