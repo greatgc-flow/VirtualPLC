@@ -121,6 +121,22 @@ Only response drop/delay are supported; writes execute before fault
 selection. No plan means unchanged responses. TCP is unaffected in a
 mixed TCP/UDP process. See docs/FAULTS.md for strict JSON and selectors.
 
+### UDP listener receive-failure diagnostics
+
+An unexpected UDP `recvfrom` socket error now emits one server **WARNING**
+(`UDP receive failed; listener worker stopped`) before ending that
+listener's receive worker. Normal `stop()` socket closure and timeout polling
+remain silent. Microsoft documents Winsock UDP error `10054` as a possible
+ICMP Port Unreachable result of an earlier send; it advises closing the
+socket, so VirtualPLC does **not** blindly retry an unusable listener.
+If the simulator is still running but its UDP listener fails, explicitly
+`stop()` and `start()` the Server from the embedding application to
+rebind its listeners. There is no automatic restart or production-grade
+availability guarantee. This logging behavior is covered by deterministic
+socket-error injection; a real Windows ICMP incident is NOT_VERIFIED.
+See [behavior](docs/BEHAVIOR.md) and
+[Microsoft recvfrom documentation](https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-recvfrom).
+
 ## Standalone UDP client example (source checkout)
 
 The pinned `pymcprotocol==0.3.0` client uses TCP. For UDP, use the
