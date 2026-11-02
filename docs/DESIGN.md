@@ -291,6 +291,20 @@ any nonlocal bind, with no UDP timeout semantics implied. A separate
 process provides an independent PLC instance. Physical PLC behavior remains
 unverified; this is a simulator transport policy only.
 
+### UDP datagram response faults (PR #52)
+
+Separate UdpFaultPlan holds only drop and stop-cancellable delay after
+UDP command dispatch, after the normal response_hook. It never shares
+TCP FaultPlan actions or TCP stream assumptions. Valid UDP responses
+are counted globally per plan (across UDP listener ports); selections
+match command, response ordinal nth and numeric source IP. Reserving
+actions and decrementing finite times are atomic under the plan lock.
+Only the opt-in path extracts the already-validated MC command again.
+Delay waits outside the shared PLC request lock, blocks only its UDP
+worker and cancels on stop. No fault means unchanged UDP overhead.
+Duplicate, corruption, reorder, scheduler and rate limiting are held
+for separate #13 slices. No manufacturer/physical fidelity implied.
+
 ## 1. Verified client facts (pinned pymcprotocol 0.3.0)
 
 - Only `plctype == iQ-R` changes wire format. Q, L, QnA, iQ-L share one **wire class**.

@@ -1,3 +1,19 @@
+## 2026-11-02 #13 UDP response-native fault plan (PR #52)
+
+First opt-in drop/delay datagram response fault slice. Independent
+UdpFaultPlan/--udp-fault-plan: command, global UDP response nth,
+numeric peer IP; after dispatch and response_hook. Distinct from
+TCP FaultPlan; no plan means normal unchanged behavior. No
+duplicate/corruption/reorder or physical PLC semantics.
+
+Tests-only RED f134073253278a9cc90ef5b8766ad25dd351cace
+(CI #41434118229): Ubuntu Python3.11 7,127 old PASS, 26 expected
+FAIL on absent virtual_plc.udp_faults and CLI option. Implementation
+7124389d787beaadd19e75dcf849f6993fa08d1c.
+Require exact candidate build+Ubuntu/Windows Python3.10-3.13 9/9
+then squash and independent main push CI 9/9; update #13/#25.
+Vendor AD/AG E/I source comparison remains NOT_VERIFIED.
+No real PLC, production network, new dependencies or PyPI release.
 ## 2026-11-02 #13 UDP receive/parse vs shutdown dispatch guard (PR #51)
 
 `_udp_loop` previously checked `_stopping` at the top of the recv loop
