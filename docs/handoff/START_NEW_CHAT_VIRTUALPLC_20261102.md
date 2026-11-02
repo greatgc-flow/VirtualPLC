@@ -137,3 +137,23 @@ re-asking already documented approvals.
 - PR #55 adds a standalone IPv4 loopback-only, standard-library MC3E binary D0 UDP reader, strict response source/length/end-code validation and executable tests. RED test-only `fc8b399529a5273c190773e36edd648e2bc0b607` (CI #41453639346); verify actual final HEAD and CI/merge outcome before acting.
 - Governance #7 broad audit was CLOSED during PR #53; #54 is the OPEN owner/admin-only follow-up for unapplied main and v* tag rulesets. The connection has no ruleset write ability. Do not push release tags or claim protection active.
 - Read `docs/HANDOFF.md` and #25/#54 for the most recent checkpoint after PR #55; do not assume this starter's commit remains current.
+## 2026-11-03 Native Windows UDP ICMP evidence (PR #59)
+
+- Fresh main baseline `069af7aa5e192b3b0b2d5040a7d9061135a415`.
+- Independent PR #59 branch `test/windows-udp-icmp-loopback-evidence-20261103`:
+  https://github.com/greatgc-flow/VirtualPLC/pull/59
+  actual native Windows UDP 10054 evidence at test-only
+  `c730b48db30925d783bbdf07c4b58c0888d7c814`,
+  [CI #41474184069](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41474184069)
+  completed 9/9: Win3.10–3.13 each 7,186 PASS and 0 SKIP
+  (genuine recvfrom 10054), Ubuntu3.10–3.13 each
+  7,181 PASS +1 intentional Windows-only SKIP.
+- Additional loopback listener lifecycle test and complete policy/evidence
+  documented in `docs/research/WINDOWS_UDP_ICMP_LOOPBACK_20261103.md`;
+  **check exact final PR HEAD CI again** after doc/test commits.
+- PR #58 warning remains UNMERGED, so do not claim main logs it.
+  PRs #56, #57, #58 and #59 must stay OPEN; current user forbids
+  main merges despite earlier handoff text authorizing them.
+- No automatic retry/rebind/WinSock ioctl settings/real PLC/production
+  network/PyPI or v* tag. #54 rulesets not applied.
+
