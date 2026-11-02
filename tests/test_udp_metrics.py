@@ -168,3 +168,65 @@ def test_udp_metrics_late_shutdown_receive_is_not_rejected():
     server._udp_loop(Listener())
     assert server.memory.read_words("D", 0, 1) == [0]
     assert server.get_udp_metrics() == {**EMPTY, "received": 1}
+
+
+@pytest.mark.parametrize("invalid_reply", [None, "not bytes", 123])
+def test_udp_metrics_invalid_hook_reply_is_rejected_but_next_request_works(
+        invalid_reply):
+    """A bad user callback must not vanish from diagnostic counters.
+
+    The first UDP request is valid, but its transformed response is
+    unusable. The next complete request on the same worker must be served.
+    A scripted socket avoids OS packet-loss or sleep-based assumptions.
+    """
+    frame = packet("3E", "binary")
+    normal = encode_response(decode_request(frame), data=b"\x00\x00")
+    calls = []
+    deliveries = []
+
+    def callback(encoded):
+        calls.append(encoded)
+        return invalid_reply if len(calls) == 1 else encoded
+
+    server = Server(listeners=[("udp", 0)], udp_metrics=True,
+                    response_hook=callback)
+
+    class ScriptedListener:
+        def __init__(self):
+            self.received = 0
+
+        def recvfrom(self, limit):
+            assert limit == 65535
+            self.received += 1
+            if self.received <= 2:
+                return frame, ("127.0.0.1", 55432)
+            server._stopping.set()
+            raise OSError("script ended")
+
+        def sendto(self, response, peer):
+            if not isinstance(response, (bytes, bytearray, memoryview)):
+                raise TypeError("sendto requires bytes-like data")
+            deliveries.append((bytes(response), peer))
+            return len(response)
+
+    server._udp_loop(ScriptedListener())
+    assert calls == [normal, normal]
+    assert deliveries == [(normal, ("127.0.0.1", 55432))]
+    assert server.get_udp_metrics() == {
+        **EMPTY, "received": 2, "rejected": 1, "sent": 1,
+    }
+
+
+@pytest.mark.parametrize("wrapper", [bytearray, memoryview])
+def test_udp_metrics_preserves_existing_bytes_like_response_hooks(wrapper):
+    """Do not break buffers already accepted by UDP sendto."""
+    frame = packet("3E", "binary")
+    expected = encode_response(decode_request(frame), data=b"\x00\x00")
+    with Server(listeners=[("udp", 0)], udp_metrics=True,
+                response_hook=lambda data: wrapper(data)) as server:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            assert udp_exchange(client, frame, server.address) == expected
+        assert server.get_udp_metrics() == {
+            **EMPTY, "received": 1, "sent": 1,
+        }
