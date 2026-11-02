@@ -141,17 +141,15 @@ def generate_report(pairs, extract=None, max_hits=12, executable="pdftotext"):
         def extract(path):
             return extract_pdf_text(path, executable=executable)
 
-    pair_reports = {}
-    # A source hash must identify exactly one edition role across the report.
-    # Different filenames are not independent sources when their bytes match.
+    # Validate and fingerprint the COMPLETE source pack before invoking
+    # any text extractor. An invalid later role must not trigger earlier
+    # pdftotext subprocesses. PDF identity is not publisher authentication.
+    preflight = {}
     seen_sources = {}
-    source_fingerprints = []
     for kind in sorted(pairs):
         paths = pairs[kind]
         if type(paths) is not tuple or len(paths) != 2 or any(p is None for p in paths):
             raise ValueError("{} requires (older PDF, newer PDF)".format(kind))
-        spec = PAIRS[kind]
-        sources, scanned = {}, {}
         for label, raw_path in zip(("older", "newer"), paths):
             path = Path(raw_path)
             metadata = fingerprint_pdf(path)
@@ -163,7 +161,15 @@ def generate_report(pairs, extract=None, max_hits=12, executable="pdftotext"):
                     "independent source evidence".format(seen_sources[digest], role)
                 )
             seen_sources[digest] = role
+            preflight[kind, label] = (path, metadata)
 
+    pair_reports = {}
+    source_fingerprints = []
+    for kind in sorted(pairs):
+        spec = PAIRS[kind]
+        sources, scanned = {}, {}
+        for label in ("older", "newer"):
+            path, metadata = preflight[kind, label]
             text = extract(path)
             # The digest in the report must identify the bytes from which
             # text was extracted. Local PDFs may be replaced during review.

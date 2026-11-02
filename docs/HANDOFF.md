@@ -1,3 +1,22 @@
+## 2026-11-02 complete-pack PDF preflight (PR #46)
+
+The developer-only local manual PDF evidence utility now checks **all** supplied
+edition roles (pair shape, existing PDF header/size, SHA-256 uniqueness across
+families) **before** invoking any text extractor. A malformed, absent or
+byte-duplicate later edition no longer causes unnecessary earlier `pdftotext`
+work. Extraction order and existing per-file post-extraction and whole-pack
+final fingerprints remain unchanged; valid report JSON schema unchanged.
+
+Observed tests-only RED `5443ae7657533f77d7f1440d634af7a653751a9e`:
+[CI #41374056432](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41374056432),
+Ubuntu Python3.11 **7,106 PASS + 3 expected FAIL** (invalid pack called
+extractor). Implementation `d485e7640e9cc0f374900cbd2f5969e289f489b1`.
+Before declaring GREEN or merging, check exact final candidate PR CI
+and independent postmerge main CI (build + 8 OS/Python jobs).
+
+No vendor PDF bytes, authenticity or AD/AG / E/I clause parity were
+verified; `NOT_VERIFIED` remains. No simulator network/CLI/PyPI changes.
+
 ## 2026-11-01 PDF full-pack source stability across editions (PR #45)
 
 Starting verified remote main: `42e52fd5d9781f4c44aad5ab15c3eae19221c49b`;
