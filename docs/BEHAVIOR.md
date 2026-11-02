@@ -126,6 +126,10 @@ See the [canonical CLI reference](../README.md#cli-reference),
   Server can safely start again after the failure.
 - `.stop()` synchronously closes all endpoints and clients and joins workers;
   idempotent, including incomplete TCP frames.
+- Concurrent external `.start()` / `.stop()` calls on one Server are
+  serialized. A stop during listener binding closes the completed startup
+  before returning; concurrent starts do not duplicate endpoints. This
+  lifecycle lock is separate from the shared TCP/UDP request lock.
 - Accepted sockets use TCP_NODELAY; if configuring TCP_NODELAY or the accepted socket timeout raises `OSError`, only that accepted peer is closed and the port continues accepting future connections. EOF, bad framing or `idle_timeout` closes only that
   client.
 - `response_hook(response_bytes) -> bytes` transforms each complete encoded response

@@ -70,8 +70,10 @@ def test_stop_during_tcp_udp_start_waits_and_closes_all_endpoints(monkeypatch):
         assert server._stopping.is_set()
     finally:
         release_first_bind.set()
-        start_thread.join(4) if start_thread.ident is not None else None
-        stop_thread.join(4) if stop_thread.ident is not None else None
+        if start_thread.ident is not None:
+            start_thread.join(4)
+        if stop_thread.ident is not None:
+            stop_thread.join(4)
         server.stop()
         for listener in created:
             listener.close()
@@ -123,8 +125,10 @@ def test_overlapping_tcp_udp_starts_do_not_double_bind_or_leak(monkeypatch):
                 0, b"\x00\x00")
     finally:
         release_first_bind.set()
-        first_thread.join(4) if first_thread.ident is not None else None
-        second_thread.join(4) if second_thread.ident is not None else None
+        if first_thread.ident is not None:
+            first_thread.join(4)
+        if second_thread.ident is not None:
+            second_thread.join(4)
         server.stop()
         for listener in created:
             listener.close()
