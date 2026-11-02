@@ -53,3 +53,14 @@ cross-tested.
    avoid maintaining duplicated method/device tables in prose.
 
 No runtime behavior changes are introduced by this document.
+
+## Raw UDP client example (source checkout only)
+
+The [standalone 3E binary D0 reader](../examples/udp_read_d0.py)
+is written with Python's standard-library `socket` module, **not**
+`pymcprotocol==0.3.0` or the untagged fork. It uses IPv4 loopback only;
+the response source, frame header, length and end code are checked.
+The script is a minimal, executable simulator example and not a client
+compatibility claim for Mitsubishi hardware. No retries, 1E/4E, ASCII,
+production networks or authentication are supported by this example.
+Tests use actual UDP loopback sockets and reject malformed replies.

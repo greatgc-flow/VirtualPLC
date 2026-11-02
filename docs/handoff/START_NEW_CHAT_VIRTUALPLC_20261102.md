@@ -21,13 +21,13 @@ or production/factory networks, or claim official Mitsubishi parity.
    `docs/governance/BRANCH_RELEASE_GATES_20261102.md`,
    `docs/DESIGN.md`, `docs/BEHAVIOR.md`, `docs/FAULTS.md`,
    `.github/workflows/ci.yml`, `.github/workflows/release.yml`.
-3. Review issue #7 governance, #13 TCP/UDP, #25 handoff,
+3. Review issue #54 governance, #13 TCP/UDP, #25 handoff,
    #14 GX Ethernet manuals, #22 SLMP 1E and #2 vendor/physical gates.
 4. Establish any latest PR and CI proof. Distinguish PR run from
    independent `push/main` run and distinguish a failed JOB from a
    cancelled/superseded WORKFLOW. Do not invent CI outcomes.
 5. Pick one bounded, evidence-backed task: preferable next work is
-   #7 enforce rulesets by owner/admin UI (if permission available),
+   #54 enforce rulesets by owner/admin UI (if permission available),
    or #13 UDP client example / useful datagram-native coverage.
    Avoid implementing duplicate/reorder/corrupt faults without
    a documented bounded policy, deterministic tests and demand.
@@ -130,3 +130,10 @@ or production/factory networks, or claim official Mitsubishi parity.
 exact commit and test count where verified; current protections
 with any admin blocker, no real PLC/PyPI. Continue without
 re-asking already documented approvals.
+
+## 2026-11-02 later session continuation (PR #55)
+
+- Later verified baseline before branch: main `caa4dc2a34da7a819809a607eb13ba335dc03946`, main push CI #41448900230 9/9.
+- PR #55 adds a standalone IPv4 loopback-only, standard-library MC3E binary D0 UDP reader, strict response source/length/end-code validation and executable tests. RED test-only `fc8b399529a5273c190773e36edd648e2bc0b607` (CI #41453639346); verify actual final HEAD and CI/merge outcome before acting.
+- Governance #7 broad audit was CLOSED during PR #53; #54 is the OPEN owner/admin-only follow-up for unapplied main and v* tag rulesets. The connection has no ruleset write ability. Do not push release tags or claim protection active.
+- Read `docs/HANDOFF.md` and #25/#54 for the most recent checkpoint after PR #55; do not assume this starter's commit remains current.
