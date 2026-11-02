@@ -9,6 +9,20 @@ not PDF authenticity or hardware qualification.
 
 # VirtualPLC — Design
 
+**Opt-in UDP transport counters (#13, PR #57 candidate):**
+The embedded Server optionally records only five event counts
+(`received`, `rejected`, `sent`, `fault_dropped`, `send_errors`).
+Disabled-by-default mode allocates no metrics table or lock; enabling
+requires a UDP listener and a literal boolean. A separate short lock
+makes increments and `get_udp_metrics()` defensive snapshots atomic
+across multiple UDP listener workers without holding the PLC request
+lock during socket I/O. Counters are process-local, cumulative over
+start/stop, not exhaustive partitions: stop/delay cancellation can
+leave received datagrams with no response. No peer/payload retention,
+network query endpoint, new dependencies, authentication or plant access.
+Tests-only RED/CI and exact-head full CI are tracked by PR #57.
+
+
 **Final cross-source evidence integrity audit (PR #45):**
 The optional offline PDF kit re-fingerprints *all* originals after scanning
 every supplied edition and family. The previous per-file post-extraction
