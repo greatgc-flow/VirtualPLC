@@ -1,3 +1,35 @@
+## 2026-11-02 #13 in-flight stop and pipelined TCP dispatch guard (PR #50)
+
+On the shared Server, TCP `_serve_frames` previously checked shutdown
+only at the outer recv loop. One recv containing read+write could process
+the later write even after stop began during the first in-flight read.
+Now the inner buffered-frame loop checks `_stopping` before starting each
+next frame. This preserves the current already-executing dispatch; it does
+not promise rollback of an in-flight PLC request. UDP keeps existing
+post-dispatch send suppression during shutdown.
+
+**Tests-first RED with realistic worker cleanup**
+`1fb52da0d1a957b307939b7d3eb0d2b8851ff702`,
+[CI #41422322631](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41422322631)
+Ubuntu Python3.11 **7,119 PASS and 1 expected FAIL**:
+after stop, queued TCP write changed D0 to 0x1234, instead of remaining 0.
+Initial tests-only `da59dd26856266cabae5b0c5cf865f673f0b2325`
+[CI #41421921593](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41421921593)
+also failed, but first at missing cleanup in a scripted test connection;
+that fixture issue was corrected before using the observed RED evidence.
+Actual correction `7d225ebcb440d426fa45e27c07fd21f46ef16e67`.
+
+Companion test covers in-flight UDP response hook, stop before send, and
+restart with a successful actual loopback datagram. The TCP test also
+verifies cleanup of both endpoints and normal TCP/UDP operation after
+restart. Validate exact final PR SHA 9/9 on build + Ubuntu/Windows
+Python3.10–3.13, then independent postmerge main push CI before GREEN.
+
+No new CLI flags, protocol/default values, dependencies, physical PLC,
+production network or PyPI action. Mitsubishi AD↔AG and E↔I revisions
+remain NOT_VERIFIED; future UDP receive-vs-stop dispatch race is a
+separate #13 issue, not part of this TCP fix.
+
 ## 2026-11-02 #13 concurrent start/stop and TCP/UDP request lock (PR #49)
 
 Concurrent external starts and stops on the same Server are now serialized

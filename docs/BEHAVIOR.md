@@ -130,6 +130,11 @@ See the [canonical CLI reference](../README.md#cli-reference),
   serialized. A stop during listener binding closes the completed startup
   before returning; concurrent starts do not duplicate endpoints. This
   lifecycle lock is separate from the shared TCP/UDP request lock.
+- On TCP, a recv may contain multiple complete, pipelined requests. After
+  shutdown is signaled, the frame-processing loop does not start dispatch of
+  the next buffered request. An already executing request is not rolled
+  back or forcibly canceled. This is simulated lifecycle policy, not a
+  hardware PLC guarantee. UDP suppresses response sends during shutdown.
 - Accepted sockets use TCP_NODELAY; if configuring TCP_NODELAY or the accepted socket timeout raises `OSError`, only that accepted peer is closed and the port continues accepting future connections. EOF, bad framing or `idle_timeout` closes only that
   client.
 - `response_hook(response_bytes) -> bytes` transforms each complete encoded response
