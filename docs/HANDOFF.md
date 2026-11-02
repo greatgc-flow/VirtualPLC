@@ -1,3 +1,24 @@
+## 2026-11-02 #7 repository rulesets / release gate verification and new-chat handoff
+
+At review baseline main `7ea3b718dd5aba848a9b9dc1e0b1642560e9b433`,
+branch API `protected=false` and rulesets API `[]`; legacy protection
+detail GET 403 for connected GitHub integration. **No actual ruleset
+was activated in this session.** GitHub actions available here do not
+permit repository admin ruleset writes. Last independent main push CI
+#41436034796 COMPLETED SUCCESS 9/9, Ubuntu Python3.11 7,159 PASS.
+Release v0.5.0 only; no tag, PyPI or physical PLC action.
+
+Scope of this docs-only PR: owner-action checklist
+`docs/governance/BRANCH_RELEASE_GATES_20261102.md` documents the
+nine exact required checks, main PR/force-push/delete restrictions,
+separate v* tag immutability gate and explicit release approvals.
+Source-owned next-chat handoff
+`docs/handoff/START_NEW_CHAT_VIRTUALPLC_20261102.md` supersedes the
+dated 2026-11-01 starter; README links it. Corrected DESIGN's
+contradiction about UDP-specific response faults and PR #52's
+already completed PR/main CI evidence here. No behavior, tests,
+CLI, dependencies or workflow action changed. #7 remains OPEN
+until an administrator **actually applies and verifies** rulesets.
 ## 2026-11-02 #13 UDP response-native fault plan (PR #52)
 
 First opt-in drop/delay datagram response fault slice. Independent
@@ -9,9 +30,12 @@ duplicate/corruption/reorder or physical PLC semantics.
 Tests-only RED f134073253278a9cc90ef5b8766ad25dd351cace
 (CI #41434118229): Ubuntu Python3.11 7,127 old PASS, 26 expected
 FAIL on absent virtual_plc.udp_faults and CLI option. Implementation
-7124389d787beaadd19e75dcf849f6993fa08d1c.
-Require exact candidate build+Ubuntu/Windows Python3.10-3.13 9/9
-then squash and independent main push CI 9/9; update #13/#25.
+7124389d787beaadd19e75dcf849f6993fa08d1c. Final PR
+75a492b9a5306b138f871caa747dcf078a0d1f8d CI #41435360893
+**COMPLETED SUCCESS 9/9**, Ubuntu Python3.11 **7,159 PASS**.
+PR #52 squash merged main 7ea3b718dd5aba848a9b9dc1e0b1642560e9b433;
+independent exact-main push CI #41436034796 **SUCCESS 9/9**,
+Ubuntu Python3.11 **7,159 PASS**, 0 open PRs at checkpoint.
 Vendor AD/AG E/I source comparison remains NOT_VERIFIED.
 No real PLC, production network, new dependencies or PyPI release.
 ## 2026-11-02 #13 UDP receive/parse vs shutdown dispatch guard (PR #51)
