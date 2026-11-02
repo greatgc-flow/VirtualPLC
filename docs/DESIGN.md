@@ -229,6 +229,15 @@ network protocol, CLI recovery flag, or concurrent lock hierarchy.
 
 ## Optional multi-listener transport extension
 
+A per-Server reentrant lifecycle lock serializes externally invoked
+`start()` and `stop()`, including rollback that calls `stop()` during a
+partially started worker group. It closes a race where stop returned while
+start was still binding and a race where two starts created separate packs.
+The existing request lock remains independent: concurrent TCP writes and
+UDP reads share atomic memory dispatch, but lifecycle locking does not
+hold the request lock across normal command handling. Other Server
+instances keep independent lifecycle locks; one PLC remains one process.
+
 Accepted TCP peers are configured with `TCP_NODELAY` and `idle_timeout`
 independently of the listener lifecycle. A socket-configuration `OSError`
 closes only the failed accepted peer; the accept worker continues processing

@@ -1,3 +1,28 @@
+## 2026-11-02 #13 concurrent start/stop and TCP/UDP request lock (PR #49)
+
+Concurrent external starts and stops on the same Server are now serialized
+by a per-instance reentrant lifecycle lock. A stop racing a blocked bind
+waits for the starting listener pack to finish, then closes all endpoints.
+A second concurrent start does not bind a duplicate TCP/UDP pack.
+Separate Server instances have separate locks; this is **not** multi-PLC
+or physical-PLC behavior. Existing command dispatch and request lock remain
+unchanged; a real TCP write/UDP read test pins serialization on shared
+Memory under the existing request lock.
+
+**Genuine tests-only RED** `7ce94d2e6ff1f568f31e23461b780eac35d53d4b`,
+[CI #41404589397](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41404589397)
+Ubuntu3.11 job **7,115 PASS + 2 expected FAIL**:
+stop returned while start was blocked in create_server, and a second start
+bound before the first completed. Deterministic bound localhost socket
+barriers, cleanup checks and cross-OS matrix; no real PLC.
+
+**Implementation** `21ac34bc50615b6c17fb9e608d8e9f12c8bd797e`.
+**Additional request-lock regression** `c3079945c07e7d34a8d6eea0be890358dbb09e12`.
+Check the exact final candidate CI (build + Ubuntu/Windows Python3.10–3.13),
+then squash merge and independent main push CI before claiming GREEN.
+No default/CLI/SLMP/PyPI/manufacturer parameter changes. Mitsubishi
+AD↔AG and E↔I clause comparisons remain NOT_VERIFIED.
+
 ## 2026-11-02 #13 late listener-timeout setup rollback (PR #48)
 
 When the second TCP or UDP socket has been created/bound but its listener

@@ -332,3 +332,75 @@ def test_second_listener_timeout_failure_rolls_back_all_and_allows_restart(
                     assert source[1] == port
                     assert response == encode_response(
                         decode_request(read), data=b"\x00\x00")
+
+
+def test_tcp_write_and_udp_read_serialize_on_shared_request_lock(monkeypatch):
+    """A concurrent UDP read must not observe a half-finished TCP write.
+
+    Hold a real TCP write inside dispatch, then prove UDP reached its
+    decoder but did not answer until the shared request lock was released.
+    """
+    from threading import Event, Thread
+    from virtual_plc import server as server_module
+
+    write_entered = Event()
+    release_write = Event()
+    udp_decoded = Event()
+    errors = []
+    tcp_replies = []
+    udp_read = packet("4E", "binary", serial=0x7A55)
+    original_dispatch = server_module.dispatch
+    original_decode = server_module.decode_request
+
+    def held_dispatch(decoded, memory, max_points, control):
+        if decoded.command == 0x1401:
+            write_entered.set()
+            if not release_write.wait(4):
+                raise RuntimeError("TCP write barrier not released")
+        return original_dispatch(decoded, memory, max_points, control)
+
+    def tracked_decode(raw):
+        if raw == udp_read:
+            udp_decoded.set()
+        return original_decode(raw)
+
+    with Server(listeners=[("tcp", 0), ("udp", 0)]) as server:
+        _, tcp_host, tcp_port = server.addresses[0]
+        _, udp_host, udp_port = server.addresses[1]
+
+        def tcp_write():
+            try:
+                with socket.create_connection((tcp_host, tcp_port), timeout=2) as client:
+                    client.settimeout(3)
+                    tcp_replies.append(exchange(
+                        client, request(0x1401, data=device_data(payload=b"\xEF\xBE"))))
+            except BaseException as error:
+                errors.append(error)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(server_module, "dispatch", held_dispatch)
+            patch.setattr(server_module, "decode_request", tracked_decode)
+            worker = Thread(target=tcp_write)
+            try:
+                worker.start()
+                assert write_entered.wait(3)
+                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp:
+                    udp.sendto(udp_read, (udp_host, udp_port))
+                    assert udp_decoded.wait(3)
+                    udp.settimeout(0.1)
+                    with pytest.raises(socket.timeout):
+                        udp.recvfrom(8192)
+                    release_write.set()
+                    worker.join(3)
+                    assert not worker.is_alive()
+                    assert errors == []
+                    assert tcp_replies == [(0, b"")]
+                    udp.settimeout(2)
+                    response, peer = udp.recvfrom(8192)
+                assert peer[1] == udp_port
+                assert response == encode_response(
+                    decode_request(udp_read), data=b"\xEF\xBE")
+            finally:
+                release_write.set()
+                if worker.ident is not None:
+                    worker.join(3)
