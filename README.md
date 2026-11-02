@@ -147,7 +147,10 @@ and delayed responses can be unaccounted for. UDP writes may already be
 committed despite a dropped reply. Counts aggregate all UDP listeners
 of one PLC and persist across stop/restart on the same Server. There is
 no per-peer state, packet capture, automatic reset, file logging, or
-claim of physical PLC compatibility.
+claim of physical PLC compatibility. A UDP `response_hook` must return a
+bytes-like buffer (including `bytearray` and `memoryview`); an invalid
+return is counted as `rejected` without sending a response. An earlier
+PLC write remains committed even if its transformed reply is rejected.
 
 ## Standalone UDP client example (source checkout)
 
