@@ -108,7 +108,7 @@ def test_udp_delay_zero_and_first_matching_action():
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
             client.settimeout(2)
             frame = packet("4E", "ascii", serial=0x1234)
-            expected = encode_response(decode_request(frame), data=b"0000")
+            expected = encode_response(decode_request(frame), data=b"\x00\x00")
             assert recv_udp(client, frame, server.address) == expected
             assert recv_udp(client, frame, server.address) == expected
 
