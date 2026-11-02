@@ -116,7 +116,12 @@ See the [canonical CLI reference](../README.md#cli-reference),
   with an 8192-byte limit. Invalid, truncated, concatenated, empty and
   oversized datagrams receive no response. It shares CPU state, Memory and
   the request lock with all TCP listeners; no reliable delivery, retry or
-  TCP-style sessions are simulated. A UDP listener cannot be combined with
+  TCP-style sessions are simulated.
+  On shutdown, a UDP datagram returned by `recvfrom` after the stop flag
+  is set is discarded before dispatch. If stop begins during parsing,
+  the shared request-lock boundary checks the flag again before starting
+  1E or 3E/4E dispatch. An already-started dispatch may finish; no
+  rollback or physical-PLC guarantee is implied. No late response is sent. A UDP listener cannot be combined with
   TCP-only `FaultPlan` actions. `max_clients` and `idle_timeout` govern TCP
   sessions only; the nonlocal bind guard still requires both explicit permission
   and an idle timeout option, even for UDP-only configurations.

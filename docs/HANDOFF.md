@@ -1,3 +1,39 @@
+## 2026-11-02 #13 UDP receive/parse vs shutdown dispatch guard (PR #51)
+
+`_udp_loop` previously checked `_stopping` at the top of the recv loop
+and prior to send, but a datagram returned while stop began could still
+execute a write and silently change PLC Memory. It now drops datagrams
+when `_stopping` is already set on receive return. `_udp_response` also
+checks the stop event **under the existing shared request lock** before
+executing 3E/4E or opt-in 1E dispatch, covering stop during decoding.
+Already executing dispatch may still finish; no transaction rollback
+or physical PLC parity claim.
+
+**Genuine tests-only RED** `3ace67f6b092023119d22b6870e49a61975bce43`,
+[CI #41428081297](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41428081297):
+Ubuntu Python3.11 job **7,120 PASS and 7 expected FAIL**. Five
+3E/4E binary/ASCII + 1E synthetic datagram cases mutated D0=0x1234
+after stop; two real-loopback UDP tests held 3E/4E decode or 1E framing
+while stop began and mutated D0=0x5678. Response was suppressed but
+memory was not protected. Other jobs also failed on these expected tests.
+Tests use fake recvfrom for exact receive boundary and actual loopback
+UDP + thread Events for parse boundary, no external PLC.
+
+**Minimal implementation** `a8f21d50842bb8522821c032fa463ba4648afe70`:
+only `virtual_plc/server.py`, adding receive-return stop check and
+request-lock-local stop checks for both 1E and 3E/4E. No new
+dependencies, CLI flags, default values, remote network access or
+extra dispatch lock. Full cross-OS CI must be verified on the exact
+final PR candidate before merging; then independently verify main
+push CI on the squash SHA.
+
+**Remaining #13:** UDP-native faults, optional client examples and
+nonlocal metrics/rate limits, IPv6/Windows edge coverage. This does
+not claim race-free global linearizability at every OS event, cancellation
+of already-dispatched work, or physical PLC parity. Manufacturer
+SH-081257ENG AD↔AG and SH-082488ENG E↔I clauses NOT_VERIFIED;
+no production network/real PLC/PyPI.
+
 ## 2026-11-02 #13 in-flight stop and pipelined TCP dispatch guard (PR #50)
 
 On the shared Server, TCP `_serve_frames` previously checked shutdown

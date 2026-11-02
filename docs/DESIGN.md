@@ -249,6 +249,16 @@ suppresses response sends after stop; a separate real-loopback regression
 covers its pending response hook and restart. This is not a physical PLC
 shutdown/firmware behavior claim.
 
+**UDP receive/parse shutdown boundary (PR #51):** response suppression
+alone does not prevent a late UDP write from mutating Memory. The UDP
+worker now checks `_stopping` immediately after `recvfrom` returns,
+in addition to its outer loop/send checks. If decoding or 1E framing
+overlaps shutdown, `_udp_response` checks the same stop event *inside*
+the existing shared request lock, just before starting 1E or 3E/4E
+dispatch. This does not add a second lock, change wire formats, or
+cancel a dispatch already in progress. The policy applies to one Server
+per PLC process; real equipment behavior remains unverified.
+
 Accepted TCP peers are configured with `TCP_NODELAY` and `idle_timeout`
 independently of the listener lifecycle. A socket-configuration `OSError`
 closes only the failed accepted peer; the accept worker continues processing
