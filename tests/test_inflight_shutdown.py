@@ -68,6 +68,9 @@ def test_stop_discards_queued_tcp_write_after_inflight_read(monkeypatch):
         except BaseException as error:
             errors.append(error)
         finally:
+            # Mirror _serve's "with connection" lifecycle: an exited
+            # worker closes its own socket even if stop has not snapped it.
+            connection.close()
             with server._clients_lock:
                 server._clients.pop(connection, None)
 
