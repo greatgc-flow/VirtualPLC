@@ -112,6 +112,11 @@ See the [canonical CLI reference](../README.md#cli-reference),
 - `server.addresses` reports `(transport, host, actual_port)` entries; the
   legacy `server.address` reports the first endpoint. A separate process
   remains necessary for separate, independent PLC memory/state.
+- Explicit numeric IPv6 loopback `host="::1"` selects IPv6 sockets for TCP
+  and UDP listeners; IPv4 is not simultaneously bound. The `localhost` name
+  retains its legacy IPv4 socket-family choice. Tests of IPv6 loopback
+  transports skip when the host OS cannot bind `::1`; no physical device or
+  factory-network compatibility is implied.
 - UDP accepts one exact complete 3E/4E binary/ASCII MC frame per datagram,
   with an 8192-byte limit. Invalid, truncated, concatenated, empty and
   oversized datagrams receive no response. It shares CPU state, Memory and
