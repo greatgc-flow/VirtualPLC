@@ -24,7 +24,7 @@ TOPICS = ("run", "options", "client", "profiles", "ethernet", "embed", "faults",
 # Option -> topic named by error messages; every other option points to `options`.
 OPTION_TOPICS = {"--profile": "profiles", "--ethernet-model": "ethernet",
                  "--ethernet-config": "ethernet", "--show-effective-ethernet": "ethernet",
-                 "--fault-plan": "faults", "--init": "memory",
+                 "--fault-plan": "faults", "--udp-fault-plan": "faults", "--init": "memory",
                  "--dump-on-exit": "memory", "--limit": "memory", "--latch-range": "memory"}
 
 # Mirrored verbatim in the README quickstart (a test fails on drift).
@@ -63,6 +63,7 @@ Multi-port: virtual-plc --listen tcp:5000 --listen tcp:5001 --listen udp:5000 (o
 1E batch mode: virtual-plc --slmp-1e --listen tcp:5000 --listen udp:5000 (not full FX5 hardware).
 Physical switch edge: --slmp-1e --slmp-1e-run-switch STOP --initial-state STOP; 13H ACK succeeds yet CPU stays STOP.
 --listen replaces --port. UDP accepts one exact MC frame/datagram; no TCP fault plan with UDP.
+Optional --udp-fault-plan FILE enables UDP response drop/delay only (no stream faults).
 -v logs requests/close reasons (no payloads/passwords). TCP idle timeout defaults to none.
 """.strip("\n")
 
@@ -159,8 +160,11 @@ OPTIONS_TAIL = ("DEV:LO-HI repeats (--limit D:0-99 --limit M:0-15); its endpoint
                 "Same data for programs: virtual-plc guide options --json")
 
 FAULTS_HEAD = """
-Faults change TCP replies AFTER the command ran; writes are never rolled back. UDP + fault plan is
-rejected (RST/stream-close/partial-send do not apply). Opt in with --fault-plan FILE or
+Faults change TCP replies AFTER the command ran; writes are never rolled back. TCP fault plans with
+UDP are rejected (RST/stream-close/partial-send do not apply). UDP uses separate
+--udp-fault-plan FILE or Server(udp_fault_plan=UdpFaultPlan(steps)) for drop/delay
+AFTER dispatch. UDP match: command, global nth, peer IP. No plan = inert.
+For TCP, opt in with --fault-plan FILE or
 Server(fault_plan=FaultPlan(steps)); without a plan nothing is matched or delayed.
 Schema: {"steps": [STEP, ...]} in a file (no other root keys); Python takes the list. A bad plan exits 2 before bind.
 STEP = {"match": {...}, "times": N, "action": {"type": T, ...}}; match and times are optional (times defaults to 1).

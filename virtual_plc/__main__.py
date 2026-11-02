@@ -15,6 +15,7 @@ from . import __version__, guide
 from .ethernet import EthernetSettings, model_catalog
 from .server import Server, is_loopback_host
 from .faults import FaultPlan
+from .udp_faults import UdpFaultPlan
 from .memory import Memory
 from .profiles import PROFILES
 
@@ -91,7 +92,8 @@ def build_parser():
     parser.add_argument("--ascii-numbering", choices=("compat", "manual", "fx5-octal"), default="compat",
                         help="ASCII addresses: decimal compat, hex manual, or FX5 X/Y octal (others use device base)")
     parser.add_argument("--text-pad", type=text_pad, default=0x00, help="CPU name fill byte 0..255; 0x20 = space")
-    parser.add_argument("--fault-plan", metavar="FILE", help="response fault JSON")
+    parser.add_argument("--fault-plan", metavar="FILE", help="TCP response fault JSON")
+    parser.add_argument("--udp-fault-plan", metavar="FILE", help="UDP drop/delay fault JSON")
     parser.add_argument("--init", metavar="FILE", help="load memory JSON before listening")
     parser.add_argument("--dump-on-exit", metavar="FILE", help="save memory JSON after shutdown")
     parser.add_argument("--latch-range", action="append", type=device_range, default=[], metavar="DEV:LO-HI",
@@ -142,6 +144,7 @@ def main(argv=None):
     topic = "faults"
     try:
         plan = FaultPlan.from_file(args.fault_plan) if args.fault_plan else None
+        udp_plan = UdpFaultPlan.from_file(args.udp_fault_plan) if args.udp_fault_plan else None
         topic = "memory"
         overrides = json.loads(Path(args.ethernet_config).read_text(encoding="utf-8")) if args.ethernet_config else None
         if args.ethernet_config and not isinstance(overrides, dict):
@@ -157,6 +160,8 @@ def main(argv=None):
             options["slmp_1e_run_switch"] = args.slmp_1e_run_switch
         if args.listen:
             options["listeners"] = args.listen
+        if udp_plan is not None:
+            options["udp_fault_plan"] = udp_plan
         if args.ethernet_model:
             options["ethernet_model"] = args.ethernet_model
             options["ethernet_overrides"] = overrides

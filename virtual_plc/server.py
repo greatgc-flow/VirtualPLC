@@ -12,7 +12,8 @@ from .codec import decode_request, encode_response, frame_size
 from .commands import CPU_STATES, dispatch
 from .ethernet import EthernetSettings
 from .memory import Memory, valid_span
-from .one_e import frame_size_1e, dispatch_1e
+from .one_e import frame_size_1e, dispatch_1e, _command_and_wire
+from .udp_faults import UdpFaultPlan
 from .profiles import PROFILES
 
 LOG = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class Server:
                  ascii_dword_order="swapped", text_pad=0x00, ascii_numbering="compat", verbose=False,
                  allow_nonlocal=False, max_clients=64, listeners=None,
                  ethernet_model=None, ethernet_overrides=None, slmp_1e=False,
-                 slmp_1e_run_switch="RUN"):
+                 slmp_1e_run_switch="RUN", udp_fault_plan=None):
         if type(port) is not int or not 0 <= port <= 65535:
             raise ValueError("port must be an integer 0..65535")
         if max_points is not None and (type(max_points) is not int or max_points < 1):
@@ -107,6 +108,10 @@ class Server:
         self.ascii_numbering = ascii_numbering
         if fault_plan is not None and not isinstance(fault_plan, faults.FaultPlan):
             raise ValueError("fault_plan must be a FaultPlan or None")
+        if udp_fault_plan is not None and not isinstance(udp_fault_plan, UdpFaultPlan):
+            raise ValueError("udp_fault_plan must be a UdpFaultPlan or None")
+        if udp_fault_plan is not None and not any(transport == "udp" for transport, _ in listen_specs):
+            raise ValueError("UDP fault plan requires at least one UDP listener")
         if initial_state not in CPU_STATES:
             raise ValueError("initial_state must be RUN, STOP or PAUSE")
         if profile not in PROFILES:
@@ -147,6 +152,7 @@ class Server:
         self.address = (host, self._listen_specs[0][1])
         self._hook = response_hook
         self._fault_plan = fault_plan
+        self._udp_fault_plan = udp_fault_plan
         self._connection_number = 0
         self._max_points = max_points
         self._max_clients = max_clients
@@ -366,7 +372,19 @@ class Server:
                 continue
             try:
                 response = self._udp_response(packet)
-                if response is not None and not self._stopping.is_set():
+                if response is None or self._stopping.is_set():
+                    continue
+                if self._udp_fault_plan is not None:
+                    # Datagram faults act after command dispatch and hook.
+                    command = (_command_and_wire(packet)[0] if self.slmp_1e
+                               else decode_request(packet).command)
+                    action = self._udp_fault_plan.select(command, peer=peer[0])
+                    if action is not None:
+                        if action["type"] == "drop":
+                            continue
+                        if self._stopping.wait(action["seconds"]):
+                            continue  # stop() cancels an outstanding delay
+                if not self._stopping.is_set():
                     listener.sendto(response, peer)
             except (ValueError, OSError) as error:
                 self._log("UDP drop: %s", error)
