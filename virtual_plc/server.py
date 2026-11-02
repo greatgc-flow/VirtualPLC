@@ -373,6 +373,13 @@ class Server:
 
         if self._hook is not None:
             response = self._hook(response)
+            # A bad callback result used to vanish into the generic worker
+            # exception handler without incrementing the rejected counter.
+            # Check the buffer protocol, preserving existing bytearray/views.
+            try:
+                memoryview(response)
+            except TypeError as error:
+                raise ValueError("UDP response_hook must return bytes-like data") from error
         if len(response) > MAX_UDP_DATAGRAM:
             self._log("UDP drop: oversized %sresponse", "1E " if self.slmp_1e else "")
             return None
