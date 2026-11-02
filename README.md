@@ -403,6 +403,15 @@ More fixes: `virtual-plc guide troubleshoot`. Protocol details:
 
 Run `virtual-plc guide divergences` for the compact list of simulator policies.
 
+## Repository safeguards and verified handoff
+
+For the **unreleased source repository**, use the
+[branch/release gate checklist](docs/governance/BRANCH_RELEASE_GATES_20261102.md)
+before configuring `main` protection or creating a `v*` tag.
+The checked-in [latest handoff prompt](docs/handoff/START_NEW_CHAT_VIRTUALPLC_20261102.md)
+records technical state and CI evidence; fetch remote main first.
+An active GitHub ruleset cannot be inferred from a successful CI run.
+
 ## Development and releases
 
 ```text

@@ -282,9 +282,9 @@ stop/close/join all workers on ordinary shutdown.
 
 UDP is a datagram adapter over the existing MC 3E/4E decoder/dispatcher:
 one exact 8192-byte-maximum frame per packet, no stream reassembly, silent
-discard on malformed/oversized packet, reply to sender address. It does not
-implement retransmission, client sessions, UDP-specific fault actions,
-authentication or rate limiting. TCP-specific FaultPlans are rejected for
+discard on malformed/oversized packet, reply to sender address. It does not implement retransmission, client sessions, UDP request
+faults, authentication or rate limiting; the independently opt-in UDP
+**response** drop/delay actions are documented in the next subsection. TCP-specific FaultPlans are rejected for
 mixed/UDP configurations rather than being silently misapplied. Loopback
 guard stays in effect; `--allow-nonlocal --idle-timeout` is required for
 any nonlocal bind, with no UDP timeout semantics implied. A separate
