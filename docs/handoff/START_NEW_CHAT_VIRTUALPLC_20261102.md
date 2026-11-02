@@ -131,6 +131,23 @@ exact commit and test count where verified; current protections
 with any admin blocker, no real PLC/PyPI. Continue without
 re-asking already documented approvals.
 
+## 2026-11-02 PR #57 follow-up — UDP hook invalid output observability
+
+- Under PR #57, tests-only `ef7c2c14994033ff7b5a05b0b31bdf6a3ff6de62`
+  [RED CI #41468869531](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41468869531):
+  Ubuntu3.11 7,197 PASS +3 expected FAIL, Windows3.12 7,201 PASS
+  +3 expected FAIL for missing `rejected` count when UDP response_hook
+  returned None/str/int. Two new valid bytearray/memoryview tests PASS.
+- Fix `e18eff04bd02c7481f533e3a6de3b5020bf4bf75`:
+  buffer-protocol validation immediately after explicit UDP hook; bad
+  outputs raise ValueError and count rejected without sending; good
+  bytes-like outputs continue. No rollback of preexisting writes.
+  README/BEHAVIOR/FAULTS/DESIGN synchronized.
+- Full CI for **latest** PR #57 head must be checked independently;
+  do not rely on earlier 9/9 at `fa5718faa32d4043daa9dead3f29ea36438cc23a`.
+- **Do not merge main.** #56 and #57 must remain OPEN. #54 actual
+  rulesets still unapplied. No tags, PyPI, real PLC or production network.
+
 ## 2026-11-02 later independent continuation (PRs #56 and #57)
 
 - Latest verified main `069af7aa5e192b3b3b0b2d5040a7d9061135a415`,
