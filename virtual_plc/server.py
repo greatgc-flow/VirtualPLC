@@ -151,6 +151,7 @@ class Server:
         self._max_points = max_points
         self._max_clients = max_clients
         self._idle_timeout = idle_timeout
+        self._lifecycle_lock = threading.RLock()  # serialize same-Server start/stop
         self._request_lock = threading.Lock()
         self._remote_stop_owner = None  # 1E connection ID; orphaned on disconnect
         self._remote_stop_owner_connected = False
@@ -213,6 +214,11 @@ class Server:
             LOG.info(message, *args)
 
     def start(self):
+        """Serialize overlapping start/stop calls for this Server instance."""
+        with self._lifecycle_lock:
+            return self._start_unlocked()
+
+    def _start_unlocked(self):
         if self._listener is not None:
             return
         self._stopping.clear()
@@ -262,7 +268,12 @@ class Server:
             raise
 
     def stop(self):
-        """Close all endpoints and clients, then join every listener and client worker."""
+        """Serialize shutdown with pending starts and other stop calls."""
+        with self._lifecycle_lock:
+            return self._stop_unlocked()
+
+    def _stop_unlocked(self):
+        """Close all endpoints and clients, then join listener and client workers."""
         self._stopping.set()
         listeners = [listener for _, listener in self._listeners]
         if self._listener is not None and self._listener not in listeners:
