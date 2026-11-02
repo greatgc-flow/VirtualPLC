@@ -1,3 +1,24 @@
+## 2026-11-03 #13 terminal UDP recvfrom warning (PR #58 UNMERGED)
+
+Microsoft official Winsock recvfrom docs associate UDP WSAECONNRESET
+10054 with ICMP Port Unreachable from a prior send and recommend socket
+closure. Chosen safe bounded scope: warn once on unexpected UDP recvfrom
+OSError then stop only that listener worker; do not retry/rebind
+automatically. Expected socket close on stop and socket timeout are quiet.
+Socket-injected tests-only RED commit
+`8fb96a84639bcecbeca9c1bfe10c1c9a363eee60`,
+[CI #41471256786](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41471256786):
+Ubuntu3.11 7,182 existing PASS + 2 expected FAIL; Windows3.13
+7,186 existing PASS + 2 expected FAIL for absent WARNING. Minimal
+runtime change `bf879e2a723c0888ee2a00b8dc6946cb7749ce4c`
+adds WARNING only for unplanned receive failure; no fault injection,
+security, wire semantics, socket-recreation or default option changes.
+Check exact final PR HEAD and 9/9 CI before calling GREEN. Real
+Windows ICMP reproduction remains NOT_VERIFIED.
+
+Latest owner instruction: **do not merge main**. Keep #56, #57
+and #58 open; no release tags/PyPI/physical PLC/production network.
+
 ## 2026-11-02 #13 UDP client example and governance #54 (PR #55)
 
 New bounded source-only UDP client example for one MC3E binary D0 read:

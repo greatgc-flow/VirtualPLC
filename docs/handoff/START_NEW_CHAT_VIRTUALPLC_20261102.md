@@ -1,5 +1,34 @@
 # VirtualPLC — NEW CHAT START / 2026-11-02 (RUNTIME + GOVERNANCE)
 
+## 2026-11-03 subsequent session: terminal UDP recvfrom diagnostics (PR #58)
+
+- Fresh main baseline at start:
+  `069af7aa5e192b3b3b0b2d5040a7d9061135a415`, protected=false,
+  rulesets=[]; previous independent main push CI #41454823707 9/9 PASS.
+- PR #56 (IPv6 ::1) remains OPEN with 9/9 at head
+  `fbf83767eab72ffc94fe91dc7fd74e93e2a87aea`.
+- PR #57 (optional UDP metrics) remains OPEN with 9/9 at head
+  `a593f3d76aed07bee622f3f8bef94cc34a263693`.
+- New independent PR #58:
+  https://github.com/greatgc-flow/VirtualPLC/pull/58
+  branch `fix/udp-recv-terminal-diagnostics-20261103`.
+  RED tests-only SHA
+  `8fb96a84639bcecbeca9c1bfe10c1c9a363eee60`;
+  [RED CI #41471256786](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41471256786)
+  Ubuntu3.11 7,182 PASS +2 expected FAIL; Windows3.13
+  7,186 PASS +2 expected FAIL. Fix
+  `bf879e2a723c0888ee2a00b8dc6946cb7749ce4c` logs
+  unexpected terminal UDP recvfrom failures once without
+  retry/rebind; normal stop/timeouts are silent. Review latest
+  exact final PR HEAD/CI 9/9 before claiming GREEN.
+- Microsoft Winsock docs associate UDP 10054 with earlier
+  ICMP Port Unreachable and advise socket closure; **no actual Windows
+  ICMP test or physical PLC test has been performed**. Recovery
+  semantics and auto-rebind are deliberately not changed.
+- **Current user expressly forbids main merge.** Do not
+  follow any older permission in this dated document allowing merge.
+  No v* tags, PyPI, real PLC, factory network or vendor parity claim.
+
 ## Role, authorization and priority
 
 You are continuing development of the GitHub repository

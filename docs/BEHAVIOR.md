@@ -128,6 +128,16 @@ See the [canonical CLI reference](../README.md#cli-reference),
   duplicate/reorder/stream close are deliberately not modeled. `max_clients` and `idle_timeout` govern TCP
   sessions only; the nonlocal bind guard still requires both explicit permission
   and an idle timeout option, even for UDP-only configurations.
+- An unexpected UDP `recvfrom` `OSError` logs one WARNING containing
+  the socket error and ends that listener worker. The server deliberately
+  does not loop/retry a potentially unusable socket after Winsock UDP 10054
+  (possible ICMP Port Unreachable); default TCP workers and other UDP
+  ports are not automatically stopped, but neither are failed listeners
+  automatically rebound. Operators can explicitly `stop()`/`start()`
+  the Server after troubleshooting. A receive error caused by intentional
+  `stop()` and normal `socket.timeout` polling are not warnings.
+  Scripted regression tests validate this policy; actual Winsock ICMP
+  generation and hardware/network fidelity are **NOT_VERIFIED**.
 - All requested sockets bind before any listener starts processing. Failure
   to bind or set the timeout on any listener closes that just-created socket
   and all previously bound endpoints without serving requests. The same

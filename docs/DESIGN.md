@@ -227,6 +227,21 @@ which point the marker changes to orphaned without releasing ownership.
 Reset and owner RUN clear both the ID and marker. This avoids adding another
 network protocol, CLI recovery flag, or concurrent lock hierarchy.
 
+## UDP receive failure observability (PR #58, pending main merge)
+
+A UDP worker must not silently disappear when `recvfrom` fails outside
+normal `stop()`. On unexpected `OSError`, log one WARNING and return;
+timeouts still poll quietly, and a stop-triggered socket close returns
+without warning. Do not spin on a potentially unusable socket or
+implicitly recreate listeners, since an automated rebind requires a
+separate cross-platform lifecycle policy and proof of safety.
+Microsoft's Winsock `recvfrom` reference associates UDP
+`WSAECONNRESET/10054` with a preceding ICMP Port Unreachable and advises
+socket closure. Deterministic injected-errno tests demonstrate the
+listener behavior on Ubuntu/Windows, **not real ICMP delivery**.
+No protocol/UDP fault-plan/PLC-state changes or new dependencies.
+See issue #13 and PR #58 for TDD/CI evidence.
+
 ## Optional multi-listener transport extension
 
 A per-Server reentrant lifecycle lock serializes externally invoked
