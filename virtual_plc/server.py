@@ -317,6 +317,10 @@ class Server:
 
         if self.slmp_1e:
             with self._request_lock:
+                # Parsing can overlap with stop(); do not begin a new command
+                # after shutdown was signaled while parsing the datagram.
+                if self._stopping.is_set():
+                    return None
                 response = dispatch_1e(packet, self.memory, self._max_points,
                                        control=self, requester=None)
         else:
@@ -326,6 +330,8 @@ class Server:
                 self._log("UDP drop: communication data code mismatch")
                 return None
             with self._request_lock:
+                if self._stopping.is_set():
+                    return None
                 end_code, data = dispatch(request, self.memory, self._max_points, self)
             self._log("UDP %s %s command=%04X sub=%04X end=%04X",
                       request.frame, request.wire, request.command,
@@ -350,6 +356,10 @@ class Server:
             except socket.timeout:
                 continue
             except OSError:
+                return
+            # recvfrom may complete just as stop() closes the listener.
+            # Do not dispatch even a fully valid late datagram.
+            if self._stopping.is_set():
                 return
             if not packet or len(packet) > MAX_UDP_DATAGRAM:
                 self._log("UDP drop: empty or oversized datagram")
