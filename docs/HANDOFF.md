@@ -1,3 +1,20 @@
+## 2026-11-02 #13 TCP accepted-socket setup failure isolation (PR #47)
+
+The per-port TCP accept worker now catches `OSError` while configuring a
+newly accepted socket's `TCP_NODELAY` or `idle_timeout`. It closes only
+that peer and continues accepting; no client worker/slot is allocated for
+failed setup. UDP, protocol commands, PLC state, network safety guards,
+configuration defaults and PyPI remain unchanged.
+
+Observed tests-first RED `59bb621f609074d8cb119db3bf879e90441a638b`:
+[CI #41381290013](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41381290013)
+Ubuntu Python 3.11 **7,109 old PASS and 2 expected FAIL** (injected
+`setsockopt` / `settimeout` exceptions killed accept loop). Small fix
+`df2fac400b59105fdbd7e3b3ae7b74138bb1ff3f`. Gate: exact final PR
+9/9 build + Ubuntu/Windows Python 3.10–3.13, then independently verify
+post-merge main 9/9 before final GREEN claim. No physical PLC / production
+networks or vendor AG/I clause claims.
+
 ## 2026-11-02 complete-pack PDF preflight (PR #46)
 
 The developer-only local manual PDF evidence utility now checks **all** supplied

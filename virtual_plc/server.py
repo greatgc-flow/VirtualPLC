@@ -353,8 +353,19 @@ class Server:
                 continue
             except OSError:
                 return
-            connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            connection.settimeout(self._idle_timeout)
+            # An accepted peer may fail socket configuration (e.g. Winsock
+            # TCP_NODELAY/timeout errors). Close only that peer; keep this
+            # port's accept worker alive for subsequent healthy clients.
+            try:
+                connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                connection.settimeout(self._idle_timeout)
+            except OSError as error:
+                try:
+                    connection.close()
+                except OSError:
+                    pass
+                self._log("close: accepted TCP socket setup failed: %s", error)
+                continue
             with self._clients_lock:
                 self._connection_number += 1  # unique for STOP owner, including cross-port TCP
                 connection_id = self._connection_number
