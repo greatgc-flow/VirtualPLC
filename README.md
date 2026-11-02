@@ -121,6 +121,37 @@ Only response drop/delay are supported; writes execute before fault
 selection. No plan means unchanged responses. TCP is unaffected in a
 mixed TCP/UDP process. See docs/FAULTS.md for strict JSON and selectors.
 
+## UDP diagnostic counters (optional, Python API, source checkout)
+
+For a bounded, read-only per-Server UDP transport snapshot, opt in with
+`udp_metrics=True`. Default `False` stores no counters;
+`get_udp_metrics()` returns `None` when disabled. This option requires
+at least one UDP listener and is not a network/CLI diagnostic endpoint.
+
+```python
+from virtual_plc import Server
+
+with Server(listeners=[("udp", 0)], udp_metrics=True) as plc:
+    # Use a local UDP test client, then inspect aggregated counters.
+    print(plc.get_udp_metrics())
+```
+
+The snapshot is a defensive copy of five cumulative integer counters:
+`received` (successful recvfrom, including data returned during stop),
+`rejected` (empty/oversized/invalid frame or unusable response, excluding
+stop cancellation), `sent` (complete successful sendto),
+`fault_dropped` (explicit post-dispatch UdpFaultPlan drop),
+and `send_errors` (sendto error or short send). These event counters
+are **not** a complete partition of receives: shutdown cancellations
+and delayed responses can be unaccounted for. UDP writes may already be
+committed despite a dropped reply. Counts aggregate all UDP listeners
+of one PLC and persist across stop/restart on the same Server. There is
+no per-peer state, packet capture, automatic reset, file logging, or
+claim of physical PLC compatibility. A UDP `response_hook` must return a
+bytes-like buffer (including `bytearray` and `memoryview`); an invalid
+return is counted as `rejected` without sending a response. An earlier
+PLC write remains committed even if its transformed reply is rejected.
+
 ## Standalone UDP client example (source checkout)
 
 The pinned `pymcprotocol==0.3.0` client uses TCP. For UDP, use the

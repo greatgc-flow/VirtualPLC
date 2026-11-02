@@ -1,3 +1,41 @@
+## 2026-11-02 #13 UDP invalid response-hook result metrics regression (PR #57)
+
+Follow-up test-only commit `ef7c2c14994033ff7b5a05b0b31bdf6a3ff6de62`
+showed a genuine [RED CI #41468869531](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41468869531):
+Ubuntu3.11 **7,197 PASS + 3 expected FAIL**, Windows3.12
+**7,201 PASS + 3 expected FAIL**, only the invalid callback output cases.
+Two new compatibility checks for valid bytearray/memoryview UDP replies PASS.
+Cause: invalid hook output (None, string, number) bypassed the ValueError
+path and therefore the optional UDP `rejected` metric, while the
+worker printed a generic exception and continued. Minimal code fix
+`e18eff04bd02c7481f533e3a6de3b5020bf4bf75` checks buffer protocol
+after an explicit UDP hook, converting unsupported output to ValueError;
+existing buffer objects remain accepted and committed writes do not roll back.
+Updated README/BEHAVIOR/FAULTS/DESIGN, plus handoff. Verify *latest exact*
+PR HEAD and full 9-job CI before calling GREEN. Do not merge `main`.
+
+## 2026-11-02 #13 opt-in UDP health counters (PR #57, UNMERGED)
+
+Separate feature branch `feat/udp-metrics-optin-20261102`, PR #57.
+Test-only RED commit `14d1dbe244684dffbe7bd3a75ff0efc77380cb24`,
+[PR CI #41461627915](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41461627915):
+Ubuntu Python 3.11 7,180 old PASS + 15 expected FAIL (missing
+`udp_metrics` keyword and `get_udp_metrics` method); Windows
+Python 3.11 7,184 old PASS + 15 expected FAIL. No old-test regressions.
+Opt-in `Server(udp_metrics=True)` requires at least one UDP listener
+and maintains process-local, integer-only counters for received,
+rejected, sent, fault_dropped, send_errors. Defensive snapshot method
+returns None when disabled; counters aggregate multiple UDP sockets
+and survive same-instance restart. Count valid UDP replies vs
+post-dispatch fault drops carefully; a lost response never rolls
+back a write. Python API only (no CLI flag, no new dependency).
+Final exact PR head CI is required before claiming GREEN.
+
+**This conversation expressly prohibits main merge.** Keep PR #56
+(IPv6 loopback already 9/9) and PR #57 separate and unmerged.
+#54 main/tag protection still absent, cannot be changed via
+current GitHub connector. No real PLC, PyPI or vendor parity claim.
+
 ## 2026-11-02 #13 UDP client example and governance #54 (PR #55)
 
 New bounded source-only UDP client example for one MC3E binary D0 read:

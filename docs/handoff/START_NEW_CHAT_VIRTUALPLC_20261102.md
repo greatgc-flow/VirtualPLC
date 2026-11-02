@@ -131,6 +131,46 @@ exact commit and test count where verified; current protections
 with any admin blocker, no real PLC/PyPI. Continue without
 re-asking already documented approvals.
 
+## 2026-11-02 PR #57 follow-up — UDP hook invalid output observability
+
+- Under PR #57, tests-only `ef7c2c14994033ff7b5a05b0b31bdf6a3ff6de62`
+  [RED CI #41468869531](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41468869531):
+  Ubuntu3.11 7,197 PASS +3 expected FAIL, Windows3.12 7,201 PASS
+  +3 expected FAIL for missing `rejected` count when UDP response_hook
+  returned None/str/int. Two new valid bytearray/memoryview tests PASS.
+- Fix `e18eff04bd02c7481f533e3a6de3b5020bf4bf75`:
+  buffer-protocol validation immediately after explicit UDP hook; bad
+  outputs raise ValueError and count rejected without sending; good
+  bytes-like outputs continue. No rollback of preexisting writes.
+  README/BEHAVIOR/FAULTS/DESIGN synchronized.
+- Full CI for **latest** PR #57 head must be checked independently;
+  do not rely on earlier 9/9 at `fa5718faa32d4043daa9dead3f29ea36438cc23a`.
+- **Do not merge main.** #56 and #57 must remain OPEN. #54 actual
+  rulesets still unapplied. No tags, PyPI, real PLC or production network.
+
+## 2026-11-02 later independent continuation (PRs #56 and #57)
+
+- Latest verified main `069af7aa5e192b3b3b0b2d5040a7d9061135a415`,
+  independent push CI #41454823707 9/9 SUCCESS (Ubuntu3.11 7,180 PASS).
+- [PR #56](https://github.com/greatgc-flow/VirtualPLC/pull/56)
+  IPv6 real TCP/UDP loopback 3E/4E binary/ASCII tests and docs,
+  head `fbf83767eab72ffc94fe91dc7fd74e93e2a87aea`,
+  [PR CI #41459979769](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41459979769)
+  completed SUCCESS 9/9: Ubuntu 7,195 PASS, Windows 7,199 PASS.
+- [PR #57](https://github.com/greatgc-flow/VirtualPLC/pull/57)
+  independent branch `feat/udp-metrics-optin-20261102`: 15 TDD tests
+  + optional Python API UDP counts, no default collection, no packet
+  storage, no CLI flag. Genuine tests-only RED `14d1dbe244684dffbe7bd3a75ff0efc77380cb24`,
+  [CI #41461627915](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41461627915)
+  Ubuntu3.11 7,180 PASS + 15 expected FAIL and Windows3.11 7,184 PASS
+  + 15 expected FAIL; validate final GREEN exact PR head separately.
+- **Latest user prohibits merging anything into main.** Prior
+  authorization allowing squash merge is superseded for this session.
+  Keep #56/#57 OPEN, no main push CI expected for their changes.
+- #54 owner/admin ruleset controls remain NOT APPLIED: main
+  protected=false, rulesets=[], #7 general audit closed.
+  Do not push v* tags; physical/vendor manual parity NOT_VERIFIED.
+
 ## 2026-11-02 later session continuation (PR #55)
 
 - Later verified baseline before branch: main `caa4dc2a34da7a819809a607eb13ba335dc03946`, main push CI #41448900230 9/9.
