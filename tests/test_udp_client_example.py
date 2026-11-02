@@ -11,7 +11,7 @@ import sys
 
 import pytest
 
-from virtual_plc import Server
+from virtual_plc import Server, Memory
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,14 +27,16 @@ def example():
 
 def test_udp_example_reads_actual_loopback_word():
     sample = example()
-    with Server(listeners=[("udp", 0)]) as plc:
-        plc.memory.write_words("D", 0, [0x1234])
+    memory = Memory()
+    memory.write_words("D", 0, [0x1234])
+    with Server(listeners=[("udp", 0)], memory=memory) as plc:
         assert sample.read_d0(plc.address[1]) == 0x1234
 
 
 def test_udp_example_reports_actual_port_from_cli():
-    with Server(listeners=[("udp", 0)]) as plc:
-        plc.memory.write_words("D", 0, [0xABCD])
+    memory = Memory()
+    memory.write_words("D", 0, [0xABCD])
+    with Server(listeners=[("udp", 0)], memory=memory) as plc:
         completed = subprocess.run(
             [sys.executable, str(EXAMPLE), str(plc.address[1])],
             capture_output=True, text=True, timeout=8)

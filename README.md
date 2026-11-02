@@ -121,6 +121,23 @@ Only response drop/delay are supported; writes execute before fault
 selection. No plan means unchanged responses. TCP is unaffected in a
 mixed TCP/UDP process. See docs/FAULTS.md for strict JSON and selectors.
 
+## Standalone UDP client example (source checkout)
+
+The pinned `pymcprotocol==0.3.0` client uses TCP. For UDP, use the
+stdlib-only, **IPv4 loopback-only** [3E binary D0 reader](examples/udp_read_d0.py).
+It sends exactly one complete request datagram and validates the sender,
+frame header, length, status and word size; malformed replies fail closed.
+No retry, authentication, physical PLC compatibility or nonlocal target.
+
+```text
+python -m virtual_plc --listen udp:5000
+python examples/udp_read_d0.py 5000
+```
+
+Seed D0 via an `--init` JSON file if you want a nonzero response.
+See [client compatibility](docs/CLIENT_COMPATIBILITY.md) for the distinction
+between this raw UDP example and the tested TCP-only pinned client.
+
 ## CLI reference
 
 Run `virtual-plc guide options` for the option/default/meaning table generated

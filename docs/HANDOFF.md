@@ -1,3 +1,23 @@
+## 2026-11-02 #13 UDP client example and governance #54 (PR #55)
+
+New bounded source-only UDP client example for one MC3E binary D0 read:
+`examples/udp_read_d0.py` is standard-library-only, validates full
+response header/length/end code/source and refuses non-loopback hosts.
+No runtime Server/CLI behavior change; pinned pymcprotocol==0.3.0 remains
+the TCP client oracle. Tests-first RED SHA
+`fc8b399529a5273c190773e36edd648e2bc0b607`,
+[CI #41453639346](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41453639346)
+Ubuntu Python3.11 job prior 7,159 PASS + 21 expected FAIL on absent
+example script; new script/tests/README/CLIENT_COMPATIBILITY prepared.
+Final candidate PR/main CI must be independently verified before
+declaring completion (9/9 build + Ubuntu/Windows Python3.10-3.13).
+Current remote baseline at start caa4dc2a34da7a819809a607eb13ba335dc03946
+(PR #53 docs-only merged, main CI #41448900230 9/9 PASS).
+Important governance correction: the broad review #7 was closed,
+but no main rulesets are actually active; owner/admin action is
+tracked by OPEN issue #54 (not #7). `main` protected=false; rulesets=[];
+this integration cannot activate rulesets. DO NOT create v* tags
+(release workflow may publish to PyPI). No actual PLC/vendor parity.
 ## 2026-11-02 #7 repository rulesets / release gate verification and new-chat handoff
 
 At review baseline main `7ea3b718dd5aba848a9b9dc1e0b1642560e9b433`,
