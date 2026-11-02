@@ -360,3 +360,44 @@ def test_cross_source_final_audit_keeps_stable_json_and_originals(kit, pdfs):
     assert report["manual_revision_equivalence"] == "NOT_VERIFIED"
     assert set(report["pairs"]) == {"cpu", "ethernet"}
     assert {key: path.read_bytes() for key, path in pdfs.items()} == original
+
+
+@pytest.mark.parametrize("invalid_role", ("duplicate_bytes", "missing_file", "malformed_pair"))
+def test_pack_preflight_fails_before_extraction_for_invalid_later_source(
+        kit, pdfs, invalid_role):
+    """All source roles must be safe before any expensive pdftotext call."""
+    if invalid_role == "duplicate_bytes":
+        pdfs["ethernet_ag"].write_bytes(pdfs["ethernet_ad"].read_bytes())
+    elif invalid_role == "missing_file":
+        pdfs["ethernet_ag"].unlink()
+
+    ethernet = (pdfs["ethernet_ad"], pdfs["ethernet_ag"])
+    if invalid_role == "malformed_pair":
+        ethernet = (pdfs["ethernet_ad"],)
+    calls = []
+
+    def extract(path):
+        calls.append(path.stem)
+        return "R04CPU Opening Method A031H"
+
+    with pytest.raises(ValueError):
+        kit.generate_report({
+            "cpu": (pdfs["cpu_e"], pdfs["cpu_i"]),
+            "ethernet": ethernet,
+        }, extract=extract)
+    assert calls == [], "invalid evidence packs must never invoke the extractor"
+
+
+def test_pack_preflight_keeps_one_extraction_per_valid_role(kit, pdfs):
+    calls = []
+
+    def extract(path):
+        calls.append(path.stem)
+        return "R04CPU Opening Method A031H"
+
+    report = kit.generate_report({
+        "ethernet": (pdfs["ethernet_ad"], pdfs["ethernet_ag"]),
+        "cpu": (pdfs["cpu_e"], pdfs["cpu_i"]),
+    }, extract=extract)
+    assert calls == ["cpu_e", "cpu_i", "ethernet_ad", "ethernet_ag"]
+    assert report["manual_revision_equivalence"] == "NOT_VERIFIED"
