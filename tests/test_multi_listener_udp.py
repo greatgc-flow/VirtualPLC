@@ -194,3 +194,65 @@ def test_cli_multi_uses_one_server_and_reports_each_bound_port(monkeypatch, caps
     stderr = capsys.readouterr().err
     assert "tcp:127.0.0.1:1111" in stderr
     assert "udp:127.0.0.1:2222" in stderr
+
+
+@pytest.mark.parametrize("failure", ["setsockopt", "settimeout"])
+def test_tcp_accept_recovers_from_connection_option_failure_without_leak(failure):
+    """One failed accepted socket must not terminate its TCP listener.
+
+    Deterministic socket doubles avoid platform-specific setsockopt failures.
+    A valid second connection on the same listener must still be served.
+    """
+    from threading import Event
+
+    server = Server(listeners=[("tcp", 0)])
+    handled = Event()
+
+    class Connection:
+        def __init__(self, failed_stage=None):
+            self.failed_stage = failed_stage
+            self.closed = False
+
+        def setsockopt(self, *args):
+            if self.failed_stage == "setsockopt":
+                raise OSError("injected TCP_NODELAY failure")
+
+        def settimeout(self, value):
+            if self.failed_stage == "settimeout":
+                raise OSError("injected accepted-socket timeout failure")
+
+        def close(self):
+            self.closed = True
+
+    broken = Connection(failure)
+    healthy = Connection()
+
+    class ScriptedListener:
+        def __init__(self):
+            self.accepted = 0
+
+        def accept(self):
+            self.accepted += 1
+            if self.accepted == 1:
+                return broken, ("127.0.0.1", 50001)
+            if self.accepted == 2:
+                return healthy, ("127.0.0.1", 50002)
+            server._stopping.set()
+            raise OSError("end scripted listener")
+
+    def serve_one(connection, connection_id):
+        try:
+            handled.set()
+        finally:
+            with server._clients_lock:
+                server._clients.pop(connection, None)
+
+    server._serve = serve_one
+    listener = ScriptedListener()
+    server._accept_loop(listener)
+
+    assert broken.closed is True
+    assert handled.wait(2), "a valid peer must still be accepted after setup failure"
+    assert listener.accepted == 3
+    with server._clients_lock:
+        assert len(server._clients) == 0
