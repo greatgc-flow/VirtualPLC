@@ -238,6 +238,17 @@ UDP reads share atomic memory dispatch, but lifecycle locking does not
 hold the request lock across normal command handling. Other Server
 instances keep independent lifecycle locks; one PLC remains one process.
 
+**In-flight shutdown boundary (PR #50):** `_serve_frames` has an outer
+recv loop and an inner loop for pipelined TCP frames. The outer stop check
+alone did not protect buffered later frames: if shutdown happened during
+dispatch of the first frame, a subsequent buffered write could still mutate
+memory. The inner loop now checks the existing shutdown event before
+starting *each next frame*. An in-flight dispatch still completes; no
+transaction cancellation/rollback is implied. The UDP worker already
+suppresses response sends after stop; a separate real-loopback regression
+covers its pending response hook and restart. This is not a physical PLC
+shutdown/firmware behavior claim.
+
 Accepted TCP peers are configured with `TCP_NODELAY` and `idle_timeout`
 independently of the listener lifecycle. A socket-configuration `OSError`
 closes only the failed accepted peer; the accept worker continues processing
