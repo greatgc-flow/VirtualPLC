@@ -231,7 +231,14 @@ class Server:
                     except BaseException:
                         listener.close()
                         raise
-                listener.settimeout(ACCEPT_POLL)
+                # The socket is bound but not yet tracked in 'opened'.
+                # A timeout-setup failure must close this socket too;
+                # the outer rollback handles previously bound listeners.
+                try:
+                    listener.settimeout(ACCEPT_POLL)
+                except BaseException:
+                    listener.close()
+                    raise
                 opened.append((transport, listener))
         except BaseException:
             for _, listener in opened:
