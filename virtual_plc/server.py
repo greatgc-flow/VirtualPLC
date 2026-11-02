@@ -361,7 +361,13 @@ class Server:
                 packet, peer = listener.recvfrom(65535)
             except socket.timeout:
                 continue
-            except OSError:
+            except OSError as error:
+                # Winsock UDP may report 10054 after an ICMP Port Unreachable
+                # from an earlier send. Microsoft cautions the socket may be
+                # unusable: do not busy-retry or silently strand the worker.
+                # Socket closure during stop() is normal and stays quiet.
+                if not self._stopping.is_set():
+                    LOG.warning("UDP receive failed; listener worker stopped: %s", error)
                 return
             # recvfrom may complete just as stop() closes the listener.
             # Do not dispatch even a fully valid late datagram.
