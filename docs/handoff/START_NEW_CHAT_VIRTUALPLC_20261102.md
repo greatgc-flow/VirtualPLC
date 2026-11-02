@@ -131,6 +131,29 @@ exact commit and test count where verified; current protections
 with any admin blocker, no real PLC/PyPI. Continue without
 re-asking already documented approvals.
 
+## 2026-11-02 later independent continuation (PRs #56 and #57)
+
+- Latest verified main `069af7aa5e192b3b3b0b2d5040a7d9061135a415`,
+  independent push CI #41454823707 9/9 SUCCESS (Ubuntu3.11 7,180 PASS).
+- [PR #56](https://github.com/greatgc-flow/VirtualPLC/pull/56)
+  IPv6 real TCP/UDP loopback 3E/4E binary/ASCII tests and docs,
+  head `fbf83767eab72ffc94fe91dc7fd74e93e2a87aea`,
+  [PR CI #41459979769](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41459979769)
+  completed SUCCESS 9/9: Ubuntu 7,195 PASS, Windows 7,199 PASS.
+- [PR #57](https://github.com/greatgc-flow/VirtualPLC/pull/57)
+  independent branch `feat/udp-metrics-optin-20261102`: 15 TDD tests
+  + optional Python API UDP counts, no default collection, no packet
+  storage, no CLI flag. Genuine tests-only RED `14d1dbe244684dffbe7bd3a75ff0efc77380cb24`,
+  [CI #41461627915](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41461627915)
+  Ubuntu3.11 7,180 PASS + 15 expected FAIL and Windows3.11 7,184 PASS
+  + 15 expected FAIL; validate final GREEN exact PR head separately.
+- **Latest user prohibits merging anything into main.** Prior
+  authorization allowing squash merge is superseded for this session.
+  Keep #56/#57 OPEN, no main push CI expected for their changes.
+- #54 owner/admin ruleset controls remain NOT APPLIED: main
+  protected=false, rulesets=[], #7 general audit closed.
+  Do not push v* tags; physical/vendor manual parity NOT_VERIFIED.
+
 ## 2026-11-02 later session continuation (PR #55)
 
 - Later verified baseline before branch: main `caa4dc2a34da7a819809a607eb13ba335dc03946`, main push CI #41448900230 9/9.
