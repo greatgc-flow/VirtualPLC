@@ -178,4 +178,8 @@ even when the response is lost. Delay holds just that UDP listener
 worker (outside the PLC request lock), not TCP or other UDP listeners.
 No retransmission, streaming, malformed frame injection, duplicate,
 corruption, reorder, authentication or timing guarantee is implied.
+For UDP, a `response_hook` must return bytes-like data; invalid callback
+results are rejected before `sendto` (and increment `rejected` only if
+opt-in `udp_metrics=True`). A command has already executed and is not
+rolled back by an unusable transformed response.
 No actual PLC or production network should be used.
