@@ -45,6 +45,15 @@ family). `--max-hits 12` (default) controls bounded page candidates;
 `--overwrite` must be explicit before replacing an existing report.
 The JSON written to `--output` is exactly the JSON printed to stdout.
 
+**Whole-pack input preflight (PR #46):** Before calling `pdftotext`,
+the tool validates both edition roles for every supplied family, screens
+headers and file sizes, and rejects duplicate PDF SHA-256 even across
+families. If a later source is missing, malformed or byte-identical, no
+extractor runs at all. This avoids unnecessary processing of known-bad
+evidence packs. The previously documented post-extraction and final
+source rechecks remain; this is not protection from every filesystem race
+or proof of an official manual.
+
 **Output file integrity (PR #44):** The CLI stages JSON in the output
 directory, flushes/fsyncs it, then atomically publishes a complete report.
 Existing output is replaced only with `--overwrite`, preserving the old

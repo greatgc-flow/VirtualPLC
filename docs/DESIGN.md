@@ -1,3 +1,12 @@
+**Whole-pack PDF input preflight (PR #46, 2026-11-02):**
+The developer-only manual evidence kit validates every edition's tuple shape,
+file signature/size and SHA-256 uniqueness before performing any text
+extraction. Malformed or duplicate late sources no longer cause earlier
+`pdftotext` subprocess calls. Existing post-extraction and final whole-pack
+source rechecks remain, with unchanged report schema and manufacturer
+`NOT_VERIFIED` status. This is a COMPACT, delivery-tool-only safeguard,
+not PDF authenticity or hardware qualification.
+
 # VirtualPLC — Design
 
 **Final cross-source evidence integrity audit (PR #45):**
