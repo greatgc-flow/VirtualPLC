@@ -21,6 +21,11 @@ start/stop, not exhaustive partitions: stop/delay cancellation can
 leave received datagrams with no response. No peer/payload retention,
 network query endpoint, new dependencies, authentication or plant access.
 Tests-only RED/CI and exact-head full CI are tracked by PR #57.
+A follow-up tests-first regression verifies that an invalid UDP
+response-hook result previously bypassed the `rejected` metric. The
+post-hook buffer-protocol check now rejects non-bytes-like values
+while preserving bytearray/memoryview compatibility. This does not
+introduce retries or undo already dispatched writes.
 
 
 **Final cross-source evidence integrity audit (PR #45):**
