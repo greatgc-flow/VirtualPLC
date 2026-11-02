@@ -121,7 +121,9 @@ See the [canonical CLI reference](../README.md#cli-reference),
   sessions only; the nonlocal bind guard still requires both explicit permission
   and an idle timeout option, even for UDP-only configurations.
 - All requested sockets bind before any listener starts processing. Failure
-  to bind one socket closes those already bound without serving requests.
+  to bind or set the timeout on any listener closes that just-created socket
+  and all previously bound endpoints without serving requests. The same
+  Server can safely start again after the failure.
 - `.stop()` synchronously closes all endpoints and clients and joins workers;
   idempotent, including incomplete TCP frames.
 - Accepted sockets use TCP_NODELAY; if configuring TCP_NODELAY or the accepted socket timeout raises `OSError`, only that accepted peer is closed and the port continues accepting future connections. EOF, bad framing or `idle_timeout` closes only that

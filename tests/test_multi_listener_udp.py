@@ -255,3 +255,80 @@ def test_tcp_accept_recovers_from_connection_option_failure_without_leak(failure
     assert listener.accepted == 3
     with server._clients_lock:
         assert len(server._clients) == 0
+
+
+@pytest.mark.parametrize("transports", [
+    ("tcp", "tcp"), ("tcp", "udp"), ("udp", "tcp"), ("udp", "udp"),
+])
+def test_second_listener_timeout_failure_rolls_back_all_and_allows_restart(
+        monkeypatch, transports):
+    """No listener may survive startup if a later socket option setup fails.
+
+    Inject failure on the *second* bound socket, covering TCP and UDP in
+    either position. Then restore real sockets and prove the same Server
+    can start, serve requests, stop, and start again.
+    """
+    from virtual_plc import server as server_module
+
+    created = []
+
+    class FakeListener:
+        def __init__(self, transport):
+            self.transport = transport
+            self.closed = False
+            self.bound = False
+
+        def bind(self, address):
+            self.bound = True
+
+        def settimeout(self, timeout):
+            if len(created) == 2 and created[1] is self:
+                raise OSError("injected listener timeout setup failure")
+
+        def close(self):
+            self.closed = True
+
+    def make_tcp(address, family):
+        listener = FakeListener("tcp")
+        listener.bound = True  # create_server binds before returning
+        created.append(listener)
+        return listener
+
+    def make_udp(family, socktype):
+        assert socktype == socket.SOCK_DGRAM
+        listener = FakeListener("udp")
+        created.append(listener)
+        return listener
+
+    server = Server(listeners=[(transport, 0) for transport in transports])
+    with monkeypatch.context() as patch:
+        patch.setattr(server_module.socket, "create_server", make_tcp)
+        patch.setattr(server_module.socket, "socket", make_udp)
+        with pytest.raises(OSError, match="injected listener timeout setup failure"):
+            server.start()
+        assert len(created) == 2
+        assert all(listener.bound for listener in created)
+        assert all(listener.closed for listener in created)
+        assert server._listener is None
+        assert server._listeners == []
+        assert server._listener_threads == []
+        server.stop()
+
+    # Real network loopback only: recovery after failed startup is essential.
+    for _ in range(2):
+        with server:
+            assert [entry[0] for entry in server.addresses] == list(transports)
+            for transport, host, port in server.addresses:
+                if transport == "tcp":
+                    with socket.create_connection((host, port), timeout=2) as client:
+                        assert exchange(client, request(data=device_data())) == (
+                            0, b"\x00\x00")
+                else:
+                    read = packet("3E", "binary")
+                    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+                        client.settimeout(2)
+                        client.sendto(read, (host, port))
+                        response, source = client.recvfrom(8192)
+                    assert source[1] == port
+                    assert response == encode_response(
+                        decode_request(read), data=b"\x00\x00")

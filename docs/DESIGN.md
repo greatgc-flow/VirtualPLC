@@ -244,7 +244,11 @@ simulation, fault selection and the one request lock, so no shared-Memory
 cross-Server concurrency is introduced. Per-protocol duplicate fixed ports
 are rejected; TCP and UDP can share a numeric port, and port 0 requests a
 fresh ephemeral bind. Bind all sockets before any worker starts; rollback on
-a failed bind; stop/close/join all workers on shutdown.
+a failed bind or listener timeout configuration error. The current socket
+must be closed even when it has not yet been added to the rollback list;
+already opened TCP/UDP endpoints are also closed. No workers start on a
+partial startup failure. The same Server can be started after failure;
+stop/close/join all workers on ordinary shutdown.
 
 UDP is a datagram adapter over the existing MC 3E/4E decoder/dispatcher:
 one exact 8192-byte-maximum frame per packet, no stream reassembly, silent

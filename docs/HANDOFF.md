@@ -1,3 +1,23 @@
+## 2026-11-02 #13 late listener-timeout setup rollback (PR #48)
+
+When the second TCP or UDP socket has been created/bound but its listener
+`settimeout` fails, `Server.start()` now closes the newly created socket
+*before* propagating the original exception. Existing outer rollback still
+closes all earlier bound sockets, with no worker started. An unchanged Server
+instance can then bind, serve and stop/restart with real loopback TCP/UDP.
+
+Observed tests-only RED `ca81f2c981f5be8b2c988d0c865b6bf2a2990d27`
+([CI #41395382427](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41395382427)):
+Ubuntu Python3.11 job **7,111 PASS / 4 expected FAIL**, all four
+TCP→TCP, TCP→UDP, UDP→TCP, UDP→UDP combinations failed on an unclosed
+second listener. Code fix `27ee55925a6aa433b0428fc76d1a65e8964eb1c9`.
+Gate: exact PR head CI (build + Ubuntu/Windows Python3.10–3.13) 9/9,
+then squash and independent exact new-main push CI 9/9.
+
+No PLC wire, memory, CPU state, manufacturer defaults, dependencies,
+real PLC, production network or PyPI changes. All tests are loopback-only;
+manual AD↔AG/E↔I source clauses remain NOT_VERIFIED.
+
 ## 2026-11-02 #13 TCP accepted-socket setup failure isolation (PR #47)
 
 The per-port TCP accept worker now catches `OSError` while configuring a
