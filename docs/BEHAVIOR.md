@@ -128,6 +128,22 @@ See the [canonical CLI reference](../README.md#cli-reference),
   duplicate/reorder/stream close are deliberately not modeled. `max_clients` and `idle_timeout` govern TCP
   sessions only; the nonlocal bind guard still requires both explicit permission
   and an idle timeout option, even for UDP-only configurations.
+- `Server(udp_metrics=True, listeners=[("udp", 0)])` enables optional
+  Python-only UDP diagnostic counters. `get_udp_metrics()` returns a
+  defensive copy with `received`, `rejected`, `sent`,
+  `fault_dropped`, and `send_errors`. The default `udp_metrics=False`
+  returns `None` and performs no counter recording. The option rejects
+  non-boolean values and TCP-only configurations before binding.
+  `received` counts every successful OS datagram receive including a
+  late one during shutdown; `rejected` counts empty/overlimit/invalid
+  frames or unusable responses, not shutdown. `sent` counts complete
+  successful UDP sends; `fault_dropped` is only a selected post-dispatch
+  drop; `send_errors` counts send failures/short sends. The fields
+  are independent event counters rather than a conservation equation;
+  shutdown/delay cancellation does not imply request failure or rollback.
+  They aggregate all UDP listeners, persist across restart on the same
+  Server, use a separate short lock, and never store peer/payload data.
+  No CLI flag, external endpoint, retry or production network support.
 - All requested sockets bind before any listener starts processing. Failure
   to bind or set the timeout on any listener closes that just-created socket
   and all previously bound endpoints without serving requests. The same
