@@ -1,5 +1,52 @@
 # VirtualPLC — NEW CHAT START / 2026-11-02 (RUNTIME + GOVERNANCE)
 
+## 2026-11-03 further follow-up — PR #60 callback-vs-stop lock inversion
+
+- Exact deterministic tests-only RED commit
+  `8adfdb5138ae56f754ebc562fa11c037efd5dc30`, [CI #41586012373](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41586012373):
+  Ubuntu3.11 7,189 PASS +1 expected FAIL; Windows3.13
+  7,193 PASS +1 expected FAIL. Fatal lock inversion:
+  stop() holds lifecycle lock and joins UDP worker; response_hook on
+  worker calls health and blocks acquiring that same lock.
+- Minimal fix `f5d5adf30912d73dd4399e26bab446780395b007`:
+  acquire existing RLock **nonblocking** in get_listener_health().
+  During active start/stop contention, return conservative
+  false/false/[] without blocking worker; otherwise read snapshot
+  and release via finally. No new thread/lock/probe or auto-rebind.
+- Integrated warning(#58)+health(#60) source changes remain
+  INDEPENDENT and UNMERGED. Future combined test plan in
+  `docs/research/UDP_WARNING_HEALTH_INTEGRATION_PLAN_20261103.md`.
+  [#13 integration preflight](https://github.com/greatgc-flow/VirtualPLC/issues/13#issuecomment-6596492756).
+- Recheck latest **exact final PR #60 HEAD CI 9/9** before calling GREEN;
+  do not mistake superseded cancelled intermediate run for failure.
+  User forbids all main merges; #54 rulesets still absent.
+
+## 2026-11-03 follow-up — Listener health snapshot PR #60 (UNMERGED)
+
+- Latest verified GitHub main: `069af7aa5e192b3b3b0b2d5040a7d9061135a415`.
+  Open PR #56 IPv6, #57 UDP metrics, #58 UDP receive warning,
+  #59 native Windows 10054 evidence (all prior 9/9 SUCCESS; all OPEN).
+  New independent [PR #60](https://github.com/greatgc-flow/VirtualPLC/pull/60)
+  branch `feat/listener-health-snapshot-20261103`, based on main.
+- TDD RED tests-only `b79055327ed6281d3ca580254aa06f7007f71643`,
+  [CI #41549380479](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41549380479):
+  Ubuntu3.11 7,180 PASS +9 expected FAIL; Windows3.13
+  7,184 PASS +9 expected FAIL, only absent get_listener_health.
+- Minimal API implementation
+  `7b904f897e4e4e956ec1d4a5b50ea38ee5a258d1`:
+  `Server.get_listener_health()`, read-only nested snapshot of
+  registered TCP/UDP endpoints and socket/worker liveness using the
+  existing lifecycle lock. No probes, daemon threads, auto-rebind,
+  retry, CLI, new dependency or network action. A registered listener
+  with a dead worker is started but not healthy; explicit stop/start
+  is the operational recovery (port 0 may change).
+- **Verify exact final PR #60 HEAD and full 9/9 CI after all docs**
+  before GREEN; distinguish PR CI from new-main push CI.
+- Current user's explicit **NO MAIN MERGE** overrides older text
+  permitting merge. Do not merge #56–#60 or publish PyPI/tag releases.
+  Owner/admin #54 rulesets still [] and main unprotected.
+  No real PLC or manufacturing network, vendor parity NOT_VERIFIED.
+
 ## Role, authorization and priority
 
 You are continuing development of the GitHub repository

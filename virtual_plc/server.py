@@ -219,6 +219,49 @@ class Server:
         if self.verbose:
             LOG.info(message, *args)
 
+    def get_listener_health(self):
+        """Read-only, nonblocking snapshot of sockets and listener workers.
+
+        stop() holds the lifecycle lock while joining listener workers.
+        A response hook running on one such worker may inspect health
+        concurrently with stop(); waiting for that lock would deadlock
+        the join. Fail closed with an empty unhealthy snapshot instead.
+        No background probe, network I/O or additional lock is created.
+        """
+        if not self._lifecycle_lock.acquire(blocking=False):
+            # Startup/shutdown owns this lock on another thread. Returning
+            # conservative unhealthy state prevents stop()->join()->hook
+            # lock inversion; callers may retry after the transition.
+            return {"started": False, "healthy": False, "listeners": []}
+        try:
+            started = self._listener is not None
+            stopping = self._stopping.is_set()
+            listeners = []
+            for index, (transport, listener) in enumerate(self._listeners):
+                worker_alive = (
+                    index < len(self._listener_threads)
+                    and self._listener_threads[index].is_alive()
+                )
+                socket_open = listener.fileno() >= 0
+                healthy = started and not stopping and socket_open and worker_alive
+                _, host, port = self.addresses[index]
+                listeners.append({
+                    "transport": transport,
+                    "host": host,
+                    "port": port,
+                    "socket_open": socket_open,
+                    "worker_alive": worker_alive,
+                    "healthy": healthy,
+                })
+            return {
+                "started": started,
+                "healthy": started and bool(listeners)
+                           and all(item["healthy"] for item in listeners),
+                "listeners": listeners,
+            }
+        finally:
+            self._lifecycle_lock.release()
+
     def start(self):
         """Serialize overlapping start/stop calls for this Server instance."""
         with self._lifecycle_lock:
@@ -361,7 +404,13 @@ class Server:
                 packet, peer = listener.recvfrom(65535)
             except socket.timeout:
                 continue
-            except OSError:
+            except OSError as error:
+                # Winsock UDP may report 10054 after an ICMP Port Unreachable
+                # from an earlier send. Microsoft cautions the socket may be
+                # unusable: do not busy-retry or silently strand the worker.
+                # Socket closure during stop() is normal and stays quiet.
+                if not self._stopping.is_set():
+                    LOG.warning("UDP receive failed; listener worker stopped: %s", error)
                 return
             # recvfrom may complete just as stop() closes the listener.
             # Do not dispatch even a fully valid late datagram.
