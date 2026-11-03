@@ -90,6 +90,12 @@ TROUBLESHOOT = """
 Symptom -> cause -> fix
 "cannot listen on H:P" (exit 1): port busy or denied -> choose another --port, or --port 0 and read the banner.
 UDP timeout: each datagram must contain exactly one full frame (max 8192 bytes); invalid requests get no response.
+UDP receive failed; listener worker stopped (WARNING): unexpected terminal UDP recvfrom socket error.
+  A prior UDP send may cause Winsock 10054 (ICMP Port Unreachable); do not blindly retry an unusable socket.
+  Embedded Python: server.get_listener_health() reports local socket/thread state; stale port can be started=True, healthy=False.
+  Diagnose, explicitly server.stop(); server.start(), then reread server.addresses (port 0 may change).
+  During start/stop lock contention, health fails closed with false/false/[] to avoid callback/join deadlock.
+  No automatic recovery, remote reachability, PLC vendor parity or production-network guarantee.
 1E: --slmp-1e supports batch 00..03, random 04/05, TCP owner-bound RUN/STOP 13/14, type 15 and loopback 16; not mixed with 3E/4E.
 Exit 2 and "see: virtual-plc guide TOPIC": bad option, JSON file or plan -> read that topic; nothing was bound.
 Client times out: wrong host/port, a fault plan that holds or drops replies, or --idle-timeout closed the socket
