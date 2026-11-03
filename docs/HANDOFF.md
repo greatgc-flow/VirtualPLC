@@ -1,3 +1,39 @@
+## 2026-11-03 #13 independent UDP warning + Health integration PR #61 (UNMERGED)
+
+User continued the previously proposed integration test work. A separate
+[PR #61](https://github.com/greatgc-flow/VirtualPLC/pull/61) based
+on unchanged main `069af7aa5e192b3b3b0b2d5040a7d9061135a415`
+combines #58's unexpected UDP recvfrom warning and #60's
+**nonblocking** `get_listener_health()` only inside its own
+reviewable source branch. It also includes BOTH original standalone
+regression test suites plus five new combined test cases (4 on
+Ubuntu + one Windows-only real UDP ICMP case).
+
+Initial tests-only RED `2f30399ca1f3d69fb6c3cb9737067b73fae3a4d7`,
+[CI #41589977921](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41589977921)
+completed FAILURE as expected: Ubuntu3.11 baseline 7,180 PASS +
+4 expected integration FAIL and 1 native-Windows SKIP;
+Windows3.13 baseline 7,184 PASS + 5 expected integration FAIL.
+Both features were absent from main. Implementation composition commit
+`89c7d1b8ef147e2101f2e1978cbb3a81e0e405c2` uses the exact
+PR60 server source with PR58's single terminal receive-error warning,
+plus PR60 and PR58 regression tests. README/BEHAVIOR/DESIGN/guide
+were reconciled in subsequent docs-only commits without editing
+either original PR. Tests check registered socket/worker health,
+one warning/no retry, mixed TCP sibling, quiet normal shutdown,
+stop/callback deadlock, explicit restart and real UDP MC reply;
+Windows uses genuine closed-loopback-client ICMP 10054 observation
+and an explicit SKIP if OS policy suppresses it.
+
+**Final candidate exact PR #61 CI must be checked 9/9 after the
+last documentation commit; do not use independent #58 or #60 CI
+to claim combined verification.** No main merge; original PRs
+#56–#60 remain independently OPEN/UNMERGED. No v* tags, PyPI,
+real PLC, production networks, Windows IOCTL workaround or
+manufacturer hardware guarantee. Source-backed details:
+`docs/research/UDP_WARNING_HEALTH_INTEGRATION_PLAN_20261103.md`,
+`docs/research/UDP_WARNING_HEALTH_INTEGRATION_RESULTS_20261103.md`.
+
 ## 2026-11-03 PR #60 shutdown/Health lock inversion reproduced and corrected
 
 Prior PR #60 green `084599d31790b35366768a6b48de6f831ff2e2aa`
