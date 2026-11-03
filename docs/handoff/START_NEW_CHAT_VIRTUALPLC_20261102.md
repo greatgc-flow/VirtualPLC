@@ -1,5 +1,30 @@
 # VirtualPLC — NEW CHAT START / 2026-11-02 (RUNTIME + GOVERNANCE)
 
+## 2026-11-03 latest continuation — combined UDP warning + Health PR #61
+
+- Fresh verified main remains `069af7aa5e192b3b0b2d5040a7d9061135a415`,
+  protected=false, rulesets=[] (#54 owner/admin action pending).
+- Independent [PR #61](https://github.com/greatgc-flow/VirtualPLC/pull/61)
+  branch `test/udp-warning-health-integration-20261103` is the
+  **only** composite integration branch. Neither #58/#60 nor main
+  was updated/merged. PRs #56–#61 remain OPEN, base main.
+- Tests-only RED `2f30399ca1f3d69fb6c3cb9737067b73fae3a4d7`,
+  [CI #41589977921](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41589977921):
+  Ubuntu3.11 7,180 PASS + 4 expected FAIL +1 Win-only SKIP;
+  Windows3.13 7,184 PASS +5 expected FAIL, missing Health.
+- Composition code commit `89c7d1b8ef147e2101f2e1978cbb3a81e0e405c2`
+  uses #60 nonblocking Health method + #58 unexpected UDP terminal
+  warning; test suites from both plus five new registered-worker
+  integration cases (four portable + one genuine Windows loopback
+  recvfrom 10054 observation). No automatic retry or rebind.
+- README, BEHAVIOR, DESIGN, guide, HANDOFF and research evidence
+  reconciled on this branch. Exact **final PR #61 HEAD 9/9 CI** must
+  be confirmed after last commit. Do not misreport standalone #58
+  or #60 success as combined CI.
+- Existing user instruction **DO NOT MERGE MAIN** still applies.
+  No release tags, PyPI, real PLC, production/factory network
+  or Mitsubishi manual revision equivalence assertions.
+
 ## 2026-11-03 further follow-up — PR #60 callback-vs-stop lock inversion
 
 - Exact deterministic tests-only RED commit
