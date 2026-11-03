@@ -2,8 +2,12 @@
 
 ## Status and decision
 
-**Plan only.** This file does not merge, cherry-pick, rebase, run code from
-two branches together, or authorize an independent main merge. Both
+**Original preflight (retained as design evidence).** After this plan was
+written, the user authorized its next step with `ㄱㄱㄱ`. The separate
+[PR #61](https://github.com/greatgc-flow/VirtualPLC/pull/61)
+combines #58/#60 source behavior only inside its own reviewable
+test branch based on main; neither original PR nor main is merged,
+rebased, or altered. This is not permission to merge main or publish. Both
 [PR #58](https://github.com/greatgc-flow/VirtualPLC/pull/58) and
 [PR #60](https://github.com/greatgc-flow/VirtualPLC/pull/60) are
 independent OPEN/UNMERGED proposals from the same main snapshot:
