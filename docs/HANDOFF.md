@@ -1,3 +1,58 @@
+## 2026-11-03 PR #60 shutdown/Health lock inversion reproduced and corrected
+
+Prior PR #60 green `084599d31790b35366768a6b48de6f831ff2e2aa`
+([CI #41550046059](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41550046059))
+introduced a health snapshot using blocking `_lifecycle_lock`.
+The already-existing Server.stop() holds the same lock while joining
+UDP workers. If a UDP `response_hook` calls `get_listener_health()`
+during stop, this is a deterministic lock-order deadlock.
+
+Tests-only commit `8adfdb5138ae56f754ebc562fa11c037efd5dc30`,
+[CI #41586012373](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41586012373):
+Ubuntu3.11 **7,189 PASS +1 expected FAIL** and Windows3.13
+**7,193 PASS +1 expected FAIL**, exact deadlock assertion in new
+event-synchronized hook/stop test; earlier suite remained green.
+Overall workflow may be CANCELLED when superseded by a follow-up
+commit: read those individual failing job logs, not workflow conclusion.
+
+Minimal fix `f5d5adf30912d73dd4399e26bab446780395b007`:
+`get_listener_health()` attempts nonblocking acquire of the
+*existing* lifecycle RLock. When held by another thread doing start/stop,
+immediately returns conservative false/false/[]; otherwise takes the
+same defensive socket/worker snapshot under the lock, releasing in
+finally. No additional lock, retry timer, monitor thread, socket,
+CLI option or PLC communication. The transient false snapshot is a
+safe upper bound on availability, not a proof of stopped state.
+README/BEHAVIOR/DESIGN/guide synchronized and future PR #58+#60
+integration test plan recorded in
+`docs/research/UDP_WARNING_HEALTH_INTEGRATION_PLAN_20261103.md`.
+**Verify final exact PR #60 HEAD 9/9 GREEN before claiming fix.**
+No main merge; #56–#60 remain independent open PRs.
+
+## 2026-11-03 #13 listener health snapshot, independent PR #60 (UNMERGED)
+
+Read-only embedded Python `Server.get_listener_health()` for TCP/UDP
+socket and worker liveness, using existing lifecycle RLock; no new
+threads/locks/probes/network endpoint or automatic recovery.
+Prestart/poststop return `started=False, healthy=False, listeners=[]`.
+A stale registered port may have `started=True` but `healthy=False`,
+with per-port `transport, host, port, socket_open, worker_alive, healthy`.
+Returns a defensive nested copy; not a protocol-response guarantee.
+Tests-only RED `b79055327ed6281d3ca580254aa06f7007f71643`:
+[CI #41549380479](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41549380479)
+Ubuntu3.11 prior **7,180 PASS + 9 expected FAIL**, Windows3.13
+prior **7,184 PASS + 9 expected FAIL** (all new tests failed solely
+because get_listener_health did not exist). Implementation
+`7b904f897e4e4e956ec1d4a5b50ea38ee5a258d1`.
+The tests cover single TCP, UDP, mixed two-UDP port 0 topology,
+snapshot copy, real worker death, sibling TCP, explicit stop/start
+and real UDP reply after recovery. Check the final exact PR HEAD and
+9/9 CI before claiming GREEN. PR #56/#57/#58/#59 remain
+independent OPEN/UNMERGED with verified 9/9 CI in prior #25 comments.
+Latest main `069af7aa5e192b3b3b0b2d5040a7d9061135a415`.
+Current owner instruction: **do not merge to main**. No v* tag,
+PyPI, real PLC or manufacturing network. #54 rulesets still absent.
+
 ## 2026-11-02 #13 UDP client example and governance #54 (PR #55)
 
 New bounded source-only UDP client example for one MC3E binary D0 read:

@@ -227,6 +227,38 @@ which point the marker changes to orphaned without releasing ownership.
 Reset and owner RUN clear both the ID and marker. This avoids adding another
 network protocol, CLI recovery flag, or concurrent lock hierarchy.
 
+## Read-only listener health snapshot (PR #60, unmerged)
+
+`Server.get_listener_health()` reports the current registered TCP/UDP
+endpoints using existing `_listeners`, `_listener_threads`,
+`addresses`, `_listener`, `_stopping` and the existing
+`_lifecycle_lock`. It performs a **nonblocking** RLock acquisition:
+when another thread is inside start/stop, the reader returns an empty
+unhealthy snapshot rather than waiting. Why: `stop()` holds the lifecycle
+lock while joining UDP workers; a worker's response_hook may itself call
+this public health API. A blocking read could create a stop->join->hook
+lock inversion. This was reproduced by an Event-synchronized test in
+`tests/test_listener_health.py`, and the fail-closed path prevents it
+without modifying stop/start serialization. During this transient,
+`started=False` is a conservative observation, not proof the Server
+has finished stopping; callers may retry after transition.
+It allocates only a short-lived dictionary/list for
+the return value. No new monitor thread, lock, timer, state flag, config
+table, CLI option or external dependency. Registration (`started`) is
+**not** the same as live service: a failed UDP recvfrom worker can exit
+while `_listener` remains set, so `start()` alone is intentionally a
+no-op. Per-endpoint `healthy` requires a live worker, nonclosed socket
+and no lifecycle shutdown; overall `healthy` requires every endpoint.
+
+The snapshot is a best-effort observation, not atomic with OS thread
+termination or socket activity. This does not prove successful network
+I/O, protocol correctness, actual PLC state or remote reachability.
+A runner may explicitly `stop()/start()` and reacquire `addresses`
+for ephemeral binds; automatic rebind and retry are a separate,
+still-unapproved state-machine design. Existing TCP/UDP request locks,
+physical-PLC/vendor fidelity and release boundaries remain unchanged.
+See tests/test_listener_health.py and issue #13 TDD/CI evidence.
+
 ## Optional multi-listener transport extension
 
 A per-Server reentrant lifecycle lock serializes externally invoked
