@@ -134,6 +134,25 @@ equipment status or liveness lease**: a worker may die just after the report.
 No automatic recovery is performed. See [behavior](docs/BEHAVIOR.md) and
 [#13](https://github.com/greatgc-flow/VirtualPLC/issues/13).
 
+### Unexpected UDP receive errors (Python server; unreleased)
+
+An unexpected terminal UDP `recvfrom` `OSError` emits **one WARNING**
+(`UDP receive failed; listener worker stopped: ...`) and stops that
+UDP worker. `socket.timeout` polling and socket closure during normal
+`stop()` remain quiet. Windows Winsock `10054` can follow a prior
+ICMP Port Unreachable; the socket may be unusable, so the Server does
+not blindly retry or automatically rebind it. In an embedding process,
+check `server.get_listener_health()` after an error: a failed but
+still-registered UDP listener can report `started=True, healthy=False`.
+Diagnose and explicitly call `server.stop(); server.start()` to rebind
+the Server; reread `server.addresses` as ephemeral ports may change.
+During concurrent start/stop the snapshot can conservatively return
+`False/False/[]` rather than block the worker. No automatic probe,
+network endpoint or availability guarantee is provided. A real
+Winsock 10054 was observed in independent PR #59's Windows CI.
+See [#13](https://github.com/greatgc-flow/VirtualPLC/issues/13)
+and [design](docs/DESIGN.md).
+
 For UDP, send **exactly one complete 3E/4E binary or ASCII MC request frame**
 per datagram; replies are datagrams sent back to the source IP/port. Invalid,
 truncated, concatenated or over-8192-byte datagrams are silently dropped.
