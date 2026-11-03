@@ -137,3 +137,50 @@ def test_listener_health_isolates_failed_udp_port_in_mixed_transport():
                                          data=b"\x00\x00")
     finally:
         server.stop()
+
+
+def test_listener_health_called_by_udp_hook_during_stop_never_deadlocks():
+    """stop() joins workers while holding the lifecycle RLock.
+
+    A UDP response hook can call the public health API from its own
+    worker. If health waits for the lifecycle lock after stop begins,
+    stop waits for that worker forever. A bounded event handshake
+    reproduces this exact order with no arbitrary sleeps.
+    """
+    import threading
+
+    entered_hook = threading.Event()
+    resume_hook = threading.Event()
+    observed = []
+
+    def callback(response):
+        entered_hook.set()
+        assert resume_hook.wait(3), "test did not release response hook"
+        observed.append(server.get_listener_health())
+        return response
+
+    server = Server(listeners=[("udp", 0)], response_hook=callback)
+    stopper = None
+    server.start()
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.sendto(packet("3E", "binary"), server.address)
+        assert entered_hook.wait(3), "UDP worker did not enter response hook"
+        stopper = threading.Thread(target=server.stop, daemon=True)
+        stopper.start()
+        assert server._stopping.wait(3), "stop() never signaled shutdown"
+        resume_hook.set()
+        stopper.join(3)
+        assert not stopper.is_alive(), (
+            "deadlock: stop() is joining the UDP worker while its "
+            "response_hook waits to acquire the lifecycle lock")
+        assert observed == [EMPTY], (
+            "contended lifecycle snapshot must fail closed, not "
+            "pretend a transitioning listener is healthy")
+        assert server.get_listener_health() == EMPTY
+    finally:
+        resume_hook.set()
+        # The RED build intentionally reproduces a daemon-thread deadlock.
+        # In GREEN, stop() always completes and no resources remain.
+        if stopper is None:
+            server.stop()
