@@ -227,6 +227,31 @@ which point the marker changes to orphaned without releasing ownership.
 Reset and owner RUN clear both the ID and marker. This avoids adding another
 network protocol, CLI recovery flag, or concurrent lock hierarchy.
 
+## Terminal UDP warning + nonblocking Health integration (PR #61, unmerged)
+
+The standalone PR #58 warning adds a single `LOG.warning` before
+exiting the UDP `recvfrom` loop on unexpected `OSError`. This is
+combined on an **isolated test branch** with PR #60's read-only
+`get_listener_health()`, whose lifecycle lock acquisition is
+nonblocking to avoid a stop/join/worker-callback deadlock. A stale,
+still-registered UDP worker may have `started=True`,
+`healthy=False` and an open socket with no live receive thread.
+The warning gives the failure reason; the snapshot gives an operator
+a momentary local health indication, **not** a remote MC-response
+or PLC/hardware guarantee.
+
+A normal stop-triggered socket error remains silent; an unexpected
+terminal failure does not busy retry or automatically rebind the socket.
+An embedding operator can choose explicit `stop()/start()` and
+re-read `addresses` for ephemeral ports. The combined tests cover
+real registered UDP workers (synthetic terminal error, mixed TCP
+sibling, logging, callback/stop contention and manual recovery),
+plus genuine Winsock loopback 10054 where supported.
+No new monitor thread, retry policy, socket IOCTL, new dependency
+or network health endpoint. The original PR #58 and #60 remain OPEN
+and unmodified; this branch is **not** a main merge or released
+behavior. See issue #13 and the integration evidence document.
+
 ## Read-only listener health snapshot (PR #60, unmerged)
 
 `Server.get_listener_health()` reports the current registered TCP/UDP
