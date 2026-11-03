@@ -153,6 +153,18 @@ See the [canonical CLI reference](../README.md#cli-reference),
   duplicate/reorder/stream close are deliberately not modeled. `max_clients` and `idle_timeout` govern TCP
   sessions only; the nonlocal bind guard still requires both explicit permission
   and an idle timeout option, even for UDP-only configurations.
+- An unexpected terminal UDP `recvfrom` `OSError` logs one WARNING
+  including the socket error and stops **only that UDP worker** without
+  retry. A healthy TCP sibling is not intentionally closed. Winsock
+  `10054` can follow an earlier ICMP Port Unreachable and may indicate
+  an unusable UDP socket; no transparent rebind/replay is attempted.
+  Ordinary `stop()` and receive timeout polling do not log a warning.
+  Combined with the read-only `get_listener_health()` snapshot, a
+  registered but dead UDP worker reports degraded health; operators
+  can explicitly `stop()` then `start()` and reread port-0 addresses.
+  A real native 10054 was observed on hosted Windows CI in PR #59;
+  neither that nor the synthetic regression tests certify physical
+  PLC behavior, production network reliability or all Windows policies.
 - All requested sockets bind before any listener starts processing. Failure
   to bind or set the timeout on any listener closes that just-created socket
   and all previously bound endpoints without serving requests. The same
