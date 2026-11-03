@@ -220,14 +220,20 @@ class Server:
             LOG.info(message, *args)
 
     def get_listener_health(self):
-        """Read-only snapshot of bound listener sockets and worker threads.
+        """Read-only, nonblocking snapshot of sockets and listener workers.
 
-        Uses the existing lifecycle lock for a consistent endpoint list;
-        no health probes or extra threads are created. Worker liveness
-        may change immediately after the snapshot. This is not a
-        protocol-response or remote-network reachability guarantee.
+        stop() holds the lifecycle lock while joining listener workers.
+        A response hook running on one such worker may inspect health
+        concurrently with stop(); waiting for that lock would deadlock
+        the join. Fail closed with an empty unhealthy snapshot instead.
+        No background probe, network I/O or additional lock is created.
         """
-        with self._lifecycle_lock:
+        if not self._lifecycle_lock.acquire(blocking=False):
+            # Startup/shutdown owns this lock on another thread. Returning
+            # conservative unhealthy state prevents stop()->join()->hook
+            # lock inversion; callers may retry after the transition.
+            return {"started": False, "healthy": False, "listeners": []}
+        try:
             started = self._listener is not None
             stopping = self._stopping.is_set()
             listeners = []
@@ -253,6 +259,8 @@ class Server:
                            and all(item["healthy"] for item in listeners),
                 "listeners": listeners,
             }
+        finally:
+            self._lifecycle_lock.release()
 
     def start(self):
         """Serialize overlapping start/stop calls for this Server instance."""
