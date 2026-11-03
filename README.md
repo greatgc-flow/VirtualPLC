@@ -95,6 +95,41 @@ with Server(listeners=[("tcp", 0), ("udp", 0)]) as plc:
     # Use a TCP client or an MC request datagram to either bound address.
 ```
 
+### Embedded listener health (Python only; unreleased)
+
+Use `server.get_listener_health()` to read a **defensive snapshot** of the
+currently registered TCP and UDP endpoints. No probe, monitoring thread,
+retry, CLI command, additional socket or network health endpoint is created:
+
+```python
+from virtual_plc import Server
+
+server = Server(listeners=[("tcp", 0), ("udp", 0)])
+try:
+    server.start()
+    health = server.get_listener_health()
+    assert health["started"] and health["healthy"]
+    print(health["listeners"])  # actual host, ephemeral port, socket/thread status
+    # After detecting a failed listener, an embedding operator can choose
+    # an explicit restart. Calling start() alone on a stale listener is a no-op.
+    if not server.get_listener_health()["healthy"]:
+        server.stop()
+        server.start()
+        print(server.addresses)  # port=0 may select new ports
+finally:
+    server.stop()
+```
+
+The result contains `started`, `healthy` and an ordered `listeners`
+list of `transport`, `host`, `port`, `socket_open`, `worker_alive`,
+`healthy`. A registered listener with a dead worker remains `started=True`
+but `healthy=False`; after stop the list is empty and both flags are false.
+The report uses the existing lifecycle lock and reads only local state.
+**It is not a guaranteed MC protocol reply, remote client reachability,
+equipment status or liveness lease**: a worker may die just after the report.
+No automatic recovery is performed. See [behavior](docs/BEHAVIOR.md) and
+[#13](https://github.com/greatgc-flow/VirtualPLC/issues/13).
+
 For UDP, send **exactly one complete 3E/4E binary or ASCII MC request frame**
 per datagram; replies are datagrams sent back to the source IP/port. Invalid,
 truncated, concatenated or over-8192-byte datagrams are silently dropped.

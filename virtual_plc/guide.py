@@ -292,6 +292,10 @@ Embed in Python (stdlib only). Leaving the with-block stops the server and joins
   snapshot = memory.dump()              # AFTER stop; same JSON schema as --init
 Server keywords: {keywords}.
 Bad values raise ValueError before binding; Server(profile=...) and Memory(profile) must match.
+Listener health (Python only): server.get_listener_health() returns started/healthy plus per TCP/UDP port socket_open, worker_alive and healthy.
+  Snapshot uses the existing lifecycle lock, makes no network requests and is not a remote response guarantee.
+  A dead UDP worker may leave started=True, healthy=False. An operator may call server.stop(); server.start();
+  then re-read server.addresses (port 0 can change). start() alone does not recover a stale listener.
 Memory API: read_words/write_words/read_bits/write_bits(device, head, ...), load(dict), dump().
 Live state: server.state ("RUN"/"STOP"/"PAUSE"), server.set_state(s), server.reset_count, server.locked.
 Memory calls are not synchronized with wire requests: never load, mutate or dump while serving; use a client.

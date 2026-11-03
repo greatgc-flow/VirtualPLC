@@ -112,6 +112,26 @@ See the [canonical CLI reference](../README.md#cli-reference),
 - `server.addresses` reports `(transport, host, actual_port)` entries; the
   legacy `server.address` reports the first endpoint. A separate process
   remains necessary for separate, independent PLC memory/state.
+- `server.get_listener_health()` is a read-only Python snapshot of the
+  current endpoint registration and per-port socket/thread state, for
+  TCP-only, UDP-only and mixed listener configurations. It returns a fresh
+  dictionary `{"started": bool, "healthy": bool, "listeners": [...]}`.
+  Each ordered entry contains `transport`, `host`, actual bound `port`,
+  `socket_open`, `worker_alive`, and per-listener `healthy`.
+  `started` reflects registered endpoints, not worker liveness: a dead
+  UDP worker can remain registered, yielding `started=True` with
+  `healthy=False`. All listeners must be healthy for the top-level flag
+  to be true. Before start or after stop: both flags false and list empty.
+  The returned nested data is a defensive copy. The existing lifecycle
+  lock protects endpoint enumeration against concurrent start/stop, but
+  worker/socket liveness can change immediately after the snapshot.
+  This is **not** an MC protocol or remote-client reachability probe.
+  No automatic retry, rebind, IOCTL, background monitor, network
+  health endpoint, CLI option, or saved per-peer data is added.
+  An embedding process may choose explicit `server.stop()` followed
+  by `server.start()`; `server.start()` alone does not repair stale
+  registered listeners. Refresh `server.addresses` after restarting
+  ephemeral port-0 listeners.
 - UDP accepts one exact complete 3E/4E binary/ASCII MC frame per datagram,
   with an 8192-byte limit. Invalid, truncated, concatenated, empty and
   oversized datagrams receive no response. It shares CPU state, Memory and

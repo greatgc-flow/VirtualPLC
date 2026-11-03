@@ -1,3 +1,27 @@
+## 2026-11-03 #13 listener health snapshot, independent PR #60 (UNMERGED)
+
+Read-only embedded Python `Server.get_listener_health()` for TCP/UDP
+socket and worker liveness, using existing lifecycle RLock; no new
+threads/locks/probes/network endpoint or automatic recovery.
+Prestart/poststop return `started=False, healthy=False, listeners=[]`.
+A stale registered port may have `started=True` but `healthy=False`,
+with per-port `transport, host, port, socket_open, worker_alive, healthy`.
+Returns a defensive nested copy; not a protocol-response guarantee.
+Tests-only RED `b79055327ed6281d3ca580254aa06f7007f71643`:
+[CI #41549380479](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41549380479)
+Ubuntu3.11 prior **7,180 PASS + 9 expected FAIL**, Windows3.13
+prior **7,184 PASS + 9 expected FAIL** (all new tests failed solely
+because get_listener_health did not exist). Implementation
+`7b904f897e4e4e956ec1d4a5b50ea38ee5a258d1`.
+The tests cover single TCP, UDP, mixed two-UDP port 0 topology,
+snapshot copy, real worker death, sibling TCP, explicit stop/start
+and real UDP reply after recovery. Check the final exact PR HEAD and
+9/9 CI before claiming GREEN. PR #56/#57/#58/#59 remain
+independent OPEN/UNMERGED with verified 9/9 CI in prior #25 comments.
+Latest main `069af7aa5e192b3b3b0b2d5040a7d9061135a415`.
+Current owner instruction: **do not merge to main**. No v* tag,
+PyPI, real PLC or manufacturing network. #54 rulesets still absent.
+
 ## 2026-11-02 #13 UDP client example and governance #54 (PR #55)
 
 New bounded source-only UDP client example for one MC3E binary D0 read:
