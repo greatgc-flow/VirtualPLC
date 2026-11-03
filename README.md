@@ -124,7 +124,11 @@ The result contains `started`, `healthy` and an ordered `listeners`
 list of `transport`, `host`, `port`, `socket_open`, `worker_alive`,
 `healthy`. A registered listener with a dead worker remains `started=True`
 but `healthy=False`; after stop the list is empty and both flags are false.
-The report uses the existing lifecycle lock and reads only local state.
+The report uses the existing lifecycle lock without waiting for it when
+another thread is starting or stopping the Server. Under that contention,
+it returns a conservative `started=False, healthy=False, listeners=[]`
+instead of blocking a UDP callback and deadlocking `stop()`.
+Retry the read after the lifecycle transition completes.
 **It is not a guaranteed MC protocol reply, remote client reachability,
 equipment status or liveness lease**: a worker may die just after the report.
 No automatic recovery is performed. See [behavior](docs/BEHAVIOR.md) and

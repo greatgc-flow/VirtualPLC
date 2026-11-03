@@ -123,8 +123,13 @@ See the [canonical CLI reference](../README.md#cli-reference),
   `healthy=False`. All listeners must be healthy for the top-level flag
   to be true. Before start or after stop: both flags false and list empty.
   The returned nested data is a defensive copy. The existing lifecycle
-  lock protects endpoint enumeration against concurrent start/stop, but
-  worker/socket liveness can change immediately after the snapshot.
+  lock protects endpoint enumeration when available, but **the health
+  reader never blocks waiting for it**. A concurrent start/stop holding
+  that lock makes health return the conservative false/false/empty value;
+  retry after the transition. This avoids a stop/join deadlock if a
+  UDP response_hook calls the health API from a worker while stop holds
+  the lifecycle lock awaiting that worker. Worker/socket liveness can
+  still change immediately after the snapshot.
   This is **not** an MC protocol or remote-client reachability probe.
   No automatic retry, rebind, IOCTL, background monitor, network
   health endpoint, CLI option, or saved per-peer data is added.

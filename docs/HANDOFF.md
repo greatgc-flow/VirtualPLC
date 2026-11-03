@@ -1,3 +1,34 @@
+## 2026-11-03 PR #60 shutdown/Health lock inversion reproduced and corrected
+
+Prior PR #60 green `084599d31790b35366768a6b48de6f831ff2e2aa`
+([CI #41550046059](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41550046059))
+introduced a health snapshot using blocking `_lifecycle_lock`.
+The already-existing Server.stop() holds the same lock while joining
+UDP workers. If a UDP `response_hook` calls `get_listener_health()`
+during stop, this is a deterministic lock-order deadlock.
+
+Tests-only commit `8adfdb5138ae56f754ebc562fa11c037efd5dc30`,
+[CI #41586012373](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41586012373):
+Ubuntu3.11 **7,189 PASS +1 expected FAIL** and Windows3.13
+**7,193 PASS +1 expected FAIL**, exact deadlock assertion in new
+event-synchronized hook/stop test; earlier suite remained green.
+Overall workflow may be CANCELLED when superseded by a follow-up
+commit: read those individual failing job logs, not workflow conclusion.
+
+Minimal fix `f5d5adf30912d73dd4399e26bab446780395b007`:
+`get_listener_health()` attempts nonblocking acquire of the
+*existing* lifecycle RLock. When held by another thread doing start/stop,
+immediately returns conservative false/false/[]; otherwise takes the
+same defensive socket/worker snapshot under the lock, releasing in
+finally. No additional lock, retry timer, monitor thread, socket,
+CLI option or PLC communication. The transient false snapshot is a
+safe upper bound on availability, not a proof of stopped state.
+README/BEHAVIOR/DESIGN/guide synchronized and future PR #58+#60
+integration test plan recorded in
+`docs/research/UDP_WARNING_HEALTH_INTEGRATION_PLAN_20261103.md`.
+**Verify final exact PR #60 HEAD 9/9 GREEN before claiming fix.**
+No main merge; #56–#60 remain independent open PRs.
+
 ## 2026-11-03 #13 listener health snapshot, independent PR #60 (UNMERGED)
 
 Read-only embedded Python `Server.get_listener_health()` for TCP/UDP

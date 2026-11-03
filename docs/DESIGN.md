@@ -232,7 +232,17 @@ network protocol, CLI recovery flag, or concurrent lock hierarchy.
 `Server.get_listener_health()` reports the current registered TCP/UDP
 endpoints using existing `_listeners`, `_listener_threads`,
 `addresses`, `_listener`, `_stopping` and the existing
-`_lifecycle_lock`. It allocates only a short-lived dictionary/list for
+`_lifecycle_lock`. It performs a **nonblocking** RLock acquisition:
+when another thread is inside start/stop, the reader returns an empty
+unhealthy snapshot rather than waiting. Why: `stop()` holds the lifecycle
+lock while joining UDP workers; a worker's response_hook may itself call
+this public health API. A blocking read could create a stop->join->hook
+lock inversion. This was reproduced by an Event-synchronized test in
+`tests/test_listener_health.py`, and the fail-closed path prevents it
+without modifying stop/start serialization. During this transient,
+`started=False` is a conservative observation, not proof the Server
+has finished stopping; callers may retry after transition.
+It allocates only a short-lived dictionary/list for
 the return value. No new monitor thread, lock, timer, state flag, config
 table, CLI option or external dependency. Registration (`started`) is
 **not** the same as live service: a failed UDP recvfrom worker can exit
