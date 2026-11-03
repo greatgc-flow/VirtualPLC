@@ -90,6 +90,12 @@ TROUBLESHOOT = """
 Symptom -> cause -> fix
 "cannot listen on H:P" (exit 1): port busy or denied -> choose another --port, or --port 0 and read the banner.
 UDP timeout: each datagram must contain exactly one full frame (max 8192 bytes); invalid requests get no response.
+UDP receive failed; listener worker stopped (WARNING): unexpected terminal UDP recvfrom socket error.
+  A prior UDP send may cause Winsock 10054 (ICMP Port Unreachable); do not blindly retry an unusable socket.
+  Embedded Python: server.get_listener_health() reports local socket/thread state; stale port can be started=True, healthy=False.
+  Diagnose, explicitly server.stop(); server.start(), then reread server.addresses (port 0 may change).
+  During start/stop lock contention, health fails closed with false/false/[] to avoid callback/join deadlock.
+  No automatic recovery, remote reachability, PLC vendor parity or production-network guarantee.
 1E: --slmp-1e supports batch 00..03, random 04/05, TCP owner-bound RUN/STOP 13/14, type 15 and loopback 16; not mixed with 3E/4E.
 Exit 2 and "see: virtual-plc guide TOPIC": bad option, JSON file or plan -> read that topic; nothing was bound.
 Client times out: wrong host/port, a fault plan that holds or drops replies, or --idle-timeout closed the socket
@@ -292,6 +298,11 @@ Embed in Python (stdlib only). Leaving the with-block stops the server and joins
   snapshot = memory.dump()              # AFTER stop; same JSON schema as --init
 Server keywords: {keywords}.
 Bad values raise ValueError before binding; Server(profile=...) and Memory(profile) must match.
+Listener health (Python only): server.get_listener_health() returns started/healthy plus per TCP/UDP port socket_open, worker_alive and healthy.
+  Snapshot uses a nonblocking read of the existing lifecycle lock. During a concurrent start/stop it returns false/false/[] without waiting,
+  preventing stop()/worker-callback deadlock; retry after transition. No network requests or remote response guarantee.
+  A dead UDP worker may leave started=True, healthy=False. An operator may call server.stop(); server.start();
+  then re-read server.addresses (port 0 can change). start() alone does not recover a stale listener.
 Memory API: read_words/write_words/read_bits/write_bits(device, head, ...), load(dict), dump().
 Live state: server.state ("RUN"/"STOP"/"PAUSE"), server.set_state(s), server.reset_count, server.locked.
 Memory calls are not synchronized with wire requests: never load, mutate or dump while serving; use a client.
