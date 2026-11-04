@@ -85,6 +85,20 @@ PLC with different memory, start another process. `--listen` replaces the
 legacy `--port` option and may not be combined with it; `--host` applies
 to every endpoint.
 
+For opt-in **IPv6 loopback**, specify a numeric host (for example,
+`virtual-plc --host ::1 --listen tcp:5000 --listen udp:5000`).
+This selects IPv6 sockets for both protocols but does **not** open an
+IPv4 dual-stack listener; `localhost` retains the legacy IPv4
+socket-family selection. Availability depends on OS support and is
+checked by real `::1` bind tests. The stock pinned pymcprotocol
+client and the IPv4-only UDP example are **not** claimed to support
+IPv6. Independent [PR #56](https://github.com/greatgc-flow/VirtualPLC/pull/56)
+covers IPv6 3E/4E read, shared memory, fault drop, malformed
+packets and explicit restart. The unmerged
+[PR #63](https://github.com/greatgc-flow/VirtualPLC/pull/63)
+adds cross-feature IPv6 opt-in metrics and listener Health tests
+without adding any new runtime networking behavior.
+
 The same topology is available to embedded Python programs:
 
 ```python
@@ -94,6 +108,94 @@ with Server(listeners=[("tcp", 0), ("udp", 0)]) as plc:
     print(plc.addresses)  # [("tcp", host, assigned_port), ("udp", host, assigned_port)]
     # Use a TCP client or an MC request datagram to either bound address.
 ```
+
+### Embedded listener health (Python only; unreleased)
+
+Use `server.get_listener_health()` to read a **defensive snapshot** of the
+currently registered TCP and UDP endpoints. No probe, monitoring thread,
+retry, CLI command, additional socket or network health endpoint is created:
+
+```python
+from virtual_plc import Server
+
+server = Server(listeners=[("tcp", 0), ("udp", 0)])
+try:
+    server.start()
+    health = server.get_listener_health()
+    assert health["started"] and health["healthy"]
+    print(health["listeners"])  # actual host, ephemeral port, socket/thread status
+    # After detecting a failed listener, an embedding operator can choose
+    # an explicit restart. Calling start() alone on a stale listener is a no-op.
+    if not server.get_listener_health()["healthy"]:
+        server.stop()
+        server.start()
+        print(server.addresses)  # port=0 may select new ports
+finally:
+    server.stop()
+```
+
+The result contains `started`, `healthy` and an ordered `listeners`
+list of `transport`, `host`, `port`, `socket_open`, `worker_alive`,
+`healthy`. A registered listener with a dead worker remains `started=True`
+but `healthy=False`; after stop the list is empty and both flags are false.
+The report uses the existing lifecycle lock without waiting for it when
+another thread is starting or stopping the Server. Under that contention,
+it returns a conservative `started=False, healthy=False, listeners=[]`
+instead of blocking a UDP callback and deadlocking `stop()`.
+Retry the read after the lifecycle transition completes.
+**It is not a guaranteed MC protocol reply, remote client reachability,
+equipment status or liveness lease**: a worker may die just after the report.
+No automatic recovery is performed. See [behavior](docs/BEHAVIOR.md) and
+[#13](https://github.com/greatgc-flow/VirtualPLC/issues/13).
+
+### Optional UDP metrics (Python-only; PR #62, unmerged)
+
+`Server(listeners=[("udp", 0)], udp_metrics=True)` enables
+`get_udp_metrics()` with five cumulative event counts:
+`received`, `rejected`, `sent`, `fault_dropped`, `send_errors`.
+It defaults to `False`: the getter returns `None`, with no
+metrics storage or lock. Counters aggregate all UDP listeners and
+survive explicit stop/start. They are events, **not confirmed PLC
+transactions**: a write may execute even if its reply is discarded.
+An unexpected terminal UDP recvfrom OSError does not count as
+`received`, but emits one WARNING and degrades `get_listener_health()`.
+Never retry/replay automatically; an operator can stop/start manually.
+Invalid non-bytes-like `response_hook` results count as rejected;
+bytearray and memoryview remain supported. This branch composes
+unmerged [#57](https://github.com/greatgc-flow/VirtualPLC/pull/57)
+and [#61](https://github.com/greatgc-flow/VirtualPLC/pull/61)
+under [PR #62](https://github.com/greatgc-flow/VirtualPLC/pull/62).
+
+When **multiple UDP listeners** share one Server, failure of one
+receive worker does not automatically stop its healthy UDP siblings.
+The five metrics remain aggregate per Server, not per port; use
+`get_listener_health()["listeners"]` to identify a specific dead
+worker with a still-registered socket. Terminal errors emit a WARNING
+but the existing message does not include the listener's local port;
+correlate the log event with the Health snapshot and current
+`server.addresses`. A read-only snapshot can be stale or conservatively
+unhealthy during start/stop. The operator-controlled recovery remains
+an explicit `stop(); start()`, not a per-port automatic retry. This
+partial-failure contract is tested in the unmerged PR #63.
+
+### Unexpected UDP receive errors (Python server; unreleased)
+
+An unexpected terminal UDP `recvfrom` `OSError` emits **one WARNING**
+(`UDP receive failed; listener worker stopped: ...`) and stops that
+UDP worker. `socket.timeout` polling and socket closure during normal
+`stop()` remain quiet. Windows Winsock `10054` can follow a prior
+ICMP Port Unreachable; the socket may be unusable, so the Server does
+not blindly retry or automatically rebind it. In an embedding process,
+check `server.get_listener_health()` after an error: a failed but
+still-registered UDP listener can report `started=True, healthy=False`.
+Diagnose and explicitly call `server.stop(); server.start()` to rebind
+the Server; reread `server.addresses` as ephemeral ports may change.
+During concurrent start/stop the snapshot can conservatively return
+`False/False/[]` rather than block the worker. No automatic probe,
+network endpoint or availability guarantee is provided. A real
+Winsock 10054 was observed in independent PR #59's Windows CI.
+See [#13](https://github.com/greatgc-flow/VirtualPLC/issues/13)
+and [design](docs/DESIGN.md).
 
 For UDP, send **exactly one complete 3E/4E binary or ASCII MC request frame**
 per datagram; replies are datagrams sent back to the source IP/port. Invalid,

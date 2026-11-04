@@ -139,6 +139,17 @@ actual platform linger setting (Windows ushort pair, POSIX int pair). No precise
 packet timing or physical PLC behavior is asserted. Ranges, native stride, SD203 and
 error semantics remain unverified; see [behavior](BEHAVIOR.md).
 
+## Optional UDP metrics with fault injection (unmerged PR #62)
+
+When enabled via Python `udp_metrics=True`, event counts include
+`fault_dropped` for an intentional post-dispatch UDP reply drop
+(not `rejected`); the underlying write may already be committed.
+A delay canceled by shutdown does not imply `rejected` or `sent`.
+A failed/short send increments `send_errors`; a terminal recvfrom
+error instead gives one WARNING and degraded listener Health,
+without automatic replay or an extra receive-error counter.
+Disabled by default, there is no extra metrics lock/storage.
+
 ## UDP datagram response faults (opt-in)
 
 UDP uses an independent UdpFaultPlan(steps) or --udp-fault-plan FILE;
