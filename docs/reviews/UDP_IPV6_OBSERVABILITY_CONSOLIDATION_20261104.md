@@ -74,3 +74,57 @@ or unverified Mitsubishi hardware/firmware parity. Issue #54 requires
 admin-applied main PR and immutable release tag rulesets; do not
 claim they are active merely because green CI ran. Maintain the
 original #56–#62 branches, tests, docs and historical CI evidence.
+
+## 2026-11-04 final structural/SSOT audit addendum
+
+Fresh review from source tree and exact original Git blobs confirms:
+- #56 IPv6-only regression source is included **byte-identically**.
+- #57 optional metrics tests are preserved in #63 through #62.
+- #58 terminal WARNING and #60 nonblocking Health plus their exact
+  source tests are preserved through #61, then #62 and #63.
+- #59 standalone native Windows observation remains independent
+  evidence; #61 already supplies registered-worker native Windows
+  10054 + warning + unhealthy Health + manual recovery, so #59's
+  overlapping suite is intentionally not imported.
+- #63 is an **unmerged combined candidate**, not a command to close,
+  merge or delete historical PR #56–#62.
+
+The original #63 head
+`759db62239badd6cad64d59cb3859d08ae2c4694`
+has exact [CI #41785899899](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41785899899)
+COMPLETED SUCCESS 9/9 (Ubuntu each 7,238 PASS+1 Windows-only
+SKIP; Windows each 7,243 PASS; build PASS).
+
+One additional **distinct** cross-feature test was committed on
+PR #63, `tests/test_udp_multi_listener_observability.py` at
+`af48fa23728c07b2c971537ff6f0099367a0e684`.
+It uses two real registered UDP sockets on 127.0.0.1 port 0:
+a scripted terminal 10054 in one worker, exactly one WARNING,
+no retry, surviving sibling UDP MC reply, aggregate Health false,
+per-port worker liveness [false,true] with sockets still open,
+per-Server metrics received/sent 1/1, no counter for failed recv,
+no implicit repair on `start()`, then explicit `stop();start()`
+and both UDP listeners responding (cumulative 3/3).
+[Test-only CI #41804509573](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41804509573)
+was **COMPLETED SUCCESS 9/9**, Ubuntu each
+7,239 PASS +1 Windows-only SKIP, Windows each 7,244 PASS,
+wheel build PASS. This is **characterization of existing code**,
+not a behavior change or fabricated RED. The only code delta
+is the single new test file; documentation is reconciled here.
+
+**Operational limitation observed from source:** `LOG.warning`
+on terminal UDP receive errors does not include the affected local
+bind address/port. Health identifies which listener is dead, but
+metrics remain per-Server, not per-port. Treat this as deferred P2
+diagnostic correlation scope, **not** permission to add a new
+per-listener counter table, retry mechanism, logger thread, or
+network diagnostic endpoint without a separately justified test-first
+change. A callback may observe conservative false/false/[] during
+lifecycle contention; snapshots are not atomic protocol checks.
+
+No main merge, no release tag/PyPI, real PLC or production/factory
+traffic, and no vendor hardware parity claim. Last observed main
+`069af7aa5e192b3b3b0b2d5040a7d9061135a415`,
+`protected=false`, rulesets `[]`; governance Issue #54 is open.
+Verify the eventual documentation commit's own exact-HEAD 9/9
+before claiming its final CI GREEN.

@@ -158,6 +158,18 @@ See the [canonical CLI reference](../README.md#cli-reference),
   event-counter and lifecycle semantics as IPv4; counters aggregate
   per Server, not per peer. Neither transport test nor Health is a
   physical PLC or remote reachability guarantee. See unmerged PR #63.
+- On a multi-UDP Server, a terminal receive error can kill one
+  listener worker while a sibling continues real MC UDP replies.
+  Aggregate Health is false if **any** endpoint is unhealthy; its
+  ordered listener entries still distinguish the healthy and failed
+  ports. `get_udp_metrics()` remains a **per-Server** aggregate,
+  not separate per-listener counters. The terminal WARNING contains
+  the socket error but not the affected bound port; correlate
+  with `get_listener_health()` and `addresses` rather than guessing
+  from the aggregate counters. No implicit repair of a stale registered
+  UDP worker; `start()` alone is a no-op, explicit `stop(); start()`
+  restores the set and may reassign port-zero endpoints. This is
+  simulated host behavior, not a remote-client/physical-PLC SLA.
 - UDP accepts one exact complete 3E/4E binary/ASCII MC frame per datagram,
   with an 8192-byte limit. Invalid, truncated, concatenated, empty and
   oversized datagrams receive no response. It shares CPU state, Memory and

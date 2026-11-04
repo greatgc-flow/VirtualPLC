@@ -227,6 +227,23 @@ which point the marker changes to orphaned without releasing ownership.
 Reset and owner RUN clear both the ID and marker. This avoids adding another
 network protocol, CLI recovery flag, or concurrent lock hierarchy.
 
+## Multi-UDP terminal-worker isolation audit (PR #63; unmerged)
+
+The single Server intentionally keeps all registered listener sockets
+until explicit `stop()`. A terminal `recvfrom` `OSError` ends only
+the affected worker; the other UDP listener thread can still answer
+real loopback MC requests. `get_listener_health()` reports a
+degraded aggregate (any endpoint unhealthy) with per-endpoint
+`socket_open` and `worker_alive`. Optional `udp_metrics` is
+per-Server: if an error happens **before** a successful recvfrom,
+there is no `received` increment, but traffic on a healthy sibling
+continues raising received/sent. Test `test_one_terminal_udp_worker_preserves_other_udp_port_and_metrics`
+covers exactly one WARNING, no busy retry, sibling reply and
+explicit full restart; baseline code remains unchanged. WARNING
+currently omits local port identification, an operational
+correlation limitation; no new logger format/config was introduced.
+Prefer Health + addresses diagnostics, not an auto-recovery daemon.
+
 ## IPv6 observability consolidation (PR #63; unmerged)
 
 PR #56's original 15 parameterized IPv6 loopback cases are imported

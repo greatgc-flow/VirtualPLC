@@ -164,7 +164,19 @@ Invalid non-bytes-like `response_hook` results count as rejected;
 bytearray and memoryview remain supported. This branch composes
 unmerged [#57](https://github.com/greatgc-flow/VirtualPLC/pull/57)
 and [#61](https://github.com/greatgc-flow/VirtualPLC/pull/61)
-under [draft #62](https://github.com/greatgc-flow/VirtualPLC/pull/62).
+under [PR #62](https://github.com/greatgc-flow/VirtualPLC/pull/62).
+
+When **multiple UDP listeners** share one Server, failure of one
+receive worker does not automatically stop its healthy UDP siblings.
+The five metrics remain aggregate per Server, not per port; use
+`get_listener_health()["listeners"]` to identify a specific dead
+worker with a still-registered socket. Terminal errors emit a WARNING
+but the existing message does not include the listener's local port;
+correlate the log event with the Health snapshot and current
+`server.addresses`. A read-only snapshot can be stale or conservatively
+unhealthy during start/stop. The operator-controlled recovery remains
+an explicit `stop(); start()`, not a per-port automatic retry. This
+partial-failure contract is tested in the unmerged PR #63.
 
 ### Unexpected UDP receive errors (Python server; unreleased)
 

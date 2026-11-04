@@ -1,3 +1,31 @@
+## 2026-11-04 — PR #63 final multi-UDP observability audit (UNMERGED)
+
+Newest source-controlled test-only addition:
+`tests/test_udp_multi_listener_observability.py`, commit
+`af48fa23728c07b2c971537ff6f0099367a0e684`, on existing PR
+[#63](https://github.com/greatgc-flow/VirtualPLC/pull/63).
+It verifies two real registered UDP listeners: scripted terminal
+10054 on one worker logs once and leaves it registered-but-dead;
+the second UDP listener continues real MC response, per-port
+Health shows [unhealthy, healthy], aggregate Health is false,
+and optional aggregate metrics count only successful receives/sends
+(1/1 then 3/3 after explicit full stop/start).
+[Test-only exact-head CI #41804509573](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41804509573)
+COMPLETED SUCCESS 9/9: Ubuntu Python3.10–3.13 each
+7,239 PASS + 1 deliberate Windows-only SKIP; Windows
+Python3.10–3.13 each 7,244 PASS; wheel build SUCCESS.
+No runtime behavior change, so these are characterization tests
+with no invented RED. Previous PR #63 head
+`759db62239badd6cad64d59cb3859d08ae2c4694` also has
+completed 9/9 [CI #41785899899](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41785899899).
+The new docs-only final HEAD still requires its **own** exact-SHA
+9-job CI check before final acceptance. See updated review
+`docs/reviews/UDP_IPV6_OBSERVABILITY_CONSOLIDATION_20261104.md`.
+Do NOT merge into main, create v* tag, publish PyPI, connect a
+real PLC or production network. Main branch/tag protection #54
+still unimplemented as last observed. Prior #56–#62 are preserved;
+PR #59 native Windows 10054 evidence intentionally not duplicated.
+
 ## 2026-11-04 — PR #63 IPv6 parity + metrics/Health consolidation (UNMERGED)
 
 New independent [PR #63](https://github.com/greatgc-flow/VirtualPLC/pull/63)
