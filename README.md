@@ -134,6 +134,24 @@ equipment status or liveness lease**: a worker may die just after the report.
 No automatic recovery is performed. See [behavior](docs/BEHAVIOR.md) and
 [#13](https://github.com/greatgc-flow/VirtualPLC/issues/13).
 
+### Optional UDP metrics (Python-only; PR #62, unmerged)
+
+`Server(listeners=[("udp", 0)], udp_metrics=True)` enables
+`get_udp_metrics()` with five cumulative event counts:
+`received`, `rejected`, `sent`, `fault_dropped`, `send_errors`.
+It defaults to `False`: the getter returns `None`, with no
+metrics storage or lock. Counters aggregate all UDP listeners and
+survive explicit stop/start. They are events, **not confirmed PLC
+transactions**: a write may execute even if its reply is discarded.
+An unexpected terminal UDP recvfrom OSError does not count as
+`received`, but emits one WARNING and degrades `get_listener_health()`.
+Never retry/replay automatically; an operator can stop/start manually.
+Invalid non-bytes-like `response_hook` results count as rejected;
+bytearray and memoryview remain supported. This branch composes
+unmerged [#57](https://github.com/greatgc-flow/VirtualPLC/pull/57)
+and [#61](https://github.com/greatgc-flow/VirtualPLC/pull/61)
+under [draft #62](https://github.com/greatgc-flow/VirtualPLC/pull/62).
+
 ### Unexpected UDP receive errors (Python server; unreleased)
 
 An unexpected terminal UDP `recvfrom` `OSError` emits **one WARNING**

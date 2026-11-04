@@ -137,6 +137,19 @@ See the [canonical CLI reference](../README.md#cli-reference),
   by `server.start()`; `server.start()` alone does not repair stale
   registered listeners. Refresh `server.addresses` after restarting
   ephemeral port-0 listeners.
+- Optional `Server(udp_metrics=True)` requires a UDP listener and
+  enables a defensive `get_udp_metrics()` copy of five event counters:
+  received (successful recvfrom including a late stop), rejected
+  (invalid datagram, malformed callback result, unusable response),
+  sent (complete sendto), fault_dropped (explicit post-dispatch drop),
+  send_errors (failed or short send). The counters aggregate all UDP
+  ports, survive stop/start, and need **not** sum to received because
+  writes may execute before a canceled/lost reply. A terminal recv
+  error is not a successful receive and has no invented receive_errors
+  counter. Default metrics disabled returns None and allocates no
+  counter lock. Explicit callback results must be bytes-like;
+  bytearray and memoryview remain allowed. No retries, replay or
+  automatic rebind. Source PR #62 is unmerged.
 - UDP accepts one exact complete 3E/4E binary/ASCII MC frame per datagram,
   with an 8192-byte limit. Invalid, truncated, concatenated, empty and
   oversized datagrams receive no response. It shares CPU state, Memory and

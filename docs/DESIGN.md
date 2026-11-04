@@ -227,6 +227,23 @@ which point the marker changes to orphaned without releasing ownership.
 Reset and owner RUN clear both the ID and marker. This avoids adding another
 network protocol, CLI recovery flag, or concurrent lock hierarchy.
 
+## UDP counters + warning + Health combined review (PR #62; unmerged)
+
+#57 rewrites the UDP receive/dispatch/fault/send accounting block,
+overlapping #61's terminal recvfrom WARNING. Composing the source
+requires both: five optional counters (no receive_errors) and
+#61's one-shot terminal WARNING and nonblocking Health getter.
+Metrics lock exists only when opted in and is separate from the
+PLC request lock and lifecycle lock. Under callback-vs-stop
+contention Health returns conservative false/false/[] to avoid
+lock inversion. A successfully received packet can count even
+if shutdown later cancels its response; a terminal socket receive
+error is not counted as received. No automatic replay/rebind,
+new thread, socket, CLI flag or extra dependency. Test both source
+PRs' original suites plus the new combined cases; see
+`docs/reviews/UDP_METRICS_WARNING_HEALTH_COMPOSITION_REVIEW_20261104.md`.
+No hardware parity is claimed.
+
 ## Terminal UDP warning + nonblocking Health integration (PR #61, unmerged)
 
 The standalone PR #58 warning adds a single `LOG.warning` before

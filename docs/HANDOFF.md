@@ -1,3 +1,20 @@
+## 2026-11-04 — PR #62 metrics + warning + Health integration TDD (UNMERGED)
+
+Main stays `069af7aa5e192b3b3b0b2d5040a7d9061135a415`, unprotected
+(rulesets=[]; issue #54). Draft [PR #62](https://github.com/greatgc-flow/VirtualPLC/pull/62)
+branches from PR #61 final SHA `e2971a62dedf1171d853d5aaceb46b6816daee2c`.
+Tests-only `254c91902ab8a8cc850feb1a775370b71f0242e2`
+imports exact PR #57 metrics test blob `68484b2738bc045acb6f425474585aa3cdb3c4fd`
+and adds two cross-feature tests. [RED Actions #41778576988](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41778576988):
+Ubuntu3.11 job log showed 7,198 PASS, 22 expected FAIL, one Windows-only
+SKIP (metrics API absent on #61). Source composition `ef2b4a8021b0afd4237feef7b768087d9c6ee66c`
+preserves #57 counter accounting and callback validation plus #61's
+nonblocking Health and terminal warning. Full combined exact-final-SHA
+CI 9/9 is **not yet verified** at this documentation commit. See
+`docs/reviews/UDP_METRICS_WARNING_HEALTH_COMPOSITION_REVIEW_20261104.md`.
+No main merge, v* tag/PyPI, nonloopback/physical PLC or vendor parity.
+Original #56–#61 PRs are untouched.
+
 ## 2026-11-03 #13 independent UDP warning + Health integration PR #61 (UNMERGED)
 
 User continued the previously proposed integration test work. A separate
