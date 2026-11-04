@@ -227,6 +227,80 @@ which point the marker changes to orphaned without releasing ownership.
 Reset and owner RUN clear both the ID and marker. This avoids adding another
 network protocol, CLI recovery flag, or concurrent lock hierarchy.
 
+## UDP counters + warning + Health combined review (PR #62; unmerged)
+
+#57 rewrites the UDP receive/dispatch/fault/send accounting block,
+overlapping #61's terminal recvfrom WARNING. Composing the source
+requires both: five optional counters (no receive_errors) and
+#61's one-shot terminal WARNING and nonblocking Health getter.
+Metrics lock exists only when opted in and is separate from the
+PLC request lock and lifecycle lock. Under callback-vs-stop
+contention Health returns conservative false/false/[] to avoid
+lock inversion. A successfully received packet can count even
+if shutdown later cancels its response; a terminal socket receive
+error is not counted as received. No automatic replay/rebind,
+new thread, socket, CLI flag or extra dependency. Test both source
+PRs' original suites plus the new combined cases; see
+`docs/reviews/UDP_METRICS_WARNING_HEALTH_COMPOSITION_REVIEW_20261104.md`.
+No hardware parity is claimed.
+
+## Terminal UDP warning + nonblocking Health integration (PR #61, unmerged)
+
+The standalone PR #58 warning adds a single `LOG.warning` before
+exiting the UDP `recvfrom` loop on unexpected `OSError`. This is
+combined on an **isolated test branch** with PR #60's read-only
+`get_listener_health()`, whose lifecycle lock acquisition is
+nonblocking to avoid a stop/join/worker-callback deadlock. A stale,
+still-registered UDP worker may have `started=True`,
+`healthy=False` and an open socket with no live receive thread.
+The warning gives the failure reason; the snapshot gives an operator
+a momentary local health indication, **not** a remote MC-response
+or PLC/hardware guarantee.
+
+A normal stop-triggered socket error remains silent; an unexpected
+terminal failure does not busy retry or automatically rebind the socket.
+An embedding operator can choose explicit `stop()/start()` and
+re-read `addresses` for ephemeral ports. The combined tests cover
+real registered UDP workers (synthetic terminal error, mixed TCP
+sibling, logging, callback/stop contention and manual recovery),
+plus genuine Winsock loopback 10054 where supported.
+No new monitor thread, retry policy, socket IOCTL, new dependency
+or network health endpoint. The original PR #58 and #60 remain OPEN
+and unmodified; this branch is **not** a main merge or released
+behavior. See issue #13 and the integration evidence document.
+
+## Read-only listener health snapshot (PR #60, unmerged)
+
+`Server.get_listener_health()` reports the current registered TCP/UDP
+endpoints using existing `_listeners`, `_listener_threads`,
+`addresses`, `_listener`, `_stopping` and the existing
+`_lifecycle_lock`. It performs a **nonblocking** RLock acquisition:
+when another thread is inside start/stop, the reader returns an empty
+unhealthy snapshot rather than waiting. Why: `stop()` holds the lifecycle
+lock while joining UDP workers; a worker's response_hook may itself call
+this public health API. A blocking read could create a stop->join->hook
+lock inversion. This was reproduced by an Event-synchronized test in
+`tests/test_listener_health.py`, and the fail-closed path prevents it
+without modifying stop/start serialization. During this transient,
+`started=False` is a conservative observation, not proof the Server
+has finished stopping; callers may retry after transition.
+It allocates only a short-lived dictionary/list for
+the return value. No new monitor thread, lock, timer, state flag, config
+table, CLI option or external dependency. Registration (`started`) is
+**not** the same as live service: a failed UDP recvfrom worker can exit
+while `_listener` remains set, so `start()` alone is intentionally a
+no-op. Per-endpoint `healthy` requires a live worker, nonclosed socket
+and no lifecycle shutdown; overall `healthy` requires every endpoint.
+
+The snapshot is a best-effort observation, not atomic with OS thread
+termination or socket activity. This does not prove successful network
+I/O, protocol correctness, actual PLC state or remote reachability.
+A runner may explicitly `stop()/start()` and reacquire `addresses`
+for ephemeral binds; automatic rebind and retry are a separate,
+still-unapproved state-machine design. Existing TCP/UDP request locks,
+physical-PLC/vendor fidelity and release boundaries remain unchanged.
+See tests/test_listener_health.py and issue #13 TDD/CI evidence.
+
 ## Optional multi-listener transport extension
 
 A per-Server reentrant lifecycle lock serializes externally invoked

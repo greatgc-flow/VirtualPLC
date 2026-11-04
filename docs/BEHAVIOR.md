@@ -112,6 +112,44 @@ See the [canonical CLI reference](../README.md#cli-reference),
 - `server.addresses` reports `(transport, host, actual_port)` entries; the
   legacy `server.address` reports the first endpoint. A separate process
   remains necessary for separate, independent PLC memory/state.
+- `server.get_listener_health()` is a read-only Python snapshot of the
+  current endpoint registration and per-port socket/thread state, for
+  TCP-only, UDP-only and mixed listener configurations. It returns a fresh
+  dictionary `{"started": bool, "healthy": bool, "listeners": [...]}`.
+  Each ordered entry contains `transport`, `host`, actual bound `port`,
+  `socket_open`, `worker_alive`, and per-listener `healthy`.
+  `started` reflects registered endpoints, not worker liveness: a dead
+  UDP worker can remain registered, yielding `started=True` with
+  `healthy=False`. All listeners must be healthy for the top-level flag
+  to be true. Before start or after stop: both flags false and list empty.
+  The returned nested data is a defensive copy. The existing lifecycle
+  lock protects endpoint enumeration when available, but **the health
+  reader never blocks waiting for it**. A concurrent start/stop holding
+  that lock makes health return the conservative false/false/empty value;
+  retry after the transition. This avoids a stop/join deadlock if a
+  UDP response_hook calls the health API from a worker while stop holds
+  the lifecycle lock awaiting that worker. Worker/socket liveness can
+  still change immediately after the snapshot.
+  This is **not** an MC protocol or remote-client reachability probe.
+  No automatic retry, rebind, IOCTL, background monitor, network
+  health endpoint, CLI option, or saved per-peer data is added.
+  An embedding process may choose explicit `server.stop()` followed
+  by `server.start()`; `server.start()` alone does not repair stale
+  registered listeners. Refresh `server.addresses` after restarting
+  ephemeral port-0 listeners.
+- Optional `Server(udp_metrics=True)` requires a UDP listener and
+  enables a defensive `get_udp_metrics()` copy of five event counters:
+  received (successful recvfrom including a late stop), rejected
+  (invalid datagram, malformed callback result, unusable response),
+  sent (complete sendto), fault_dropped (explicit post-dispatch drop),
+  send_errors (failed or short send). The counters aggregate all UDP
+  ports, survive stop/start, and need **not** sum to received because
+  writes may execute before a canceled/lost reply. A terminal recv
+  error is not a successful receive and has no invented receive_errors
+  counter. Default metrics disabled returns None and allocates no
+  counter lock. Explicit callback results must be bytes-like;
+  bytearray and memoryview remain allowed. No retries, replay or
+  automatic rebind. Source PR #62 is unmerged.
 - UDP accepts one exact complete 3E/4E binary/ASCII MC frame per datagram,
   with an 8192-byte limit. Invalid, truncated, concatenated, empty and
   oversized datagrams receive no response. It shares CPU state, Memory and
@@ -128,6 +166,18 @@ See the [canonical CLI reference](../README.md#cli-reference),
   duplicate/reorder/stream close are deliberately not modeled. `max_clients` and `idle_timeout` govern TCP
   sessions only; the nonlocal bind guard still requires both explicit permission
   and an idle timeout option, even for UDP-only configurations.
+- An unexpected terminal UDP `recvfrom` `OSError` logs one WARNING
+  including the socket error and stops **only that UDP worker** without
+  retry. A healthy TCP sibling is not intentionally closed. Winsock
+  `10054` can follow an earlier ICMP Port Unreachable and may indicate
+  an unusable UDP socket; no transparent rebind/replay is attempted.
+  Ordinary `stop()` and receive timeout polling do not log a warning.
+  Combined with the read-only `get_listener_health()` snapshot, a
+  registered but dead UDP worker reports degraded health; operators
+  can explicitly `stop()` then `start()` and reread port-0 addresses.
+  A real native 10054 was observed on hosted Windows CI in PR #59;
+  neither that nor the synthetic regression tests certify physical
+  PLC behavior, production network reliability or all Windows policies.
 - All requested sockets bind before any listener starts processing. Failure
   to bind or set the timeout on any listener closes that just-created socket
   and all previously bound endpoints without serving requests. The same

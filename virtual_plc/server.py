@@ -41,7 +41,7 @@ class Server:
                  ascii_dword_order="swapped", text_pad=0x00, ascii_numbering="compat", verbose=False,
                  allow_nonlocal=False, max_clients=64, listeners=None,
                  ethernet_model=None, ethernet_overrides=None, slmp_1e=False,
-                 slmp_1e_run_switch="RUN", udp_fault_plan=None):
+                 slmp_1e_run_switch="RUN", udp_fault_plan=None, udp_metrics=False):
         if type(port) is not int or not 0 <= port <= 65535:
             raise ValueError("port must be an integer 0..65535")
         if max_points is not None and (type(max_points) is not int or max_points < 1):
@@ -112,6 +112,10 @@ class Server:
             raise ValueError("udp_fault_plan must be a UdpFaultPlan or None")
         if udp_fault_plan is not None and not any(transport == "udp" for transport, _ in listen_specs):
             raise ValueError("UDP fault plan requires at least one UDP listener")
+        if type(udp_metrics) is not bool:
+            raise ValueError("udp_metrics must be a boolean")
+        if udp_metrics and not any(transport == "udp" for transport, _ in listen_specs):
+            raise ValueError("udp_metrics requires at least one UDP listener")
         if initial_state not in CPU_STATES:
             raise ValueError("initial_state must be RUN, STOP or PAUSE")
         if profile not in PROFILES:
@@ -153,6 +157,11 @@ class Server:
         self._hook = response_hook
         self._fault_plan = fault_plan
         self._udp_fault_plan = udp_fault_plan
+        # Optional, per-Server aggregate; no packet/source/payload storage.
+        self._udp_metrics = (dict.fromkeys(
+            ("received", "rejected", "sent", "fault_dropped", "send_errors"), 0
+        ) if udp_metrics else None)
+        self._udp_metrics_lock = threading.Lock() if udp_metrics else None
         self._connection_number = 0
         self._max_points = max_points
         self._max_clients = max_clients
@@ -218,6 +227,66 @@ class Server:
     def _log(self, message, *args):
         if self.verbose:
             LOG.info(message, *args)
+
+    def get_listener_health(self):
+        """Read-only, nonblocking snapshot of sockets and listener workers.
+
+        stop() holds the lifecycle lock while joining listener workers.
+        A response hook running on one such worker may inspect health
+        concurrently with stop(); waiting for that lock would deadlock
+        the join. Fail closed with an empty unhealthy snapshot instead.
+        No background probe, network I/O or additional lock is created.
+        """
+        if not self._lifecycle_lock.acquire(blocking=False):
+            # Startup/shutdown owns this lock on another thread. Returning
+            # conservative unhealthy state prevents stop()->join()->hook
+            # lock inversion; callers may retry after the transition.
+            return {"started": False, "healthy": False, "listeners": []}
+        try:
+            started = self._listener is not None
+            stopping = self._stopping.is_set()
+            listeners = []
+            for index, (transport, listener) in enumerate(self._listeners):
+                worker_alive = (
+                    index < len(self._listener_threads)
+                    and self._listener_threads[index].is_alive()
+                )
+                socket_open = listener.fileno() >= 0
+                healthy = started and not stopping and socket_open and worker_alive
+                _, host, port = self.addresses[index]
+                listeners.append({
+                    "transport": transport,
+                    "host": host,
+                    "port": port,
+                    "socket_open": socket_open,
+                    "worker_alive": worker_alive,
+                    "healthy": healthy,
+                })
+            return {
+                "started": started,
+                "healthy": started and bool(listeners)
+                           and all(item["healthy"] for item in listeners),
+                "listeners": listeners,
+            }
+        finally:
+            self._lifecycle_lock.release()
+
+    def get_udp_metrics(self):
+        """Return a stable UDP counter copy; None means metrics disabled.
+
+        Counters aggregate every UDP listener of this Server and survive
+        stop/start. Snapshots are thread-safe and contain no peer/payload data.
+        """
+        if self._udp_metrics is None:
+            return None
+        with self._udp_metrics_lock:
+            return dict(self._udp_metrics)
+
+    def _count_udp(self, key):
+        """Increment one optional event counter without touching the PLC lock."""
+        if self._udp_metrics is not None:
+            with self._udp_metrics_lock:
+                self._udp_metrics[key] += 1
 
     def start(self):
         """Serialize overlapping start/stop calls for this Server instance."""
@@ -347,6 +416,13 @@ class Server:
 
         if self._hook is not None:
             response = self._hook(response)
+            # A bad callback result used to vanish into the generic worker
+            # exception handler without incrementing the rejected counter.
+            # Check the buffer protocol, preserving existing bytearray/views.
+            try:
+                memoryview(response)
+            except TypeError as error:
+                raise ValueError("UDP response_hook must return bytes-like data") from error
         if len(response) > MAX_UDP_DATAGRAM:
             self._log("UDP drop: oversized %sresponse", "1E " if self.slmp_1e else "")
             return None
@@ -356,37 +432,62 @@ class Server:
         """UDP socket lifecycle: receive, validate, respond, or drop one datagram."""
         while not self._stopping.is_set():
             try:
-                # Receive the full OS datagram before enforcing our smaller cap:
-                # Winsock raises WSAEMSGSIZE on an undersized recvfrom buffer.
+                # Receive full OS datagram before our smaller bound: Winsock
+                # raises WSAEMSGSIZE if recvfrom's buffer is too small.
                 packet, peer = listener.recvfrom(65535)
             except socket.timeout:
                 continue
-            except OSError:
+            except OSError as error:
+                # Winsock UDP may report 10054 after an ICMP Port Unreachable
+                # from an earlier send. Microsoft cautions the socket may be
+                # unusable: do not busy-retry or silently strand the worker.
+                # Socket closure during stop() is normal and stays quiet.
+                if not self._stopping.is_set():
+                    LOG.warning("UDP receive failed; listener worker stopped: %s", error)
                 return
-            # recvfrom may complete just as stop() closes the listener.
-            # Do not dispatch even a fully valid late datagram.
+            # Count a completed receive even if shutdown happened concurrently.
+            self._count_udp("received")
             if self._stopping.is_set():
-                return
+                return  # late data is not an invalid protocol request
             if not packet or len(packet) > MAX_UDP_DATAGRAM:
+                self._count_udp("rejected")
                 self._log("UDP drop: empty or oversized datagram")
                 continue
             try:
                 response = self._udp_response(packet)
-                if response is None or self._stopping.is_set():
+                if response is None:
+                    if not self._stopping.is_set():
+                        self._count_udp("rejected")
+                    continue
+                if self._stopping.is_set():
                     continue
                 if self._udp_fault_plan is not None:
-                    # Datagram faults act after command dispatch and hook.
+                    # Faults apply after dispatch; a dropped write was executed.
                     command = (_command_and_wire(packet)[0] if self.slmp_1e
                                else decode_request(packet).command)
                     action = self._udp_fault_plan.select(command, peer=peer[0])
                     if action is not None:
                         if action["type"] == "drop":
+                            self._count_udp("fault_dropped")
                             continue
                         if self._stopping.wait(action["seconds"]):
-                            continue  # stop() cancels an outstanding delay
+                            continue  # shutdown cancels the response delay
                 if not self._stopping.is_set():
-                    listener.sendto(response, peer)
-            except (ValueError, OSError) as error:
+                    try:
+                        sent = listener.sendto(response, peer)
+                    except OSError:
+                        self._count_udp("send_errors")
+                        raise
+                    if sent == len(response):
+                        self._count_udp("sent")
+                    else:
+                        self._count_udp("send_errors")
+                        self._log("UDP short send: %s of %s", sent, len(response))
+            except ValueError as error:
+                if not self._stopping.is_set():
+                    self._count_udp("rejected")
+                self._log("UDP drop: %s", error)
+            except OSError as error:
                 self._log("UDP drop: %s", error)
             except Exception as error:
                 print(f"UDP worker: {type(error).__name__}: {error}", file=sys.stderr, flush=True)

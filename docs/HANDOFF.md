@@ -1,3 +1,111 @@
+## 2026-11-04 — PR #62 metrics + warning + Health integration TDD (UNMERGED)
+
+Main stays `069af7aa5e192b3b3b0b2d5040a7d9061135a415`, unprotected
+(rulesets=[]; issue #54). Draft [PR #62](https://github.com/greatgc-flow/VirtualPLC/pull/62)
+branches from PR #61 final SHA `e2971a62dedf1171d853d5aaceb46b6816daee2c`.
+Tests-only `254c91902ab8a8cc850feb1a775370b71f0242e2`
+imports exact PR #57 metrics test blob `68484b2738bc045acb6f425474585aa3cdb3c4fd`
+and adds two cross-feature tests. [RED Actions #41778576988](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41778576988):
+Ubuntu3.11 job log showed 7,198 PASS, 22 expected FAIL, one Windows-only
+SKIP (metrics API absent on #61). Source composition `ef2b4a8021b0afd4237feef7b768087d9c6ee66c`
+preserves #57 counter accounting and callback validation plus #61's
+nonblocking Health and terminal warning. Full combined exact-final-SHA
+CI 9/9 is **not yet verified** at this documentation commit. See
+`docs/reviews/UDP_METRICS_WARNING_HEALTH_COMPOSITION_REVIEW_20261104.md`.
+No main merge, v* tag/PyPI, nonloopback/physical PLC or vendor parity.
+Original #56–#61 PRs are untouched.
+
+## 2026-11-03 #13 independent UDP warning + Health integration PR #61 (UNMERGED)
+
+User continued the previously proposed integration test work. A separate
+[PR #61](https://github.com/greatgc-flow/VirtualPLC/pull/61) based
+on unchanged main `069af7aa5e192b3b3b0b2d5040a7d9061135a415`
+combines #58's unexpected UDP recvfrom warning and #60's
+**nonblocking** `get_listener_health()` only inside its own
+reviewable source branch. It also includes BOTH original standalone
+regression test suites plus five new combined test cases (4 on
+Ubuntu + one Windows-only real UDP ICMP case).
+
+Initial tests-only RED `2f30399ca1f3d69fb6c3cb9737067b73fae3a4d7`,
+[CI #41589977921](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41589977921)
+completed FAILURE as expected: Ubuntu3.11 baseline 7,180 PASS +
+4 expected integration FAIL and 1 native-Windows SKIP;
+Windows3.13 baseline 7,184 PASS + 5 expected integration FAIL.
+Both features were absent from main. Implementation composition commit
+`89c7d1b8ef147e2101f2e1978cbb3a81e0e405c2` uses the exact
+PR60 server source with PR58's single terminal receive-error warning,
+plus PR60 and PR58 regression tests. README/BEHAVIOR/DESIGN/guide
+were reconciled in subsequent docs-only commits without editing
+either original PR. Tests check registered socket/worker health,
+one warning/no retry, mixed TCP sibling, quiet normal shutdown,
+stop/callback deadlock, explicit restart and real UDP MC reply;
+Windows uses genuine closed-loopback-client ICMP 10054 observation
+and an explicit SKIP if OS policy suppresses it.
+
+**Final candidate exact PR #61 CI must be checked 9/9 after the
+last documentation commit; do not use independent #58 or #60 CI
+to claim combined verification.** No main merge; original PRs
+#56–#60 remain independently OPEN/UNMERGED. No v* tags, PyPI,
+real PLC, production networks, Windows IOCTL workaround or
+manufacturer hardware guarantee. Source-backed details:
+`docs/research/UDP_WARNING_HEALTH_INTEGRATION_PLAN_20261103.md`,
+`docs/research/UDP_WARNING_HEALTH_INTEGRATION_RESULTS_20261103.md`.
+
+## 2026-11-03 PR #60 shutdown/Health lock inversion reproduced and corrected
+
+Prior PR #60 green `084599d31790b35366768a6b48de6f831ff2e2aa`
+([CI #41550046059](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41550046059))
+introduced a health snapshot using blocking `_lifecycle_lock`.
+The already-existing Server.stop() holds the same lock while joining
+UDP workers. If a UDP `response_hook` calls `get_listener_health()`
+during stop, this is a deterministic lock-order deadlock.
+
+Tests-only commit `8adfdb5138ae56f754ebc562fa11c037efd5dc30`,
+[CI #41586012373](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41586012373):
+Ubuntu3.11 **7,189 PASS +1 expected FAIL** and Windows3.13
+**7,193 PASS +1 expected FAIL**, exact deadlock assertion in new
+event-synchronized hook/stop test; earlier suite remained green.
+Overall workflow may be CANCELLED when superseded by a follow-up
+commit: read those individual failing job logs, not workflow conclusion.
+
+Minimal fix `f5d5adf30912d73dd4399e26bab446780395b007`:
+`get_listener_health()` attempts nonblocking acquire of the
+*existing* lifecycle RLock. When held by another thread doing start/stop,
+immediately returns conservative false/false/[]; otherwise takes the
+same defensive socket/worker snapshot under the lock, releasing in
+finally. No additional lock, retry timer, monitor thread, socket,
+CLI option or PLC communication. The transient false snapshot is a
+safe upper bound on availability, not a proof of stopped state.
+README/BEHAVIOR/DESIGN/guide synchronized and future PR #58+#60
+integration test plan recorded in
+`docs/research/UDP_WARNING_HEALTH_INTEGRATION_PLAN_20261103.md`.
+**Verify final exact PR #60 HEAD 9/9 GREEN before claiming fix.**
+No main merge; #56–#60 remain independent open PRs.
+
+## 2026-11-03 #13 listener health snapshot, independent PR #60 (UNMERGED)
+
+Read-only embedded Python `Server.get_listener_health()` for TCP/UDP
+socket and worker liveness, using existing lifecycle RLock; no new
+threads/locks/probes/network endpoint or automatic recovery.
+Prestart/poststop return `started=False, healthy=False, listeners=[]`.
+A stale registered port may have `started=True` but `healthy=False`,
+with per-port `transport, host, port, socket_open, worker_alive, healthy`.
+Returns a defensive nested copy; not a protocol-response guarantee.
+Tests-only RED `b79055327ed6281d3ca580254aa06f7007f71643`:
+[CI #41549380479](https://github.com/greatgc-flow/VirtualPLC/actions/runs/41549380479)
+Ubuntu3.11 prior **7,180 PASS + 9 expected FAIL**, Windows3.13
+prior **7,184 PASS + 9 expected FAIL** (all new tests failed solely
+because get_listener_health did not exist). Implementation
+`7b904f897e4e4e956ec1d4a5b50ea38ee5a258d1`.
+The tests cover single TCP, UDP, mixed two-UDP port 0 topology,
+snapshot copy, real worker death, sibling TCP, explicit stop/start
+and real UDP reply after recovery. Check the final exact PR HEAD and
+9/9 CI before claiming GREEN. PR #56/#57/#58/#59 remain
+independent OPEN/UNMERGED with verified 9/9 CI in prior #25 comments.
+Latest main `069af7aa5e192b3b3b0b2d5040a7d9061135a415`.
+Current owner instruction: **do not merge to main**. No v* tag,
+PyPI, real PLC or manufacturing network. #54 rulesets still absent.
+
 ## 2026-11-02 #13 UDP client example and governance #54 (PR #55)
 
 New bounded source-only UDP client example for one MC3E binary D0 read:
