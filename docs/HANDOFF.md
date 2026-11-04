@@ -1,3 +1,23 @@
+## 2026-11-04 — PR #63 IPv6 parity + metrics/Health consolidation (UNMERGED)
+
+New independent [PR #63](https://github.com/greatgc-flow/VirtualPLC/pull/63)
+branches from exact verified PR #62 `5b14a1987e58c2fb56bd15e7efa83718944cc205`
+(CI #41779246404 9/9 PASS). It copies the **byte-identical**
+original PR #56 IPv6 test blob
+`31c200baa38bf2a25cc0fabc97ef4dcb0b03b25a` (15 cases);
+three extra parameterized combined tests cover IPv6 `::1`
+UDP metrics/Health with mixed transport and restart, plus
+IPv6 peer-selected fault drop/reply event accounting. No runtime change.
+Independent PR #59 native Windows 10054 tests are intentionally
+not duplicated because #61/#62 has a stronger registered-worker
+native warning/Health/explicit recovery case; PR #59 evidence remains
+OPEN and intact. See review:
+`docs/reviews/UDP_IPV6_OBSERVABILITY_CONSOLIDATION_20261104.md`.
+Final documentation-head CI must be independently verified 9/9;
+tests are characterization GREEN by design, not a fabricated TDD RED.
+All PR #56–#62 and main left unmerged; no tag/PyPI or real PLC.
+Branch rulesets #54 remain unapplied.
+
 ## 2026-11-04 — PR #62 metrics + warning + Health integration TDD (UNMERGED)
 
 Main stays `069af7aa5e192b3b3b0b2d5040a7d9061135a415`, unprotected

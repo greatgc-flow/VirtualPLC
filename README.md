@@ -85,6 +85,20 @@ PLC with different memory, start another process. `--listen` replaces the
 legacy `--port` option and may not be combined with it; `--host` applies
 to every endpoint.
 
+For opt-in **IPv6 loopback**, specify a numeric host (for example,
+`virtual-plc --host ::1 --listen tcp:5000 --listen udp:5000`).
+This selects IPv6 sockets for both protocols but does **not** open an
+IPv4 dual-stack listener; `localhost` retains the legacy IPv4
+socket-family selection. Availability depends on OS support and is
+checked by real `::1` bind tests. The stock pinned pymcprotocol
+client and the IPv4-only UDP example are **not** claimed to support
+IPv6. Independent [PR #56](https://github.com/greatgc-flow/VirtualPLC/pull/56)
+covers IPv6 3E/4E read, shared memory, fault drop, malformed
+packets and explicit restart. The unmerged
+[PR #63](https://github.com/greatgc-flow/VirtualPLC/pull/63)
+adds cross-feature IPv6 opt-in metrics and listener Health tests
+without adding any new runtime networking behavior.
+
 The same topology is available to embedded Python programs:
 
 ```python

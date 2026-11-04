@@ -150,6 +150,14 @@ See the [canonical CLI reference](../README.md#cli-reference),
   counter lock. Explicit callback results must be bytes-like;
   bytearray and memoryview remain allowed. No retries, replay or
   automatic rebind. Source PR #62 is unmerged.
+- Explicit numeric IPv6 loopback `host="::1"` chooses IPv6 sockets for
+  both TCP and UDP; it does not simultaneously bind IPv4. The host
+  `localhost` keeps the legacy IPv4 choice. Real `::1` loopback tests
+  skip when the OS cannot bind both socket kinds. Optional UDP metrics
+  and read-only Health operate on these IPv6 listeners with the same
+  event-counter and lifecycle semantics as IPv4; counters aggregate
+  per Server, not per peer. Neither transport test nor Health is a
+  physical PLC or remote reachability guarantee. See unmerged PR #63.
 - UDP accepts one exact complete 3E/4E binary/ASCII MC frame per datagram,
   with an 8192-byte limit. Invalid, truncated, concatenated, empty and
   oversized datagrams receive no response. It shares CPU state, Memory and

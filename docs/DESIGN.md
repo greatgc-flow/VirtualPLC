@@ -227,6 +227,24 @@ which point the marker changes to orphaned without releasing ownership.
 Reset and owner RUN clear both the ID and marker. This avoids adding another
 network protocol, CLI recovery flag, or concurrent lock hierarchy.
 
+## IPv6 observability consolidation (PR #63; unmerged)
+
+PR #56's original 15 parameterized IPv6 loopback cases are imported
+byte-identically on a branch from the complete #62 metrics + Health +
+terminal WARNING implementation; this changes **no runtime source**.
+Three additional parameterized tests cover real IPv6 UDP reads in a
+mixed TCP/UDP listener with Health and cumulative counters across
+explicit stop/start, plus the IPv6 peer-specific post-dispatch UDP
+fault-drop counter. All sockets bind `::1` with ephemeral ports;
+IPv6-disabled runners explicitly skip the relevant cases. No automatic
+dual-stack behavior, retry, replay, rebind, thread, monitor or CLI
+option is introduced. The distinct historical PR #59 native Windows
+10054 evidence is deliberately **not copied** into this branch:
+the #61/#62 suite already tests real Windows 10054 from a registered
+UDP worker with WARNING, unhealthy Health and explicit recovery.
+Its historical original branch and independent CI remain intact.
+See `docs/reviews/UDP_IPV6_OBSERVABILITY_CONSOLIDATION_20261104.md`.
+
 ## UDP counters + warning + Health combined review (PR #62; unmerged)
 
 #57 rewrites the UDP receive/dispatch/fault/send accounting block,
