@@ -81,7 +81,7 @@ An explicitly supplied value equal to its default has
 `overridden=True`; no host-kernel timer is applied.
 
 All settings and provenance live in the independent source-of-truth
-`virtual_plc/ethernet.py`, exposed through read-only
+`virtual_plc/ethernet_reference.py`, exposed through read-only
 `reference_catalog()["rncpu_builtin"]["data_timer_reference"]`
 and `virtual-plc guide ethernet --json`. The inspector returns
 defensively independent JSON-compatible data, with

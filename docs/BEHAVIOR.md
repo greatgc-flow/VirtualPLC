@@ -25,8 +25,8 @@ synthetic module identity; no actual FX5 hardware identity is implied.
 First-slice device validation is restricted to M (0..7679),
 X/Y (0..255) and D (0..7999) synthetic points. Invalid PC numbers,
 monitoring timers, reserved fields, framing and data widths do not
-mutate memory. A 1E error reply uses end code 5BH plus a 16-bit
-manufacturer-table-derived code; simulator error mapping and physical
+mutate memory. A normal 3E/4E reply uses end code `0x0000` (1E uses status `00H`). A 1E error reply uses end code `5BH` plus a 16-bit
+code from `virtual_plc/one_e.py` (`0xC051` bit points, `0xC052` word points, `0xC053` random bit points, `0xC054` random word points, `0xC056` address out of range, `0xC05B` unsupported 1E device, `0xC05C` request/alignment/frame-data error, `0xC05F` remote control denied, `0xC060` invalid bit-write data); simulator error mapping and physical
 PLC equivalence remain unverified. TCP fragmented and coalesced frames
 are handled by **command-specific bounded lengths**, while UDP accepts
 exactly one complete frame/datagram. No legacy 3E-style length/route
@@ -122,10 +122,7 @@ See the [canonical CLI reference](../README.md#cli-reference),
   the shared request-lock boundary checks the flag again before starting
   1E or 3E/4E dispatch. An already-started dispatch may finish; no
   rollback or physical-PLC guarantee is implied. No late response is sent. A UDP listener cannot be combined with
-  TCP-only `FaultPlan` actions. Separate opt-in UdpFaultPlan drop/delay
-  applies only to UDP replies after dispatch; no plan means no extra
-  matching or delay. Selectors: command, global response nth, source IP;
-  duplicate/reorder/stream close are deliberately not modeled. `max_clients` and `idle_timeout` govern TCP
+  TCP-only `FaultPlan` actions; opt-in `UdpFaultPlan` drop/delay is documented in [FAULTS.md](FAULTS.md#udp-datagram-response-faults-opt-in). `max_clients` and `idle_timeout` govern TCP
   sessions only; the nonlocal bind guard still requires both explicit permission
   and an idle timeout option, even for UDP-only configurations.
 - All requested sockets bind before any listener starts processing. Failure
@@ -250,17 +247,7 @@ The existing server lock covers the whole request, including reads. Writes
 then apply in wire order (word section first), so later duplicate or overlapping
 entries overwrite earlier ones.
 
-Random-access point limits (manual-derived per SH-080008 p.98/105/108; C053/C054
-assignment unverified, not verified PLC behavior) are keyed on the request wire
-class (`Wire` in `profiles.py`: Q-class subcommands 0000/0001 vs iQ-R 0002/0003)
-and are independent of `--max-points` (which applies to batch only):
-- Random read (`0x0403`): `words + dwords <= 192` (Q-class) / `96` (iQ-R).
-- Random word/dword write (`0x1402` word subcommand): `words*12 + dwords*14 <= 1920` (Q-class) / `960` (iQ-R).
-- Random bit write (`0x1402` bit subcommand): `points <= 188` (Q-class) / `94` (iQ-R).
-
-Check order in `random_access`: zero total count (`0xC053` for bit, `0xC054` for
-word/dword), then over-limit (`0xC053` for bit, `0xC054` for word/dword), then
-payload length/format and device range checks. The client rejects 256 before
+Random-access point limits and `0xC053` / `0xC054` error codes follow `WIRE_CLASSES` in `virtual_plc/profiles.py` and `random_access` in `virtual_plc/commands.py` (see [Public API](#public-api) above). Check order in `random_access`: zero total count, then over-limit, then payload length/format and device range checks. The client rejects 256 before
 sending because a count field is only one byte. A valid raw count of 256 does
 not exist. Tests send over-limit and 256-entry frames and require rejection with
 no mutation.
@@ -429,11 +416,11 @@ new default is a simulator policy, not a verified claim about vendor behavior.
 
 ### Numbering and overflow policy
 
-The only supported numbering policy is explicitly **compat**. Q descriptors
+The default ASCII numbering policy is **compat** (opt-in `manual` and `fx5-octal` policies are described in [Fixed-width text padding](#fixed-width-text-padding) above). In `compat` mode, Q descriptors
 have two device-code characters and exactly six decimal address digits, even
 for X/Y/B/W/SB/SW/DX/DY/ZR. A client request for `X0A` contains `X*000010` and
 accesses point 10, not point 16. Transport detection never selects a numbering
-policy. Raw `X*00000A` is rejected; no hexadecimal address autodetection occurs.
+policy. In `compat` mode, raw `X*00000A` is rejected; no hexadecimal address autodetection occurs.
 
 ASCII addresses are limited to 0..999999 by field width. The client's formatter
 does not truncate addresses wider than six digits. Such packets fail exact
@@ -585,9 +572,8 @@ used in some of these branches. Type4E inherits the same command encoding.
 | Random bit-write value | 1 byte / 2 hex characters | 2 bytes / 4 hex characters |
 | ASCII password length | Exactly 4 | 6–32 |
 | Default synthetic point range | 0..0xFFFFFF | 0..0xFFFFFFFF |
-| Random read max (`words + dwords`) | 192 | 96 |
-| Random word/dword write max (`words*12 + dwords*14`) | 1920 | 960 |
-| Random bit write max (`points`) | 188 | 94 |
+
+Random-access point limits per wire class are owned by `WIRE_CLASSES` in `virtual_plc/profiles.py` (see [Public API](#public-api) above).
 
 All numeric binary fields remain little-endian. ASCII retains compat decimal
 numbering, uppercase numeric output and lowercase-hex tolerance. Eight-digit
@@ -615,23 +601,16 @@ profile always determines the capabilities and returned CPU identity.
 
 ### Synthetic identities and ranges
 
-| Profile | CPU name | CPU code (hex) | Batch word cap (bin / ASCII) | Batch bit cap (bin / ASCII) |
-|---|---|---|---|---|
-| Q | VirtualPLC-Q | FFFF | 960 / 960 | 7168 / 3584 |
-| L | VirtualPLC-L | FFFE | 960 / 960 | 7168 / 3584 |
-| QnA | VirtualPLC-QnA | FFFD | 480 / 480 | 3584 / 1792 |
-| iQ-L | VirtualPLC-iQ-L | FFFC | 960 / 960 | 7168 / 3584 |
-| iQ-R | VirtualPLC-iQ-R | FFFB | 960 / 960 | 7168 / 3584 |
+| Profile | CPU name | CPU code (hex) |
+|---|---|---|
+| Q | VirtualPLC-Q | FFFF |
+| L | VirtualPLC-L | FFFE |
+| QnA | VirtualPLC-QnA | FFFD |
+| iQ-L | VirtualPLC-iQ-L | FFFC |
+| iQ-R | VirtualPLC-iQ-R | FFFB |
 
 These are simulator identities, not actual Mitsubishi CPU models. Names are
-filled to 16 bytes with `text_pad` (NUL by default). Batch point caps (`Profile.batch_max`
-and `BATCH_MAX` in `profiles.py`, keyed by `(profile, wire, unit)`) are manual-derived
-from SH-080008 (p.87/91/96, Ethernet E71 column); `QnA` shares the `Q-class` wire but
-has lower batch caps. `batch()` rejects zero or over-limit points with `0xC051`
-(`POINTS_OUT_OF_RANGE`) for word units and `0xC052` (`BIT_POINTS_OUT_OF_RANGE`) for bit
-units (SH-081257 3.5; code assignment unverified, real-PLC verification still open in
-#2). `--max-points` defaults to `None`; when set, the effective batch limit is
-`min(manual_cap, max_points)`. Direct `Memory` calls are uncapped. Profile ranges are synthetic
+filled to 16 bytes with `text_pad` (NUL by default). Per-profile batch point caps (`BATCH_MAX` in `virtual_plc/profiles.py`), `--max-points` interaction and `C051`/`C052` rejection rules are described in [Public API](#public-api) above (`QnA` shares the `Q-class` wire with half the E71 batch capacity). Profile ranges are synthetic
 address-width
 ceilings, not vendor-verified capacities; custom Memory limits still override
 per-family ranges. Default latch retention covers the selected profile's entire L range.
@@ -698,22 +677,12 @@ remain unverified.
 
 ## Unverified behavior
 
-Empty or over-limit batch counts are rejected with C051 (word units) or C052
-(bit units), and empty (total count 0) or over-limit random counts are rejected with
-C053 (bits) or C054 (words/dwords) (manual-derived; C051/C052/C053/C054 assignment unverified,
-not verified PLC behavior). Dwords over bit devices span 32
-packed points with 16-point head alignment. Malformed random lengths use C057,
-invalid access uses C05C, and range overflow uses C056; these mappings await
-manual verification. ASCII dword order is configurable: `swapped` (low word
-first) is the default and `client` (high word first) preserves client mapping.
-The suspected real-PLC low-word-first ordering remains unverified. Nonzero
-reserved fields close the connection. Per-request transport switching is a
-simulator feature. See DESIGN's open items for remaining vendor checks.
+For the canonical summary of simulator policies and unverified vendor behavior, run `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`) and see [DESIGN.md §8](DESIGN.md#8-open-items). In addition, dwords over bit devices span 32 packed points with 16-point head alignment; malformed random lengths use C057, invalid access uses C05C, and range overflow uses C056 (awaiting manual verification); nonzero reserved fields close the connection; and per-request transport switching is a simulator feature.
 
 
 ## Lifecycle, snapshots, timers and routes
 
-The package exports Server, Memory, FaultPlan and __version__. A context starts
+The package exports `Server`, `FaultPlan`, `UdpFaultPlan`, `Memory`, `EthernetSettings` and `__version__`. A context starts
 on entry and stops/joins on exit. Use one lifecycle per instance. Ctrl+C uses
 bounded waits on Windows; SIGTERM/SIGBREAK follow graceful cleanup. Forced
 Windows TerminateProcess bypasses handlers. Bind errors exit 1 without a

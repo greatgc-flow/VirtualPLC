@@ -157,6 +157,7 @@ SIGBREAK needs a shared console; forced termination bypasses Python handlers.
 | `virtual-plc guide options` | All flags and defaults, generated from argparse |
 | `virtual-plc guide client` | Client reads/writes, control and addressing |
 | `virtual-plc guide profiles` | Generated command/frame/wire/profile/device matrix |
+| `virtual-plc guide ethernet` | Hardware model settings, overrides and offline reference JSON |
 | `virtual-plc guide embed` | Python API and pytest fixture |
 | `virtual-plc guide faults` | Plan schema, actions and three examples |
 | `virtual-plc guide memory` | Seeding, snapshots, ranges and devices |
@@ -228,45 +229,22 @@ responses, use `python -m virtual_plc.oracle plan`, `template`, and
 `compare FILE --report REPORT.json`. This offline utility **never contacts
 a PLC** and never certifies real hardware. See [offline oracle procedure](docs/PHYSICAL_ORACLE.md).
 
-## FX5 vendor SLMP port preflight (offline, reference only)
+## FX5 vendor SLMP port preflight (offline reference)
 
-This source checkout includes `inspect_reference_slmp_port(model, port)`
-for `fx5_cpu_builtin` and `fx5_enet`. It distinguishes vendor
-**recommended**, **permitted but not recommended**, **5549–5569 system
-reserved**, and **port 0 simulator-only**. It never binds sockets or
-enables an FX5 hardware profile. The CPU's 8 aggregate Ethernet connections
-must not be confused with 16 simple-CPU-communication targets on FX5U/UC.
-See [FX5 connection/port scope](docs/research/FX5_SLMP_PORT_SCOPE_20261031.md).
+These offline helpers exist only in a source checkout; published v0.5.0 predates them.
+Offline helper `inspect_reference_slmp_port(model, port)` checks vendor recommended and reserved port ranges; see `virtual-plc guide ethernet --json` and [FX5 port scope](docs/research/FX5_SLMP_PORT_SCOPE_20261031.md).
 
-## RnCPU built-in service connection settings (reference only)
+## RnCPU built-in service connection settings (offline reference)
 
-Mitsubishi documents **service-specific** RnCPU built-in Ethernet rules:
-a simple-CPU-communication **peer** uses auto-open UDP with no extra
-opening setting; connecting several **GOTs** requires per-GOT
-GX Works3 external-device configuration for TCP, but no opening setting
-for GOT UDP. These are not interchangeable SLMP server rules.
-Use `virtual-plc guide ethernet --json` for read-only metadata; no
-service is automatically opened by VirtualPLC. See
-[RnCPU service connection scope](docs/research/RNCPU_BUILTIN_SERVICE_CONNECTIONS_20261101.md).
+Service-specific connection rules for RnCPU built-in Ethernet (auto-open UDP vs per-GOT TCP); see `virtual-plc guide ethernet --json` and [RnCPU service connection scope](docs/research/RNCPU_BUILTIN_SERVICE_CONNECTIONS_20261101.md).
 
-## FX5 CPU firmware compatibility (offline reference only)
+## FX5 CPU firmware compatibility (offline reference)
 
-Mitsubishi's simple CPU communication firmware gate differs by CPU:
-FX5U/FX5UC need **1.110+**, while FX5UJ/FX5S support the feature from
-first release. `inspect_reference_fx5_simple_cpu_communication("FX5U", "1.110")`
-reports the official model/firmware rule and a narrowly scoped GX Works3
-interop configuration path; unknown firmware is not silently marked
-unsupported. The feature is **not** an SLMP socket listener setting.
-See [FX5 CPU firmware matrix](docs/research/FX5_CPU_FIRMWARE_SIMPLE_COMM_20261101.md).
+Offline helper `inspect_reference_fx5_simple_cpu_communication(model, firmware)` checks model/firmware support gates; see `virtual-plc guide ethernet --json` and [FX5 firmware matrix](docs/research/FX5_CPU_FIRMWARE_SIMPLE_COMM_20261101.md).
 
 ## FX5-ENET existence-check settings (offline reference)
 
-`inspect_reference_fx5_enet_alive_timers(overrides=None)` checks the FX5-ENET
-alive-check start/interval/retry ranges as documented in Mitsubishi
-SH-082026ENG-H p.70. It never changes network sockets or vendor hardware:
-`start=600s`, `interval=10s`, `retry=3` by default, with optional explicit
-`change_set_timer_value=True`. See
-[FX5-ENET source matrix](docs/research/FX5_ENET_ALIVE_REFERENCE_20261101.md).
+Offline helper `inspect_reference_fx5_enet_alive_timers()` validates module alive-check timer ranges; see `virtual-plc guide ethernet --json` and [FX5-ENET source matrix](docs/research/FX5_ENET_ALIVE_REFERENCE_20261101.md).
 
 ## GX Works2/3 model-specific Ethernet settings (opt-in)
 
@@ -400,25 +378,7 @@ More fixes: `virtual-plc guide troubleshoot`. Protocol details:
 
 ## Known divergences from a real PLC
 
-- CPU identities, ranges and SD203 state encoding are synthetic; SD203 mirrors
-  state in one direction. CPU names default to NUL fill on both encodings;
-  the client retains NULs. Physical fill remains unverified.
-- ASCII addresses default to decimal-text compatibility, including hex-base
-  devices; opt into hexadecimal per-device addressing with `--ascii-numbering manual`
-  or FX5-style **X/Y octal** with `--ascii-numbering fx5-octal` (D decimal,
-  W/B hexadecimal; see [FX5 1E/3E scope](docs/research/FX5_SLMP_FRAME_SCOPE_20261031.md)).
-  This address option does **not** enable an FX5-ENET hardware profile or SLMP
-  1E packets; generic simulator 4E support is not an FX5 hardware claim.
-  Dword order
-  defaults to low-word-first (`swapped`); `client` selects high-word-first.
-  Physical order is unverified; roundtrips remain symmetric.
-- Locking is server-wide, survives disconnect and gates only CPU control.
-  It provides no authentication. Native iQ-R dword stride is one 32-bit point
-  per address; this and physical lock/reset policies are unverified.
-- Timers/counters store values without execution. Monitoring timers are
-  parsed/ignored; routes alias one memory/state. Error meanings await checks.
-
-Run `virtual-plc guide divergences` for the compact list of simulator policies.
+For the complete list of synthetic policies and unverified behaviors, run `virtual-plc guide divergences` (or `virtual-plc guide divergences --json`) and see [BEHAVIOR](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md).
 
 ## Repository safeguards and verified handoff
 
@@ -457,54 +417,22 @@ CI tests Windows/Linux on Python 3.10–3.13 and installs built wheels in clean
 environments. Tags must match pyproject version; trusted publishing requires
 the PyPI publisher and GitHub environment pypi to be configured.
 
-See [DESIGN](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/DESIGN.md),
-[BEHAVIOR](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md)
-and [FAULTS](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/FAULTS.md).
+See [DESIGN](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/DESIGN.md), [BEHAVIOR](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md) and [FAULTS](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/FAULTS.md).
 Licensed under [MIT](https://github.com/greatgc-flow/VirtualPLC/blob/main/LICENSE).
 
-### RnCPU built-in Ethernet remote RUN/STOP setting check (source checkout)
+### RnCPU built-in Ethernet remote RUN/STOP setting check (offline reference)
 
-The reference-only, **offline** `inspect_reference_rncpu_remote_opening()`
-helper reports `UNKNOWN` when the CPU `Opening Method` is not supplied.
-For `open_by_program`, it reports the documented remote-STOP/reconnect risk.
-For `do_not_open_by_program`, it reports the vendor recommendation
-**without** guaranteeing physical remote RUN success. No simulator listener,
-remote control or PyPI release is changed. See
-[the manufacturer-scoped RnCPU opening guide](docs/research/RNCPU_REMOTE_OPENING_SAFETY_20261101.md)
-and `virtual-plc guide ethernet --json` for source-backed metadata.
+These offline helpers exist only in a source checkout; published v0.5.0 predates them.
+Offline helper `inspect_reference_rncpu_remote_opening()` checks vendor opening settings; see `virtual-plc guide ethernet --json` and [RnCPU opening guide](docs/research/RNCPU_REMOTE_OPENING_SAFETY_20261101.md).
 
 ### R04CPU built-in Ethernet A038H offline timer preflight
 
-A source-checkout helper `inspect_reference_rncpu_data_timers()`
-validates the **R04CPU CPU-built-in** GX Works3 timer reference from
-official SH-081257ENG-AD pp.329–330 and 396–397 (not the separate
-RJ71EN71 Ethernet module). It is read-only and retains the default
-`Change/Set Timer Value = No`; documented optional overrides are
-strictly checked, never applied to OS sockets or to the VirtualPLC
-server. For runnable examples and scope limits see
-[manufacturer-scoped R04CPU guide](docs/research/RNCPU_R04CPU_A038H_DATA_TIMER_REFERENCE_20261101.md)
-and `virtual-plc guide ethernet --json`.
+Offline helper `inspect_reference_rncpu_data_timers()` validates R04CPU timer references; see `virtual-plc guide ethernet --json` and [R04CPU timer guide](docs/research/RNCPU_R04CPU_A038H_DATA_TIMER_REFERENCE_20261101.md).
 
 ### R04CPU built-in Ethernet external-device settings (offline)
 
-The pure `inspect_reference_rncpu_external_device("R04CPU", slot, plc_port)`
-checks GX Works3 user slot numbers 1–16 and user-configurable
-PLC own-port ranges with explicit Appendix 10 **system reservations**.
-These are settings, **not** active TCP client limits or newly opened
-VirtualPLC ports. It is available from a source checkout and remains
-reference-only; see [R04CPU source matrix](docs/research/RNCPU_R04CPU_EXTERNAL_DEVICE_PORTS_20261101.md)
-and `virtual-plc guide ethernet --json`.
+Offline helper `inspect_reference_rncpu_external_device()` checks user slot and port ranges; see `virtual-plc guide ethernet --json` and [R04CPU port matrix](docs/research/RNCPU_R04CPU_EXTERNAL_DEVICE_PORTS_20261101.md).
 
 ### R04CPU external-device multi-entry offline review
 
-From a source checkout,
-`inspect_reference_rncpu_external_device_batch(entries=None,
-model="R04CPU", report_slot_gaps=True)` reviews multiple GX Works3
-CPU-built-in external-device configuration rows. It composes the
-existing single-row manufacturer port/slot checks, identifies
-duplicate configuration numbers, flags potential own-port reuse
-and optionally reports missing slot numbers. Warnings do **not**
-mean the manufacturer rejects a physical connection; no network
-port is opened. See [examples and source revision gate](docs/research/RNCPU_R04CPU_BATCH_LINT_20261101.md).
-Latest manufacturer manual AG (2026-10) is known but not yet
-compared with the AD reference used here.
+Offline helper `inspect_reference_rncpu_external_device_batch()` lints multiple configuration rows; see `virtual-plc guide ethernet --json` and [R04CPU batch lint guide](docs/research/RNCPU_R04CPU_BATCH_LINT_20261101.md).

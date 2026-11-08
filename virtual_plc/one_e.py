@@ -19,6 +19,8 @@ ERROR = {
     "bit_points": 0xC051, "word_points": 0xC052,
     "address": 0xC056, "device": 0xC05B,
     "request": 0xC05C, "bit_data": 0xC060,
+    "random_bit_points": 0xC053, "random_word_points": 0xC054,
+    "remote_control": 0xC05F,
 }
 # ASCII 16H maximum: 8 header + 2 length + 254 encoded bytes (508).
 MAX_1E_REQUEST = 4092  # 255 untrusted 05H ASCII records, bounded
@@ -176,7 +178,7 @@ def _random_write(frame, command, wire, memory, max_points):
     """Validate all records then commit atomically; same shared Memory."""
     records = _parse_random(frame, wire, command)
     cap = 80 if command == 4 else 10
-    limit_code = 0xC053 if command == 4 else 0xC054
+    limit_code = ERROR["random_bit_points" if command == 4 else "random_word_points"]
     if not 1 <= len(records) <= cap:
         return _response(command, wire, limit_code)
     writes = []
@@ -223,10 +225,10 @@ def _remote_control(frame, command, wire, control, requester):
     elif frame[1] != 0xFF or frame[2:4] != b"\x00\x00":
         raise ValueError("1E remote PC number or timer invalid")
     if control is None or requester is None or control.locked:
-        return _response(command, wire, 0xC05F)
+        return _response(command, wire, ERROR["remote_control"])
     owner = control._remote_stop_owner
     if owner is not None and owner != requester:
-        return _response(command, wire, 0xC05F)
+        return _response(command, wire, ERROR["remote_control"])
     if command == 0x14:
         control.set_state("STOP")
         control._remote_stop_owner = requester
