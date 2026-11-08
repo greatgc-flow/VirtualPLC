@@ -3,7 +3,7 @@
 Verified 2026-10-31 against Mitsubishi official published material.
 **No hardware traffic was generated.** Research gate: #14, #2, #22.
 The reference catalog is the single source of truth:
-`virtual_plc/ethernet.py` -> `reference_catalog()` ->
+`virtual_plc/ethernet_reference.py` -> `reference_catalog()` ->
 `virtual-plc guide ethernet --json`. Reference entries do NOT
 become runnable Ethernet hardware profiles.
 

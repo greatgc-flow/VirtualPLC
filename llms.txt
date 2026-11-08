@@ -6,20 +6,21 @@ Client: pip install pymcprotocol
   from pymcprotocol import Type3E
   c = Type3E(plctype="Q"); c.connect("127.0.0.1", 5000); c.close()
 Start here: virtual-plc guide
+Quick start: virtual-plc --port 5000; `virtual-plc guide options` lists flags/defaults.
 Topics: run options client profiles ethernet embed faults memory troubleshoot divergences
 Machine-readable: virtual-plc guide options --json; virtual-plc guide profiles --json; virtual-plc guide ethernet --json
 Equivalent entry point: python -m virtual_plc guide
 
 Rules:
-- Use localhost; never connect to equipment or production networks.
+- Safety: use localhost; never connect to equipment or production networks. See [README](https://raw.githubusercontent.com/greatgc-flow/VirtualPLC/main/README.md).
 - Client plctype and server profile must agree for iQ-R.
-- CLI --ethernet-model infers its matching wire profile; explicit --profile conflicts are rejected.
-- Ethernet guide JSON exposes separate runnable models and research-only FX5/RnCPU facts; no invented defaults.
-- Optional --slmp-1e accepts batch 00H/01H/02H/03H, random write 04H/05H, TCP remote RUN/STOP 13H/14H, and diagnostics 15H/16H (15H returns bare F3, 16H raw length+data); see docs/BEHAVIOR.md.
+- 1E contract, errors and simulator policies: [BEHAVIOR](https://raw.githubusercontent.com/greatgc-flow/VirtualPLC/main/docs/BEHAVIOR.md).
+- Optional 1E commands: 00H/01H/02H/03H, 04H/05H, 13H/14H, 15H/16H; see the contract above.
 - CPU names have NUL fill by default; --text-pad 0x20 gives space fill.
 - Seed direct Memory before start; snapshot after stop; use clients for live writes.
-- Faults happen after execution; faulted writes are not rolled back.
-- The client's single recv(4096) limits reads; keep batches under ~1000 words.
+- Ethernet model and research-only references: `virtual-plc guide ethernet --json`.
+- Fault schema and after-dispatch behavior: [FAULTS](https://raw.githubusercontent.com/greatgc-flow/VirtualPLC/main/docs/FAULTS.md).
+- The pinned client's single recv(4096) limits reads; keep batches under ~1000 words.
 - PLC ordering, capacities and control policies remain partly unverified.
 
 Docs:

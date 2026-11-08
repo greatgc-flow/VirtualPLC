@@ -79,7 +79,7 @@ The result includes:
 - exact official FAQ links and `physical_hardware_certified=false`,
   `simulator_network_affected=false`.
 
-All values are produced from `virtual_plc/ethernet.py`'s
+All values are produced from `virtual_plc/ethernet_reference.py`'s
 reference-only single source of truth and exposed in
 `virtual-plc guide ethernet --json`.
 Runtime `Server`, listeners, `--max-clients=64`, memory and

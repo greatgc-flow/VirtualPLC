@@ -12,6 +12,8 @@ PLC process. Defaults and existing 3E/4E wire protocol are unaffected.
 Only synthetic Q-class memory is currently implemented in this mode:
 `profile="Q"`, no `ethernet_model` or 3E/4E `fault_plan`. Incompatible
 settings raise `ValueError` before any port is bound.
+The 1E option opens only explicitly selected listeners; it does not open
+vendor system or MELSOFT ports.
 
 Commands `00H` (bit read, max 256, encoded count 00H=256), `01H`
 (word/group read, max 64 D words / 32 aligned groups of 16 bits),
@@ -20,7 +22,8 @@ words / 10 aligned bit groups), plus 04H random bit writes (1–80 points), 05H 
 **Unlike batch responses**, `15H` replies with only model code `F3H`
 (binary) or `F3` (ASCII); `16H` echoes only the original byte count
 and data (binary length byte; ASCII two-character hexadecimal length).
-Neither uses the batch subheader/status. The type code is a manual-sourced,
+The 16H loopback length is 1–254 bytes. Neither diagnostic uses the batch
+subheader/status. The type code is a manual-sourced,
 synthetic module identity; no actual FX5 hardware identity is implied.
 First-slice device validation is restricted to M (0..7679),
 X/Y (0..255) and D (0..7999) synthetic points. Invalid PC numbers,
@@ -694,6 +697,9 @@ Memory.load(data) validates complete JSON before overlaying native points.
 Memory.dump() groups contiguous stored points using the same schema; explicit
 zeros are retained. Values are unsigned bits/words/native dwords. See
 [seeding examples](../README.md#memory-seeding-snapshots-and-embedding).
+Direct memory range violations raise `OutOfRange`, a `ValueError`; wire access
+maps invalid ranges to protocol errors as described in the [1E contract](#slmp-1e-transport-opt-in)
+and command-specific sections above.
 Load/mutate before start and dump after stop. Direct memory operations have no
 lock: live clients must use wire requests for synchronization. Limits use
 inclusive native points. Repeated CLI limits use the last span per family;

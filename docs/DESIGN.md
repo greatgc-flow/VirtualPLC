@@ -138,7 +138,7 @@ file output avoid confusing a manual/simulated result with real PLC parity.
 No socket or PLC control operation exists in this utility; see
 [offline procedure](PHYSICAL_ORACLE.md).
 
-**SLMP 1E (opt-in):** `virtual_plc/one_e.py` owns the bounded, command-aware 1E parser/response codec (`Server(slmp_1e=True)` / `--slmp-1e`), including `slmp_1e_run_switch`, TCP owner-scoped remote control, and `Server.get_1e_remote_control_status()` / `reset_1e_remote_control()`. Full behavioral specification, command/device bounds, and error mappings are owned by [BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in); manual test vectors and scope remain in [FX5 1E/3E protocol scope](research/FX5_SLMP_FRAME_SCOPE_20261031.md) ([#22](https://github.com/greatgc-flow/VirtualPLC/issues/22)).
+**SLMP 1E (opt-in):** `virtual_plc/one_e.py` owns the parser and codec. See [BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in) for the contract and [FX5 1E/3E protocol scope](research/FX5_SLMP_FRAME_SCOPE_20261031.md) for manual vectors.
 
 **FX5 offline SLMP host-port metadata (not a runtime model):**
 `virtual_plc.ethernet.inspect_reference_slmp_port(model, port)` reads
@@ -435,9 +435,8 @@ dword views; vendor verification of ASCII dword word order (configurable: defaul
 ASCII overwidth requests are rejected; `manual` (device-base) and
 `fx5-octal` (X/Y only) numbering are opt-in policies. See
 [FX5 1E/3E frame distinction and limits](research/FX5_SLMP_FRAME_SCOPE_20261031.md).
-Opt-in 1E framing is implemented as a separate command-aware frame adapter in `virtual_plc/one_e.py` (#22), not an
-extension of the 3E length header. Client 0.3.0
-is pinned and checked by the oracle test.
+For the opt-in 1E framing contract and implementation details, see
+[BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in).
 
 
 ## 9. Server lifecycle and CLI
