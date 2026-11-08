@@ -81,3 +81,15 @@ def test_no_stale_policy_phrases_in_behavior_and_design():
         text = (ROOT / rel_path).read_text(encoding="utf-8")
         found = [phrase for phrase in stale_phrases if phrase in text]
         assert not found, f"{rel_path} contains stale phrases: {found}"
+
+
+def test_guide_divergences_1e_points_to_behavior_without_command_enumeration():
+    text = guide.DIVERGENCES
+    assert "--slmp-1e" in text
+    assert "docs/BEHAVIOR.md#slmp-1e-transport-opt-in" in text
+    leaked = [
+        f"{cmd:02X}" for cmd in _supported_1e_commands()
+        if re.search(rf"\b{cmd:02X}H?\b", text)
+    ]
+    assert not leaked, f"guide.DIVERGENCES enumerates 1E command bytes: {leaked}"
+

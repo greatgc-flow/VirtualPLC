@@ -122,17 +122,9 @@ This is a simulator, not a PLC. These behaviors are synthetic or unverified; do 
 - iQ-R native dword devices (LTN LSTN LCN LZ) use one 32-bit point per address; word access streams the
   low/high halves. The stride is unverified.
 - Timers and counters hold plain values; no PLC logic executes. The monitoring timer is parsed and ignored.
-- Optional --slmp-1e uses bounded 1E framing: batch 00..03, atomic random 04/05,
-  TCP-owner-only remote RUN/STOP 13/14, model-code 15 and loopback 16. The STOP
-  owner persists across disconnects; local Server.reset_1e_remote_control() releases
-  it while keeping STOP; UDP remote control denied. Local
-  Server.get_1e_remote_control_status() reports owned/connected/orphaned safely.
-  Optional --slmp-1e-run-switch STOP --initial-state STOP simulates the documented
-  physical STOP selector: authorized 13H RUN acknowledges, releases ownership,
-  but CPU stays STOP. Default RUN behavior is unchanged. Simulator only.
-  Unlike batches, 15 replies F3 and 16 raw length+data. No mixed 1E/3E/4E.
-  Synthetic Q memory, not vendor FX5 CPU/ENET certification.
-  Every network/PC/station route aliases one memory.
+- Optional --slmp-1e / --slmp-1e-run-switch uses synthetic Q memory and simulator-only
+  TCP STOP ownership (not FX5 hardware parity); see docs/BEHAVIOR.md#slmp-1e-transport-opt-in.
+- Every network/PC/station route aliases one memory.
 - Error codes are design values. Z devices are unsupported.
 - Faults act after execution: a faulted write or reset has already happened.
 """.strip("\n")
