@@ -1,8 +1,9 @@
 # Offline FX5 SLMP 1E reference-vector comparison
 
-**Status:** manual-derived examples, NOT measured physical PLC responses,
-hardware certification, or a network capture tool. The command never opens
-a socket, sends a PLC command, or changes CPU/device state.
+**Status:** strictly offline manual-derived comparison utility; responses are not measured, and this is not a network capture tool. It never opens a socket, sends a PLC command, or changes CPU/device state; see [README safety](../README.md#30-second-quickstart).
+
+Human evidence collection, if separately authorized, belongs only on an
+isolated test bench, never production PLCs or live factory equipment.
 
 ## Scope and evidence
 
@@ -16,10 +17,6 @@ a socket, sends a PLC command, or changes CPU/device state.
   byte ("ABCDE" is sent as "4142434445"), per official p.135–136.
 - There are NO batch writes, random writes, STOP, RUN or other PLC
   control commands in the offline vector plan.
-
-The tool never contacts hardware, not even loopback. Independently
-authorized human evidence collection, if needed, must be on an isolated
-test bench, not production PLCs or live factory equipment.
 
 ## Very Simple: source-checkout workflow (Python 3.10+)
 
@@ -69,11 +66,7 @@ digests; device metadata is hashed, raw observed payloads never printed.
 Original captures remain in local files and should not be committed,
 uploaded to public issues, or sent to CI logs.
 
-The origin label is self-reported, NOT independently authenticated.
-Every report explicitly sets physical_hardware_certified=false even
-when all four examples match. Manufacturer-vector equality alone is
-NOT proof of Ethernet setting, model, firmware, timing, STOP ownership,
-device addressing, or hardware compatibility.
+The origin label is self-reported and every report sets `physical_hardware_certified=false`. Vector equality is not proof of Ethernet setting, model, firmware, timing, STOP ownership, or device addressing (see [README safety](../README.md#30-second-quickstart)).
 
 Tracked follow-ups: GitHub issues #2 (physical oracle),
 #14 (model-specific Ethernet) and #22 (1E command/fidelity).

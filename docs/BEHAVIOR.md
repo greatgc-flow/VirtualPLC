@@ -124,8 +124,7 @@ See the [canonical CLI reference](../README.md#cli-reference),
   is set is discarded before dispatch. If stop begins during parsing,
   the shared request-lock boundary checks the flag again before starting
   1E or 3E/4E dispatch. An already-started dispatch may finish; no
-  rollback or physical-PLC guarantee is implied. No late response is sent. A UDP listener cannot be combined with
-  TCP-only `FaultPlan` actions; opt-in `UdpFaultPlan` drop/delay is documented in [FAULTS.md](FAULTS.md#udp-datagram-response-faults-opt-in). `max_clients` and `idle_timeout` govern TCP
+  rollback or physical-PLC guarantee is implied. No late response is sent. `max_clients` and `idle_timeout` govern TCP
   sessions only; the nonlocal bind guard still requires both explicit permission
   and an idle timeout option, even for UDP-only configurations.
 - All requested sockets bind before any listener starts processing. Failure
@@ -146,9 +145,7 @@ See the [canonical CLI reference](../README.md#cli-reference),
 - Accepted sockets use TCP_NODELAY; if configuring TCP_NODELAY or the accepted socket timeout raises `OSError`, only that accepted peer is closed and the port continues accepting future connections. EOF, bad framing or `idle_timeout` closes only that
   client.
 - `response_hook(response_bytes) -> bytes` transforms each complete encoded response
-  before the fault plan.
-- `faults.FaultPlan(steps)` / `.from_file(path)` supplies ordered, counted response
-  faults; None is inert.
+  before the fault plan; TCP `FaultPlan` and UDP `UdpFaultPlan` schemas and actions are owned by [FAULTS.md](FAULTS.md).
 - Q/L/QnA/iQ-L/iQ-R have synthetic CPU identities; names occupy 16 bytes, filled with
   `text_pad` (default NUL).
 - Echo response: length uint16 + text. ASCII encodes numeric fields as uppercase hex.
@@ -172,7 +169,8 @@ See the [canonical CLI reference](../README.md#cli-reference),
 - `codec.pack_bits(values)` / `unpack_bits(data, count)` use high nibble first, odd low
   nibble zero.
 - Frames auto-detect 3E/4E, binary/ASCII per request; reserved fields must be zero; bad
-  framing raises ValueError.
+  framing raises ValueError. Per-request 3E/4E and binary/ASCII switching is a
+  simulator feature, not PLC behavior.
 - `commands.ERROR_CODES[code]` has `name`, `source`, `status`; all current rows remain
   unverified.
 - Each request validates before mutation under one lock. Batch read (`0x0401`) and batch
@@ -250,7 +248,7 @@ The existing server lock covers the whole request, including reads. Writes
 then apply in wire order (word section first), so later duplicate or overlapping
 entries overwrite earlier ones.
 
-Random-access point limits and `0xC053` / `0xC054` error codes follow `WIRE_CLASSES` in `virtual_plc/profiles.py` and `random_access` in `virtual_plc/commands.py` (see [Public API](#public-api) above). Check order in `random_access`: zero total count, then over-limit, then payload length/format and device range checks. The client rejects 256 before
+Random-access point limits and `0xC053` / `0xC054` error codes follow `WIRE_CLASSES` in `virtual_plc/profiles.py` and `random_access` in `virtual_plc/commands.py` (see [Public API](#public-api) above). Check order in `random_access`: zero total count, then over-limit, then payload length/format (`C057`) first, then per-entry access/alignment (`C05C`) or device range (`C056`) checks (awaiting manual verification). Dwords over bit devices span 32 packed points with 16-point head alignment. The client rejects 256 before
 sending because a count field is only one byte. A valid raw count of 256 does
 not exist. Tests send over-limit and 256-entry frames and require rejection with
 no mutation.
@@ -680,7 +678,7 @@ remain unverified.
 
 ## Unverified behavior
 
-For the canonical summary of simulator policies and unverified vendor behavior, run `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`) and see [DESIGN.md §8](DESIGN.md#8-open-items). In addition, dwords over bit devices span 32 packed points with 16-point head alignment; malformed random lengths use C057, invalid access uses C05C, and range overflow uses C056 (awaiting manual verification); nonzero reserved fields close the connection; and per-request transport switching is a simulator feature.
+Canonical simulator policies and unverified vendor behaviors are owned by `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`).
 
 
 ## Lifecycle, snapshots, timers and routes

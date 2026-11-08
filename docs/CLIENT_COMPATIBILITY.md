@@ -13,7 +13,7 @@ implements any simulator-only policy. See [BEHAVIOR](BEHAVIOR.md),
 | --- | --- | --- | --- |
 | Upstream `pymcprotocol` | PyPI `pymcprotocol==0.3.0`; `requirements-dev.txt` pin | Real client + raw-protocol tests, CI OS/Python matrix | **Primary tested client contract** |
 | `greatgc-flow/pymcprotocol` fork | [`46eb391a2116`](https://github.com/greatgc-flow/pymcprotocol/commit/46eb391a2116140763d863001a4fb5dbdbd85525), untagged fork main at this review | Fork's client improvements merged; no released artifact or independent VirtualPLC fork matrix verified here | **Experimental source snapshot; not the stock PyPI package** |
-| Physical PLC hardware / vendor MC implementation | No hardware model + firmware + recording pair specified | Manual-derived vectors and explicitly unverified simulator policies only | **Unverified; do not connect to production/physical equipment for this simulator** |
+| Physical PLC hardware / vendor MC implementation | No hardware model + firmware + recording pair specified | Manual-derived vectors and explicitly unverified simulator policies only | **Unverified; see [README safety](../README.md#30-second-quickstart)** |
 
 ## What changes between clients
 
@@ -56,11 +56,4 @@ No runtime behavior changes are introduced by this document.
 
 ## Raw UDP client example (source checkout only)
 
-The [standalone 3E binary D0 reader](../examples/udp_read_d0.py)
-is written with Python's standard-library `socket` module, **not**
-`pymcprotocol==0.3.0` or the untagged fork. It uses IPv4 loopback only;
-the response source, frame header, length and end code are checked.
-The script is a minimal, executable simulator example and not a client
-compatibility claim for Mitsubishi hardware. No retries, 1E/4E, ASCII,
-production networks or authentication are supported by this example.
-Tests use actual UDP loopback sockets and reject malformed replies.
+The [standalone 3E binary D0 reader](../examples/udp_read_d0.py) uses Python's standard-library `socket` module on IPv4 loopback only (checking response source, frame header, length, and end code); it is a minimal simulator example (no retries, 1E/4E, or ASCII) and follows [README safety](../README.md#30-second-quickstart).

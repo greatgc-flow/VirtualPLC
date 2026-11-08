@@ -138,7 +138,7 @@ file output avoid confusing a manual/simulated result with real PLC parity.
 No socket or PLC control operation exists in this utility; see
 [offline procedure](PHYSICAL_ORACLE.md).
 
-**SLMP 1E (opt-in):** `virtual_plc/one_e.py` owns the parser and codec. See [BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in) for the contract and [FX5 1E/3E protocol scope](research/FX5_SLMP_FRAME_SCOPE_20261031.md) for manual vectors.
+**SLMP 1E (opt-in):** `virtual_plc/one_e.py` owns the 1E parser/codec and 1E-specific codes `0xC05B`, `0xC05F`, `0xC060` (shared codes in [BEHAVIOR](BEHAVIOR.md#slmp-1e-transport-opt-in)), with `Server.get_1e_remote_control_status()` and `reset_1e_remote_control()`; see [FX5 1E/3E protocol scope](research/FX5_SLMP_FRAME_SCOPE_20261031.md) for manual vectors.
 
 **FX5 offline SLMP host-port metadata (not a runtime model):**
 `virtual_plc.ethernet.inspect_reference_slmp_port(model, port)` reads
@@ -382,14 +382,7 @@ policy.
 | M5 | Control: run/stop/pause/latchclear/reset, lock/unlock; CPU state machine | Agreed semantics, all four transports; vendor behavior unverified | Complete |
 | M6 | All named profiles; iQ-R 4+2 addressing, LT*/LST*/LC*/LZ/RD, pw 6-32, 2-byte random bit | Profile-driven handlers and generated transport cells; raw LSTC; native stride documented | Complete; vendor ranges/stride unverified |
 | M7 | Declarative delay/drop/truncate/end-code/close/RST/hold/corruption/partial-send faults on the response hook; JSON CLI | Counted thread-safe matching, real reset reconnect, client-misbehaviour labels | Complete |
-Extension point = command registry dict (no extension milestone).
-
-M7's optional FaultPlan reserves the first eligible declared step under the
-request lock, after dispatch. Encoding and the existing response hook run next;
-socket faults run outside the lock. None retains normal response delivery.
-Steps match command, per-connection request ordinal and/or accepted connection
-ID, with once/N uses. See [fault schema and policies](FAULTS.md); waits cancel on stop,
-faults do not roll back committed writes.
+Extension point = command registry dict (no extension milestone). See [fault schema and policies](FAULTS.md) for M7 `FaultPlan` and `UdpFaultPlan` reservation and post-dispatch delivery.
 
 ## 6. Transport and command regression scenarios
 
@@ -426,17 +419,7 @@ never touches SM/SD, apart from the explicit SD203 state mirror on transitions.
 
 ## 8. Open items
 
-Vendor verification of CPU-name text fill (configurable, default NUL); authoritative
-per-series limits/ranges; vendor verification of the selected native dword stride; SM/SD
-per-range RO; vendor verification of M5 lock/reset/state-code policies; real-PLC
-unaligned bit-head word reads; bit-device
-dword views; vendor verification of ASCII dword word order (configurable: default
-`swapped`, optional `client`; low-word-first PLC behavior remains suspected/unverified).
-ASCII overwidth requests are rejected; `manual` (device-base) and
-`fx5-octal` (X/Y only) numbering are opt-in policies. See
-[FX5 1E/3E frame distinction and limits](research/FX5_SLMP_FRAME_SCOPE_20261031.md).
-For the opt-in 1E framing contract and implementation details, see
-[BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in).
+Canonical simulator policies and unverified vendor behaviors live in `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`). Remaining open design items: SM/SD per-range read-only enforcement, real-PLC unaligned bit-head word reads, and bit-device dword views; see [FX5 1E/3E frame distinction and limits](research/FX5_SLMP_FRAME_SCOPE_20261031.md) and [BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in).
 
 
 ## 9. Server lifecycle and CLI
@@ -483,9 +466,7 @@ does not block a bumped oracle. CI covers Linux/Windows on Python 3.10–3.13
 and installs built wheels in clean environments. Trusted publishing requires
 the repository PyPI publisher and GitHub environment pypi to be configured.
 
-Open verification remains: vendor capacities, native stride, CPU-name fill,
-ASCII dword order, error meanings and physical lock/reset/state behavior.
-Windows SIGBREAK needs a console; TerminateProcess cannot flush snapshots.
+Open verification items follow `virtual-plc guide divergences`. Windows SIGBREAK needs a console; TerminateProcess cannot flush snapshots.
 Artifact builds need setuptools>=77; build/twine are release tools, not runtime
 dependencies. Workflow execution/publishing require configured hosted runners.
 
@@ -521,16 +502,11 @@ collapse embedded newlines. Unknown guide topics list available topics, exit 2.
 
 ## 13. Unverified / deferred
 
-The following simulator policies await physical PLC verification or manual cross-check:
+Canonical simulator divergences live in `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`), and manual cross-check provenance is in [docs/manual/PROVENANCE.md](manual/PROVENANCE.md) (remote-password `C200..C202` vs `C203/C204` remap in #5). Additional pinned/manual items awaiting physical PLC verification:
 
-- **ASCII hex addressing for X/Y/B/W**: default behavior (`compat`) accepts decimal digits only; `manual` opt-in policy accepts hex digits for base-16 devices; real PLC numbering is unverified.
 - **0xC057 vs 0xC05C on length mismatch**: which end code a real PLC returns is unverified.
-- **Batch and random-access point limits (zero and upper bounds)**: manual-derived caps in `virtual_plc/profiles.py` (`BATCH_MAX`, `WIRE_CLASSES`) and `0xC051..0xC054` error mappings in `virtual_plc/commands.py` await physical PLC verification (#2); see [BEHAVIOR.md](BEHAVIOR.md#public-api) and [docs/manual/PROVENANCE.md](manual/PROVENANCE.md).
 - **Error information and bad_end_code frame shape**: abnormal responses (and `bad_end_code` with code != 0) append error information per SH-080008 5.2/5.3 (route, command, subcommand; response data dropped; length field = end code + error info; manual-derived). Other-station routing and real-PLC no-error-info cases remain unverified.
-- **Echo (0x0619) payload**: 0-9, A-F, a-f only, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py; unverified (case).
-- **Remote STOP (0x1002) mode**: only mode 1 accepted, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py.
-
-Manual cross-check provenance and SH-080008 / SH-081257 clause notes are recorded in [docs/manual/PROVENANCE.md](manual/PROVENANCE.md) (remote-password `C200..C202` vs `C203/C204` remap tracked in issue #5).
+- **Echo (0x0619) payload and Remote STOP (0x1002) mode**: echo accepts 0-9, A-F, a-f (`0xC05C` otherwise, case unverified); STOP accepts mode 1 only (`0xC05C` otherwise); both pinned by `tests/test_pinned_behavior.py`.
 
 ### Restart semantics
 

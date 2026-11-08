@@ -311,7 +311,7 @@ More fixes: `virtual-plc guide troubleshoot`. Protocol details:
 
 ## Known divergences from a real PLC
 
-Run `virtual-plc guide divergences`; see [BEHAVIOR](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md) for the canonical protocol contract.
+`virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`) is the canonical list of simulator policies and unverified PLC behavior; see [BEHAVIOR](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md) for wire protocol details.
 
 ## Repository safeguards and verified handoff
 
