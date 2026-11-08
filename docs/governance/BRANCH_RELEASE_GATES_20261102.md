@@ -50,7 +50,7 @@ https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-
    failing; verify the active ruleset UI and accessible ruleset API.
    A dry-run on a disposable test PR is preferable to bypassing main.
 7. Record the active ruleset IDs/URLs, effective 9 check names,
-   any bypass actors and verification date in issue #7; do not
+   any bypass actors and verification date in issue #54; do not
    equate a document or a green CI run with enforcement.
 
 Official ruleset rules reference:
@@ -75,6 +75,6 @@ https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-
 ## Acceptance / current blocker
 
 Documentation and project handoff may be merged with ordinary PR checks.
-Actual ruleset activation **remains open** in issue #7 because this
-connection cannot write admin rules. Do not mark #7 complete until
-the owner/admin applies and verifies both branch and tag policies.
+Actual ruleset activation **remains open** in issue #54 (broad review #7
+was closed) because this connection cannot write admin rules. Do not mark
+#54 complete until the owner/admin applies and verifies both branch and tag policies.

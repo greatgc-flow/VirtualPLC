@@ -1,3 +1,5 @@
+# VirtualPLC — Design
+
 **Whole-pack PDF input preflight (PR #46, 2026-11-02):**
 The developer-only manual evidence kit validates every edition's tuple shape,
 file signature/size and SHA-256 uniqueness before performing any text
@@ -6,8 +8,6 @@ extraction. Malformed or duplicate late sources no longer cause earlier
 source rechecks remain, with unchanged report schema and manufacturer
 `NOT_VERIFIED` status. This is a COMPACT, delivery-tool-only safeguard,
 not PDF authenticity or hardware qualification.
-
-# VirtualPLC — Design
 
 **Final cross-source evidence integrity audit (PR #45):**
 The optional offline PDF kit re-fingerprints *all* originals after scanning
@@ -129,14 +129,6 @@ features of
 profile: **Q series**.
 Not for industrial use. Binds 127.0.0.1 by default.
 
-**Physical RUN/STOP selector (opt-in simulator behavior):**
-The separate 1E mode supports `slmp_1e_run_switch="STOP"` only together
-with `initial_state="STOP"`. On authorized 13H remote RUN, owner information
-clears and the wire response is successful, but CPU state and SD203 remain STOP.
-This small static switch models the official JY997D56001-K p.132 condition,
-without changing default mode or pretending to implement physical switch
-transitions, firmware behavior or complete FX5 hardware parity.
-
 **Offline manufacturer vector oracle (separate from simulator networking):**
 `virtual_plc/oracle.py` defines four manual-derived 1E 15H/16H binary/ASCII
 read-only request/response cases and a minimal offline plan/template/compare CLI.
@@ -146,16 +138,7 @@ file output avoid confusing a manual/simulated result with real PLC parity.
 No socket or PLC control operation exists in this utility; see
 [offline procedure](PHYSICAL_ORACLE.md).
 
-**SLMP 1E (opt-in):** `virtual_plc/one_e.py` owns the independently
-bounded, command-aware 1E parser/response codec with 00..03 batch, 04/05 transactional random writes, TCP owner-checked 13/14 remote RUN/STOP, and 15/16 diagnostics. The latter use
-**raw identity or length+data replies**, not the batch 8X/00 status layout. `Server(slmp_1e=True)` selects **1E-only** framing, reuses
-the existing single Memory/lock across TCP/UDP, and rejects
-incompatible hardware-model/fault-plan/profile choices before binding.
-1E has no 3E network route or common length header; random frames carry one count then exact device records. Owner ID is a monotonically increasing TCP-accept counter; ownership persists across close and can only be cleared by owner RUN or explicit local administrator reset, which leaves CPU STOP. UDP remote control is rejected with simulator C05F. Atomic writes stage only touched device maps, validating the entire request under the existing shared request lock. These are simulator safety choices, not vendor identity/error parity. Invalid commands
-are closed/dropped, never passed to the 3E decoder. Manual test
-vectors and limits: [FX5 1E/3E protocol scope](research/FX5_SLMP_FRAME_SCOPE_20261031.md). Physical FX5 parity, unsupported device/firmware variants and physical
-remote ownership/release/error-code semantics remain open
-under [#22](https://github.com/greatgc-flow/VirtualPLC/issues/22).
+**SLMP 1E (opt-in):** `virtual_plc/one_e.py` owns the 1E parser/codec and 1E-specific codes `0xC05B`, `0xC05F`, `0xC060` (shared codes in [BEHAVIOR](BEHAVIOR.md#slmp-1e-transport-opt-in)), with `Server.get_1e_remote_control_status()` and `reset_1e_remote_control()`; see [FX5 1E/3E protocol scope](research/FX5_SLMP_FRAME_SCOPE_20261031.md) for manual vectors.
 
 **FX5 offline SLMP host-port metadata (not a runtime model):**
 `virtual_plc.ethernet.inspect_reference_slmp_port(model, port)` reads
@@ -181,7 +164,7 @@ uses official Mitsubishi FAQ #39316's distinct FX5U/FX5UC >=1.110 and
 FX5UJ/FX5S from-first rules. FAQ #44329's mixed-firmware interop
 GX Works3 path applies only where documented; unsupported/unknown
 firmware is not conflated and early UJ/S path remains unknown.
-The SSOT belongs in `virtual_plc/ethernet.py` reference hardware,
+The SSOT belongs in `virtual_plc/ethernet_reference.py` (re-exported by `virtual_plc/ethernet.py`),
 not runnable settings; simple CPU target limits are not SLMP TCP sockets.
 See [FX5 firmware gate](research/FX5_CPU_FIRMWARE_SIMPLE_COMM_20261101.md).
 
@@ -189,7 +172,7 @@ See [FX5 firmware gate](research/FX5_CPU_FIRMWARE_SIMPLE_COMM_20261101.md).
 `inspect_reference_fx5_enet_alive_timers(overrides=None)` performs pure
 metadata validation for the FX5-ENET expansion module's documented
 existence-check settings (start, interval, retry), with an explicit
-Change/Set Timer Value flag. The SSOT is `virtual_plc/ethernet.py`;
+Change/Set Timer Value flag. The SSOT is `virtual_plc/ethernet_reference.py` (re-exported by `virtual_plc/ethernet.py`);
 seconds/milliseconds are different allowed units with documented bounds,
 not host TCP retransmission/idle timeouts. No server configuration changes.
 See [manufacturer comparison](research/FX5_ENET_ALIVE_REFERENCE_20261101.md).
@@ -197,8 +180,8 @@ See [manufacturer comparison](research/FX5_ENET_ALIVE_REFERENCE_20261101.md).
 **GX Works2 / GX Works3 hardware-specific Ethernet mode (opt-in):**
 [usage/config/effective-settings guide](ETHERNET_MODEL_SETTINGS.md) and
 [official-manual timer/port/open-setting research](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md).
-The single source of truth for the implemented model defaults, ranges, sources
-and fidelity is `virtual_plc/ethernet.py`, exposed through
+The single source of truth for the implemented runnable model defaults, ranges, sources
+and fidelity is `virtual_plc/ethernet.py` (with offline FX5/RnCPU reference metadata in `virtual_plc/ethernet_reference.py` and `virtual_plc/rncpu_reference.py`), exposed through
 `virtual-plc guide ethernet --json` and `--show-effective-ethernet`.
 The supported model keys are `qj71e71` (Q), `lj71e71` (L), and
 `rj71en71` (iQ-R), with independent official manual sources.
@@ -217,15 +200,6 @@ socket `idle_timeout` are not modified. The broader fidelity backlog remains
 in [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
 **One independent PLC per OS process**; multiple listeners within that
 process share one PLC state.
-
-
-**1E owner observability:** the local-only `Server.get_1e_remote_control_status()`
-reads CPU state and STOP ownership under the shared request lock. Accepted
-TCP IDs remain monotonic across listeners. The remote STOP owner gets an
-`owner_connected` marker until its worker detects connection closure, at
-which point the marker changes to orphaned without releasing ownership.
-Reset and owner RUN clear both the ID and marker. This avoids adding another
-network protocol, CLI recovery flag, or concurrent lock hierarchy.
 
 ## Optional multi-listener transport extension
 
@@ -293,17 +267,7 @@ unverified; this is a simulator transport policy only.
 
 ### UDP datagram response faults (PR #52)
 
-Separate UdpFaultPlan holds only drop and stop-cancellable delay after
-UDP command dispatch, after the normal response_hook. It never shares
-TCP FaultPlan actions or TCP stream assumptions. Valid UDP responses
-are counted globally per plan (across UDP listener ports); selections
-match command, response ordinal nth and numeric source IP. Reserving
-actions and decrementing finite times are atomic under the plan lock.
-Only the opt-in path extracts the already-validated MC command again.
-Delay waits outside the shared PLC request lock, blocks only its UDP
-worker and cancels on stop. No fault means unchanged UDP overhead.
-Duplicate, corruption, reorder, scheduler and rate limiting are held
-for separate #13 slices. No manufacturer/physical fidelity implied.
+Separate `UdpFaultPlan` (`virtual_plc/udp_faults.py`) reserves post-dispatch UDP `drop`/`delay` atomically under its own plan lock and waits outside the shared PLC request lock; full schema and matching semantics are owned by [FAULTS.md](FAULTS.md#udp-datagram-response-faults-opt-in). Duplicate, corruption, reorder, scheduler and rate limiting are held for separate #13 slices.
 
 ## 1. Verified client facts (pinned pymcprotocol 0.3.0)
 
@@ -345,11 +309,11 @@ policy](BEHAVIOR.md#native-dword-stride-policy-unverified).
 
 | ID | Decision |
 |---|---|
-| D1 | Old assets remain under `archive/m1-m29`; Keep concrete test scenarios and the wheel-hash pin; omit gates/evidence/progress scripts. |
+| D1 | Historical M1–M29 scaffold assets were retired before git history; keep concrete test scenarios (`tests/`) and the wheel-hash pin (`tests/oracle_pin.txt`); omit gates/evidence/progress scripts. |
 | D2 | Five named profiles (Q, L, QnA, iQ-L, iQ-R) mapped to two wire classes (`Q-class`, `iQ-R`). Same wire class != same capabilities; ranges, CPU names and batch point caps (QnA vs Q/L/iQ-L/iQ-R) are per profile. Addressed requests using the opposite wire class's subcommands return an error in either direction. Q-class names and non-addressed packets are indistinguishable on the wire; see BEHAVIOR. |
 | D3 | Layout `virtual_plc/{server,codec,commands,memory,profiles,faults,__main__}.py`; tables in Python. stdlib + pytest only. One lock per request; validate whole request before any mutation; each response fully written via `sendall`/checked send loop; `TCP_NODELAY`; tests bind port 0. M7 explicitly injects response faults after dispatch. |
 | D4 | Tests generated from tables over **applicable** combinations only (explicit exclusions with reasons). Oracles: (i) real pymcprotocol 0.3.0 = *client-compat*; (ii) hand-authored expected bytes in test code, independent of `codec.py`/tables/client = *manual-derived* (never "manual-correct", never "capture"). Oracle pin = PyPI 0.3.0 wheel hash (verify checkout matches). |
-| D5 | Numbering policy is explicit (`compat` default = decimal text as client sends; `manual` parses declared device bases including hex X/Y/W/B; `fx5-octal` parses **X/Y octal only**, other devices retain declared bases). Never autodetect. FX5 JY997D56001-K p.67 confirms the OCT/HEX distinction, but FX5 full hardware parity and 1E are still unsupported. ASCII dword order is separate: `swapped` (default) or `client` (high first); physical ordering remains unverified. |
+| D5 | Numbering policy is explicit (`compat` default = decimal text as client sends; `manual` parses declared device bases including hex X/Y/W/B; `fx5-octal` parses **X/Y octal only**, other devices retain declared bases). Never autodetect. FX5 JY997D56001-K p.67 confirms the OCT/HEX distinction; opt-in 1E framing is in `virtual_plc/one_e.py`, while full FX5 hardware parity remains out of scope. ASCII dword order is separate: `swapped` (default) or `client` (high first); physical ordering remains unverified. |
 | D6 | Milestones below. 4096 is a *client receive limit*, documented separately from server limits; large valid responses tested with a raw-socket client. |
 | D7a | Timers/counters (TS/TC/TN, CS/CC/CN, SS/SC/SN): independent storage, no timer execution. Own milestone step. |
 | D7b | SM/SD writable by default; no read-only ranges are currently enforced. |
@@ -374,15 +338,7 @@ policy](BEHAVIOR.md#native-dword-stride-policy-unverified).
 - Response: `D0 00 | net pc io stn | len(2) | end(2) | data` (end code first inside len).
 - Q-class batch read/write (cmd 0401/1401), sub 0000 (word) / 0001 (bit): `addr(3 LE)
   devcode(1) points(2)`; words LE; bits 2/byte high nibble first, odd count padded low
-  nibble 0. Batch point caps from SH-080008 (p.87/91/96, Ethernet E71 column) are stored
-  per profile in `profiles.py` keyed by `(profile, wire, unit)`: `Q`, `L`, `iQ-L`, `iQ-R`
-  allow word `960`, bit binary `7168`, bit ASCII `3584`; `QnA` allows word `480`, bit
-  binary `3584`, bit ASCII `1792`. Zero or over-limit points return
-  `POINTS_OUT_OF_RANGE` (`0xC051`) for word units or `BIT_POINTS_OUT_OF_RANGE` (`0xC052`)
-  for bit units (SH-081257 3.5; manual-derived, code assignment unverified, real-PLC
-  verification still open in #2). `--max-points` defaults to `None` and acts as an
-  optional additional cap (`min(manual_cap, max_points)` when set); direct `Memory` calls
-  are uncapped.
+  nibble 0. Per-profile batch point caps (`BATCH_MAX` in `virtual_plc/profiles.py`), `--max-points` interaction, and `0xC051`/`0xC052` rejection rules are documented in [BEHAVIOR.md](BEHAVIOR.md#public-api).
 - Server: length-framed parser (total = 9 + len), fragmentation, merged requests, clean
   EOF; malformed frame -> close.
 - Q-class random read (0403/0000): uint8 word count + uint8 dword count, followed by
@@ -392,18 +348,7 @@ policy](BEHAVIOR.md#native-dword-stride-policy-unverified).
   address/value entries (4+2 bytes), then dword address/value entries (4+4 bytes).
 - Q-class random bit write (1402/0001): uint8 count, then address(4) + value(1) entries;
   values must be 0 or 1, not packed nibbles.
-- Zero and over-limit random counts are rejected with RANDOM_POINTS_OUT_OF_RANGE
-  (0xC054) for words/dwords or RANDOM_BIT_POINTS_OUT_OF_RANGE (0xC053) for bits per
-  manuals SH-080008 (p.98/105/108) and SH-081257 3.5 (manual-derived; C053/C054
-  assignment unverified, not verified PLC behavior). Keyed on the request wire class
-  (`Wire` in `profiles.py`: Q-class subcommands 0000/0001 vs iQ-R 0002/0003), limits are:
-  random read (0x0403) `words + dwords <= 192` (Q-class) / `96` (iQ-R); random word/dword
-  write (0x1402) `words*12 + dwords*14 <= 1920` (Q-class) / `960` (iQ-R); random bit write
-  (0x1402 bit subcommand) `points <= 188` (Q-class) / `94` (iQ-R), independent of
-  `--max-points`. Check order: zero total, then over-limit, then payload length/format
-  checks. A single zero count with the other nonzero is valid. Count 256 has no wire
-  representation; raw tests send wrapped/widened counts with 256 entries and require
-  rejection. See [random access behavior](BEHAVIOR.md).
+- Random-access point limits per wire class (`WIRE_CLASSES` in `virtual_plc/profiles.py`), check order, and `0xC053`/`0xC054` error codes are owned by `virtual_plc/commands.py` (`random_access`) and documented in [BEHAVIOR.md](BEHAVIOR.md#public-api).
 - The same codec is parameterized by frame (3E/4E) and wire (binary/ASCII).
   Request headers auto-detect the transport on every request, including mixed
   requests on a single connection. This does not autodetect address numbering.
@@ -411,7 +356,7 @@ policy](BEHAVIOR.md#native-dword-stride-policy-unverified).
   uppercase hexadecimal output, and case-insensitive hex input. Q descriptors
   are two code characters followed by six **decimal** address digits (`compat`).
   Overwidth addresses and invalid payloads return a nonzero error without mutation;
-  the manual hex-address policy remains deferred.
+  opt-in `manual` and `fx5-octal` numbering policies are selected via `--ascii-numbering` (see D5 and [BEHAVIOR.md](BEHAVIOR.md#fixed-width-text-padding)).
 - 4E inserts serial(2 binary bytes / 4 hex characters) and reserved zeros of
   the same width after the subheader. Responses echo serials. End-code offsets
   are 9/18 for 3E binary/ASCII and 13/26 for 4E binary/ASCII.
@@ -437,14 +382,7 @@ policy.
 | M5 | Control: run/stop/pause/latchclear/reset, lock/unlock; CPU state machine | Agreed semantics, all four transports; vendor behavior unverified | Complete |
 | M6 | All named profiles; iQ-R 4+2 addressing, LT*/LST*/LC*/LZ/RD, pw 6-32, 2-byte random bit | Profile-driven handlers and generated transport cells; raw LSTC; native stride documented | Complete; vendor ranges/stride unverified |
 | M7 | Declarative delay/drop/truncate/end-code/close/RST/hold/corruption/partial-send faults on the response hook; JSON CLI | Counted thread-safe matching, real reset reconnect, client-misbehaviour labels | Complete |
-Extension point = command registry dict (no extension milestone).
-
-M7's optional FaultPlan reserves the first eligible declared step under the
-request lock, after dispatch. Encoding and the existing response hook run next;
-socket faults run outside the lock. None retains normal response delivery.
-Steps match command, per-connection request ordinal and/or accepted connection
-ID, with once/N uses. See [fault schema and policies](FAULTS.md); waits cancel on stop,
-faults do not roll back committed writes.
+Extension point = command registry dict (no extension milestone). See [fault schema and policies](FAULTS.md) for M7 `FaultPlan` and `UdpFaultPlan` reservation and post-dispatch delivery.
 
 ## 6. Transport and command regression scenarios
 
@@ -481,18 +419,7 @@ never touches SM/SD, apart from the explicit SD203 state mirror on transitions.
 
 ## 8. Open items
 
-Vendor verification of CPU-name text fill (configurable, default NUL); authoritative
-per-series limits/ranges; vendor verification of the selected native dword stride; SM/SD
-per-range RO; vendor verification of M5 lock/reset/state-code policies; real-PLC
-unaligned bit-head word reads; bit-device
-dword views; vendor verification of ASCII dword word order (configurable: default
-`swapped`, optional `client`; low-word-first PLC behavior remains suspected/unverified).
-ASCII overwidth requests are rejected; `manual` (device-base) and
-`fx5-octal` (X/Y only) numbering are opt-in policies. See
-[FX5 1E/3E frame distinction and limits](research/FX5_SLMP_FRAME_SCOPE_20261031.md).
-1E is a separately tracked future command-aware frame adapter (#22), not an
-extension of the 3E length header. Client 0.3.0
-is pinned and checked by the oracle test.
+Canonical simulator policies and unverified vendor behaviors live in `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`). Remaining open design items: SM/SD per-range read-only enforcement, real-PLC unaligned bit-head word reads, and bit-device dword views; see [FX5 1E/3E frame distinction and limits](research/FX5_SLMP_FRAME_SCOPE_20261031.md) and [BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in).
 
 
 ## 9. Server lifecycle and CLI
@@ -500,7 +427,7 @@ is pinned and checked by the oracle test.
 Use `virtual-plc guide options` (generated from argparse), `--help`, and the
 [human CLI reference](../README.md#cli-reference), plus
 [embedding/snapshot examples](../README.md#memory-seeding-snapshots-and-embedding).
-Package exports are Server, Memory, FaultPlan and the installed version.
+Package exports are `Server`, `FaultPlan`, `UdpFaultPlan`, `Memory`, `EthernetSettings` and `__version__`.
 Context exit stops/joins workers. Seed direct memory before start and take
 snapshots after stop; wire requests remain the synchronization boundary.
 Invalid configuration fails before bind. Bind failures exit 1 without a
@@ -539,9 +466,7 @@ does not block a bumped oracle. CI covers Linux/Windows on Python 3.10–3.13
 and installs built wheels in clean environments. Trusted publishing requires
 the repository PyPI publisher and GitHub environment pypi to be configured.
 
-Open verification remains: vendor capacities, native stride, CPU-name fill,
-ASCII dword order, error meanings and physical lock/reset/state behavior.
-Windows SIGBREAK needs a console; TerminateProcess cannot flush snapshots.
+Open verification items follow `virtual-plc guide divergences`. Windows SIGBREAK needs a console; TerminateProcess cannot flush snapshots.
 Artifact builds need setuptools>=77; build/twine are release tools, not runtime
 dependencies. Workflow execution/publishing require configured hosted runners.
 
@@ -577,17 +502,11 @@ collapse embedded newlines. Unknown guide topics list available topics, exit 2.
 
 ## 13. Unverified / deferred
 
-The following simulator policies await physical PLC verification or manual cross-check:
+Canonical simulator divergences live in `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`), and manual cross-check provenance is in [docs/manual/PROVENANCE.md](manual/PROVENANCE.md) (remote-password `C200..C202` vs `C203/C204` remap in #5). Additional pinned/manual items awaiting physical PLC verification:
 
-- **ASCII hex addressing for X/Y/B/W**: default behavior (`compat`) accepts decimal digits only; `manual` opt-in policy accepts hex digits for base-16 devices; real PLC numbering is unverified.
 - **0xC057 vs 0xC05C on length mismatch**: which end code a real PLC returns is unverified.
-- **Random-access point limits (zero and upper bounds)**: total count 0 and over-limit counts rejected with C053 (random bit points) or C054 (random word/dword points) per SH-080008 (p.98/105/108) and SH-081257 3.5 (applied; manual-derived, C053/C054 assignment unverified, not verified PLC behavior). Limits keyed on request wire class (`Wire` in `profiles.py`, independent of `max_points`): read 0x0403 `words + dwords <= 192` (Q-class) / `96` (iQ-R); word/dword write 0x1402 `words*12 + dwords*14 <= 1920` (Q-class) / `960` (iQ-R); bit write 0x1402 `points <= 188` (Q-class) / `94` (iQ-R).
-- **Batch point limits (zero and upper bounds)**: per-profile `(profile, wire, unit)` caps in `profiles.py` from SH-080008 (p.87/91/96, Ethernet E71 column): `Q`, `L`, `iQ-L`, `iQ-R` allow word `960`, bit binary `7168`, bit ASCII `3584`; `QnA` allows word `480`, bit binary `3584`, bit ASCII `1792`. Zero or over-limit points rejected with `C051` (word units) or `C052` (bit units) per SH-081257 3.5 (applied; manual-derived, code assignment unverified, real-PLC verification still open in #2). `--max-points` defaults to `None` (optional additional cap `min(manual_cap, max_points)`); direct `Memory` calls are not capped.
 - **Error information and bad_end_code frame shape**: abnormal responses (and `bad_end_code` with code != 0) append error information per SH-080008 5.2/5.3 (route, command, subcommand; response data dropped; length field = end code + error info; manual-derived). Other-station routing and real-PLC no-error-info cases remain unverified.
-- **Echo (0x0619) payload**: 0-9, A-F, a-f only, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py; unverified (case).
-- **Remote STOP (0x1002) mode**: only mode 1 accepted, otherwise `0xC05C`; pinned by tests/test_pinned_behavior.py.
-
-Manual cross-check results (SH-080008, see `docs/manual/PROVENANCE.md`): STOP mode `0001H` verified; echo data is 0-9/A-F only (simulator accepts a-f, unverified (case)); X/Y/B/W numbers are hexadecimal; error information in abnormal responses per 5.2/5.3 applied (manual-derived; other-station routing and real-PLC no-error-info unverified); batch zero and upper point limits (SH-080008 p.87/91/96, Ethernet E71 column) mapped to C051 (word) and C052 (bit) per SH-081257 3.5 (manual-derived; code assignment unverified, real-PLC verification still open in #2); random-access zero and upper point limits (SH-080008 p.98/105/108) mapped to C053 (bits) and C054 (words/dwords) per SH-081257 3.5 (manual-derived; C053/C054 assignment unverified); C057 is the documented length mismatch code in SH-081257 3.5; C200/C201/C202 are not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5.
+- **Echo (0x0619) payload and Remote STOP (0x1002) mode**: echo accepts 0-9, A-F, a-f (`0xC05C` otherwise, case unverified); STOP accepts mode 1 only (`0xC05C` otherwise); both pinned by `tests/test_pinned_behavior.py`.
 
 ### Restart semantics
 

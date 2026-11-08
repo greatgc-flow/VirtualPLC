@@ -37,4 +37,4 @@ This file is for agents developing this repository. For product usage, run
 - Do not add dependencies or duplicate option/device/command tables in guide prose.
 - Do not label simulator policies as verified physical PLC behavior.
 - Do not access direct Memory concurrently with wire requests; use clients.
-- Do not expose the simulator to production networks or real equipment.
+- Do not expose the simulator to production networks or real equipment (see README).

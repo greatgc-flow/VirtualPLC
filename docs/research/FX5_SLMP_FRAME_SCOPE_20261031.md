@@ -2,6 +2,8 @@
 
 Evidence snapshot: 2026-10-31. Implementations: [PR #21](https://github.com/greatgc-flow/VirtualPLC/pull/21) for the ASCII X/Y octal prerequisite and [PR #23](https://github.com/greatgc-flow/VirtualPLC/pull/23) for the opt-in **1E batch 00..03** parser; [PR #24](https://github.com/greatgc-flow/VirtualPLC/pull/24) for **15H/16H diagnostic** frames; [merged PR #26](https://github.com/greatgc-flow/VirtualPLC/pull/26) covers manual-scoped 04/05 random and 13/14 remote; [issue #22](https://github.com/greatgc-flow/VirtualPLC/issues/22) retains the remaining 1E commands/physical-verification gate; [issue #14](https://github.com/greatgc-flow/VirtualPLC/issues/14) for per-hardware Ethernet configuration and physical parity. Read alongside [hardware model differences](ETHERNET_HARDWARE_NEXT_20261031.md).
 
+Snapshot dated 2026-10-31; current behaviour: docs/BEHAVIOR.md.
+
 **Status legend:** `IMPLEMENTED_SIMULATOR` means observed behavior in VirtualPLC tests; `OFFICIAL_MANUAL` means documented vendor behavior but not verified on live equipment; `NOT_IMPLEMENTED` means unsupported. Green CI is not physical PLC certification.
 
 ## 1. Critical distinction: 1E != 3E != 4E

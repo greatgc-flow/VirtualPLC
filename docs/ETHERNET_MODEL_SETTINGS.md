@@ -1,8 +1,8 @@
 # GX Works2/3 Ethernet settings — VirtualPLC runtime contract
 
-Implementation: issue [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14). Source-of-truth code: `virtual_plc/ethernet.py`. Detailed manufacturer research and model/firmware caveats: [GX Works Ethernet research](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md).
+Implementation: issue [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14). Source-of-truth code: `virtual_plc/ethernet.py` (runnable presets) and `virtual_plc/ethernet_reference.py` / `virtual_plc/rncpu_reference.py` (offline reference SSOT). Detailed manufacturer research and model/firmware caveats: [GX Works Ethernet research](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md).
 
-> **One independent PLC = one OS process.** A process can open many TCP/UDP listeners, but they all share exactly one CPU state, one Memory and one request lock. The module presets described here are **opt-in**, local test emulation only; not a replacement for a real Mitsubishi PLC, a GX Works project importer, or an OS Ethernet stack.
+> **One independent PLC = one OS process.** A process can open many TCP/UDP listeners sharing one CPU state, Memory, and request lock; presets are opt-in local test emulation only (see [README safety](../README.md#30-second-quickstart)).
 
 ## 1. Select a hardware module, not a GX Works editor version
 
@@ -72,19 +72,7 @@ increments and incorrect types fail **before binding**. There is no live reload;
 
 ## 2. Manufacturer timer defaults
 
-The generated model registry is the authoritative implementation record. For **all three currently supported hardware models**, its factory values are:
-
-| Key (milliseconds unless noted) | Factory value | Manufacturer concept | Runtime effect |
-| --- | ---: | --- | --- |
-| `tcp_ulp_ms` | 30000 | TCP ULP send lifetime | Reference only |
-| `tcp_zero_window_ms` | 10000 | TCP zero-window probing | Reference only |
-| `tcp_resend_ms` | 10000 | TCP retransmit wait | Reference only |
-| `tcp_end_ms` | 20000 | TCP FIN closing | Reference only |
-| `ip_assembly_ms` | 5000 | IP fragment reassembly | Reference only |
-| `response_monitor_ms` | 30000 | Ethernet module response monitoring | Reference only |
-| `alive_start_ms` | 600000 | External-station existence check start | Reference only |
-| `alive_interval_ms` | 10000 | Existence-check interval | Reference only |
-| `alive_retries` (count) | 3 | Existence-check retries | Reference only |
+The runnable models' nine factory timer parameters (`tcp_ulp_ms`, `tcp_zero_window_ms`, `tcp_resend_ms`, `tcp_end_ms`, `ip_assembly_ms`, `response_monitor_ms`, `alive_start_ms`, `alive_interval_ms`, `alive_retries`) are defined by `_TIMER_DEFAULTS` in `virtual_plc/ethernet.py` and reported by `model_catalog()`; inspect them via `virtual-plc guide ethernet` or `virtual-plc guide ethernet --json`. All three runnable models share identical factory timer values.
 
 Ranges and increments **differ by hardware**, so do not simply reuse GX Works2 values in GX Works3:
 
@@ -132,7 +120,7 @@ The `Server` constructor validates model/PLC profile matching before listening. 
 
 - **No auto-open of manufacturer default system ports.** QJ71E71's UDP/5000 and RJ71EN71's auto UDP/5000 or MELSOFT UDP/5001, TCP/5002 are described only as reference metadata. Only explicitly provided `--listen` endpoints bind. MELSOFT service handshake is not implemented.
 - **No in-process independent PLC supervisor.** Run another independent OS process for another PLC, each with its own network ports, memory, configuration file, fault plan and snapshot file.
-- **No external network or physical PLC guarantee.** Default local-only binding and nonlocal explicit opt-in + finite TCP idle timeout still apply. The selected manufacturer idle/ULP values do not override this safety policy.
+- **No external network or physical PLC guarantee:** manufacturer timer presets never override local-only binding or `--allow-nonlocal --idle-timeout` rules; see [README safety](../README.md#30-second-quickstart).
 - **No native GX Works project import, no outbound active-open, no fullpassive restriction or vendor socket-state machine.** These may require separate simulator milestones and official manual/firmware evidence. Keep [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14) open for future model parity and RnCPU/FX5 coverage.
 
 ## 6. Regression and verification
@@ -145,10 +133,8 @@ Read-only discovery for unimplemented interfaces:
 virtual-plc guide ethernet --json
 ```
 
-The top-level `models` object contains **runnable** Q/L/R Ethernet models.
-The separate `reference_only_models` object describes `fx5_cpu_builtin`,
-`fx5_enet`, and `rncpu_builtin` with independently sourced known settings and
-an explicit `unverified` list. These are **not** valid `--ethernet-model`
+The top-level `models` object contains **runnable** Q/L/R Ethernet models (`virtual_plc/ethernet.py`).
+The separate `reference_only_models` object (`virtual_plc/ethernet_reference.py` and `virtual_plc/rncpu_reference.py`, projected by `virtual-plc guide ethernet --json`) describes `fx5_cpu_builtin`, `fx5_enet`, and `rncpu_builtin` with independently sourced known settings, an explicit `unverified` list, and offline reference inspectors (`inspect_reference_slmp_port`, `inspect_reference_fx5_enet_alive_timers`, `inspect_reference_fx5_simple_cpu_communication`, `inspect_reference_rncpu_remote_opening`, `inspect_reference_rncpu_data_timers`, `inspect_reference_rncpu_external_device`, `inspect_reference_rncpu_external_device_batch`, `inspect_reference_r04cpu_configuration`). These are **not** valid `--ethernet-model`
 values; their missing timer defaults are not inferred from Q/L/R.
 See [the hardware gap matrix](research/ETHERNET_HARDWARE_NEXT_20261031.md)
 and [FX5 SLMP 1E/3E protocol gate](research/FX5_SLMP_FRAME_SCOPE_20261031.md)

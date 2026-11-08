@@ -43,7 +43,7 @@ or production/factory networks, or claim official Mitsubishi parity.
   Python3.10–3.13, Ubuntu3.11 **7,159 PASS**.
 - Exact PR #52 SHA `75a492b9a5306b138f871caa747dcf078a0d1f8d`,
   PR CI #41435360893 completed SUCCESS 9/9, Ubuntu3.11 7,159 PASS.
-- PRs open: 0; issues open: #25, #22, #14, #13, #7, #5, #2.
+- PRs open: 0; issues open: #25, #22, #14, #13, #54, #5, #2.
 - GitHub repo is public; `/branches/main` protected=false;
   `/rulesets` returned []; branch protection detail GET 403
   (integration cannot access that endpoint). No available
@@ -112,8 +112,8 @@ or production/factory networks, or claim official Mitsubishi parity.
 
 (A) Verify the latest main and issues, then owner-applied
     `main-ci-pr-gate` and `v*` tag rulesets; record actual ID,
-    active policy and merge-blocked test in #7. If settings are
-    not writable, leave #7 OPEN and do not claim completion.
+    active policy and merge-blocked test in #54. If settings are
+    not writable, leave #54 OPEN and do not claim completion.
 (B) Next independent engineering slice: evaluate demand for an
     optional raw UDP client example and/or IPv6 loopback tests.
     Avoid new UDP packet scheduler and costly duplicated logic.

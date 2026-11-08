@@ -2,9 +2,11 @@
 
 Research extension: 2026-10-31 (KST). Linked from [the primary GX Works2/3 Ethernet matrix](GXWORKS_ETHERNET_PARAMETERS_20261031.md) and [runtime model guide](../ETHERNET_MODEL_SETTINGS.md). Tracks [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
 
+Snapshot dated 2026-10-31; current behaviour: docs/BEHAVIOR.md.
+
 The machine-readable `virtual-plc guide ethernet --json` has separate
 `models` (runnable) and `reference_only_models` (unimplemented, sourced
-facts + explicit unknowns). Both are projected from `virtual_plc/ethernet.py`;
+facts + explicit unknowns). Runnable models are projected from `virtual_plc/ethernet.py`; reference-only data comes from `virtual_plc/ethernet_reference.py`;
 this document explains evidence and open gates without making a future model
 executable.
 

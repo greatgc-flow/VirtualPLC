@@ -61,7 +61,7 @@ All results include exact `source`, `gxworks3_path`, `parameter_id`,
 `remote_run_after_stop_guaranteed=False`,
 `physical_hardware_certified=False`, and
 `simulator_network_affected=False`. The metadata is sourced from
-`virtual_plc/ethernet.py` and independently deep-copied into
+`virtual_plc/ethernet_reference.py` and independently deep-copied into
 `virtual-plc guide ethernet --json` under
 `reference_only_models.rncpu_builtin.remote_opening_reference`.
 

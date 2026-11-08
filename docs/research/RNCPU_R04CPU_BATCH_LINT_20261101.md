@@ -106,7 +106,7 @@ manufacturer/bench evidence.
 
 ## 4. Single source of truth, tests and release gate
 
-`virtual_plc/ethernet.py` owns
+`virtual_plc/ethernet_reference.py` owns
 `_REFERENCE_HARDWARE["rncpu_builtin"]["external_device_configuration_reference"]`,
 including the new
 `manual_revision_gate={validated_reference_revision:"AD",
