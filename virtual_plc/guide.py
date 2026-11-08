@@ -289,6 +289,7 @@ Live state: server.state ("RUN"/"STOP"/"PAUSE"), server.set_state(s), server.res
 Memory calls are not synchronized with wire requests: never load, mutate or dump while serving; use a client.
 FaultPlan(steps) or FaultPlan.from_file(path) -> Server(fault_plan=...); schema: virtual-plc guide faults.
 UdpFaultPlan(steps) -> Server(listeners=[('udp', 0)], udp_fault_plan=...); drop/delay only.
+Observability: server.get_listener_health(), server.get_udp_metrics() (udp_metrics=True); see docs/BEHAVIOR.md#udp-observability-opt-in.
 response_hook(bytes) -> bytes transforms every complete reply before it is sent.
 pytest fixture:
   import pytest
