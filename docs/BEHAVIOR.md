@@ -25,8 +25,7 @@ and data (binary length byte; ASCII two-character hexadecimal length).
 The 16H loopback length is 1–254 bytes. Neither diagnostic uses the batch
 subheader/status. The type code is a manual-sourced,
 synthetic module identity; no actual FX5 hardware identity is implied.
-First-slice device validation is restricted to M (0..7679),
-X/Y (0..255) and D (0..7999) synthetic points. Invalid PC numbers,
+Supported 1E devices are M (0..7679), X/Y (0..377 octal (0..255 decimal)), D (0..7999), TS/TN (0..511), CS/CN (0..255), and R (0..32767); timers and counters use plain independent storage (simulator policy: no PLC logic; see [FX5 1E device range research](research/FX5_SLMP_1E_DEVICE_RANGE_JY997D56001K.md)). Invalid PC numbers,
 monitoring timers, reserved fields, framing and data widths do not
 mutate memory. A normal 3E/4E reply uses end code `0x0000` (1E uses status `00H`). A 1E error reply uses end code `5BH` plus a 16-bit
 code from `virtual_plc/one_e.py` (`0xC051` bit points, `0xC052` word points, `0xC053` random bit points, `0xC054` random word points, `0xC056` address out of range, `0xC05B` unsupported 1E device, `0xC05C` request/alignment/frame-data error, `0xC05F` remote control denied, `0xC060` invalid bit-write data); simulator error mapping and physical
