@@ -143,7 +143,7 @@ See the [canonical CLI reference](../README.md#cli-reference),
   hardware PLC guarantee. UDP suppresses response sends during shutdown.
 - Accepted sockets use TCP_NODELAY; if configuring TCP_NODELAY or the accepted socket timeout raises `OSError`, only that accepted peer is closed and the port continues accepting future connections. EOF, bad framing or `idle_timeout` closes only that
   client.
-- `response_hook(response_bytes) -> bytes` transforms each complete encoded response
+- `response_hook(response_bytes) -> bytes-like` transforms each complete encoded response
   before the fault plan; TCP `FaultPlan` and UDP `UdpFaultPlan` schemas and actions are owned by [FAULTS.md](FAULTS.md).
 - Q/L/QnA/iQ-L/iQ-R have synthetic CPU identities; names occupy 16 bytes, filled with
   `text_pad` (default NUL).
@@ -224,6 +224,16 @@ See the [canonical CLI reference](../README.md#cli-reference),
   `.text_pad` stores the normalized integer.
   Booleans, byte strings, multi-character strings and out-of-range values raise
 ValueError.
+
+## UDP observability (opt-in)
+
+These are local simulator diagnostics, not physical PLC behavior, and are not exposed in MC/SLMP frames. `Server(udp_metrics=True)` enables counters and requires a UDP listener; the default is `False`. There is no CLI metrics flag.
+
+`get_udp_metrics()` returns `None` when disabled, otherwise a locked copy of cumulative counters aggregated across the server's UDP listeners and retained across stop/start: `received` counts datagrams returned by `recvfrom` (including a late shutdown receive); `rejected` counts datagrams that produced no reply before the fault plan; `sent` counts successful sends; `fault_dropped` counts fault-plan drops; and `send_errors` counts send failures. Receive errors are not counted.
+
+`get_listener_health()` returns `started`, `healthy`, and `listeners`; each listener entry has `transport`, `host`, `port`, `socket_open`, `worker_alive`, and `healthy`. Overall health requires a started server and every listener healthy. The snapshot does not restart workers. It attempts the lifecycle lock without waiting; if start or stop holds it, or the server is not started, it returns `started=False`, `healthy=False`, and an empty list.
+
+A terminal `recvfrom` error outside shutdown logs a warning and ends that UDP worker without retry. This includes Windows ICMP-related 10054; stop and start can restore the listener. For UDP, `response_hook` must return bytes-like data; an invalid result is rejected and the worker continues.
 
 ## Random access and common devices
 

@@ -4,8 +4,12 @@
 - Released version: v0.5.0; published v0.5.0 predates the multi-listener/1E/UDP-fault/offline-reference source features on main.
 - Upstream client oracle pin: `pymcprotocol==0.3.0` (`requirements-dev.txt`).
 - Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh 9/9 before merging (strict=false).
-- Open issues: #2, #5, #13, #14, #22, #25. Open PRs: #56-#63 (all #13 UDP/IPv6 slices).
+- Open issues: #2, #5, #13, #14, #22, #25. Open PRs: #56-#63 (all #13 UDP/IPv6 slices; #63 rebuild in progress).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
+
+## 2026-11-08 #13 observability rebuild
+
+#13 observability rebuilt from #63 onto main; #56-#62 superseded (see PR).
 
 ## 2026-11-02 #13 UDP client example and governance #54 (PR #55)
 
