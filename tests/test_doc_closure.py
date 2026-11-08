@@ -5,8 +5,16 @@ import re
 
 import virtual_plc
 from virtual_plc import commands, guide, one_e
+from virtual_plc.server import is_loopback_host
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_design_points_to_safety_predicate_and_cli_ssot():
+    design = (ROOT / "docs/DESIGN.md").read_text(encoding="utf-8")
+    assert is_loopback_host.__name__ in design
+    assert "build_parser is the SSOT" in design
+    assert "virtual-plc guide options" in design
 
 
 def _supported_1e_commands():

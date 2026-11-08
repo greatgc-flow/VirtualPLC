@@ -129,6 +129,8 @@ features of
 profile: **Q series**.
 Not for industrial use. Binds 127.0.0.1 by default.
 
+`virtual_plc/server.py` `is_loopback_host` is the single predicate used by `Server()` (server.py) and the CLI (__main__.py) for the localhost-only rule; [README Safety](../README.md#safety) is the user-facing SSOT.
+
 **Offline manufacturer vector oracle (separate from simulator networking):**
 `virtual_plc/oracle.py` defines four manual-derived 1E 15H/16H binary/ASCII
 read-only request/response cases and a minimal offline plan/template/compare CLI.
@@ -425,6 +427,8 @@ Canonical simulator policies and unverified vendor behaviors live in `virtual-pl
 
 
 ## 9. Server lifecycle and CLI
+
+CLI options: build_parser is the SSOT; see `virtual-plc guide options`.
 
 Use `virtual-plc guide options` (generated from argparse), `--help`, and the
 [human CLI reference](../README.md#cli-reference), plus
