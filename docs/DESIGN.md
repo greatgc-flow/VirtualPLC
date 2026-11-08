@@ -138,7 +138,7 @@ file output avoid confusing a manual/simulated result with real PLC parity.
 No socket or PLC control operation exists in this utility; see
 [offline procedure](PHYSICAL_ORACLE.md).
 
-**SLMP 1E (opt-in):** `virtual_plc/one_e.py` owns the 1E parser/codec and 1E-specific codes `0xC05B`, `0xC05F`, `0xC060` (shared codes in [BEHAVIOR](BEHAVIOR.md#slmp-1e-transport-opt-in)), with `Server.get_1e_remote_control_status()` and `reset_1e_remote_control()`; see [FX5 1E/3E protocol scope](research/FX5_SLMP_FRAME_SCOPE_20261031.md) for manual vectors.
+**SLMP 1E (opt-in):** `virtual_plc/one_e.py` owns the 1E parser/codec and 1E-specific codes `0xC05B`, `0xC05F`, `0xC060` (shared codes in [BEHAVIOR](BEHAVIOR.md#slmp-1e-transport-opt-in)), with `Server.get_1e_remote_control_status()` and `reset_1e_remote_control()`; `guide divergences` points to `BEHAVIOR` for the 1E contract, and [FX5 1E/3E protocol scope](research/FX5_SLMP_FRAME_SCOPE_20261031.md) owns manual vectors.
 
 **FX5 offline SLMP host-port metadata (not a runtime model):**
 `virtual_plc.ethernet.inspect_reference_slmp_port(model, port)` reads
