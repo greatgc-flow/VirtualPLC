@@ -14,8 +14,7 @@ Equivalent entry point: python -m virtual_plc guide
 Rules:
 - Safety: use localhost; never connect to equipment or production networks. See [README](https://raw.githubusercontent.com/greatgc-flow/VirtualPLC/main/README.md).
 - Client plctype and server profile must agree for iQ-R.
-- 1E contract, errors and simulator policies: [BEHAVIOR](https://raw.githubusercontent.com/greatgc-flow/VirtualPLC/main/docs/BEHAVIOR.md).
-- Optional 1E commands: 00H/01H/02H/03H, 04H/05H, 13H/14H, 15H/16H; see the contract above.
+- Optional 1E commands 00H/01H/02H/03H, 04H/05H, 13H/14H, 15H/16H; contract, errors and simulator policies: [BEHAVIOR](https://raw.githubusercontent.com/greatgc-flow/VirtualPLC/main/docs/BEHAVIOR.md).
 - CPU names have NUL fill by default; --text-pad 0x20 gives space fill.
 - Seed direct Memory before start; snapshot after stop; use clients for live writes.
 - Ethernet model and research-only references: `virtual-plc guide ethernet --json`.
