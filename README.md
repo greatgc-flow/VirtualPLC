@@ -70,11 +70,10 @@ closed without allocating workers. Embedded servers use
 A non-loopback host without explicit permission (or without an idle timeout
 when permitted) raises a configuration error before listening.
 
-## Multiple TCP/UDP listeners (unreleased source feature)
+## Multiple TCP/UDP listeners
 
 The legacy command `virtual-plc --port 5000` still opens **one TCP port**.
-From an updated source checkout (this change is not included in published v0.5.0),
-repeat `--listen` to expose several ports on **one shared virtual PLC**:
+Repeat `--listen` to expose several ports on **one shared virtual PLC**:
 
 ```powershell
 virtual-plc --listen tcp:5000 --listen tcp:5001 --listen udp:5000
@@ -115,7 +114,7 @@ an isolated, trusted **test** network only; never connect to production PLCs.
 
 For local UDP diagnostics, see [UDP observability](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md#udp-observability-opt-in).
 
-## UDP response faults (optional, unreleased)
+## UDP response faults (optional)
 
 UDP listeners support the independent drop/delay plan; see [FAULTS](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/FAULTS.md#udp-datagram-response-faults-opt-in).
 
@@ -155,11 +154,11 @@ Run `virtual-plc guide options` for the generated flag/default table, or `virtua
 
 Every topic accepts `--json`.
 
-## MELSEC iQ-F SLMP 1E mode (opt-in; source checkout)
+## MELSEC iQ-F SLMP 1E mode (opt-in)
 
 Enable with `--slmp-1e`; this selects a separate 1E-only parser on synthetic Q memory. See [BEHAVIOR](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md#slmp-1e-transport-opt-in) for command bounds, diagnostics, remote-control policy and error codes; this is not FX5 hardware parity.
 
-## Offline physical-oracle preparation (source checkout)
+## Offline physical-oracle preparation
 
 For separately and manually captured read-only 1E 15H model and 16H loopback
 responses, use `python -m virtual_plc.oracle plan`, `template`, and
@@ -168,7 +167,6 @@ a PLC** and never certifies real hardware. See [offline oracle procedure](docs/P
 
 ## FX5 vendor SLMP port preflight (offline reference)
 
-These offline helpers exist only in a source checkout; published v0.5.0 predates them.
 Offline helper `inspect_reference_slmp_port(model, port)` checks vendor recommended and reserved port ranges; see `virtual-plc guide ethernet --json` and [FX5 port scope](docs/research/FX5_SLMP_PORT_SCOPE_20261031.md).
 
 ## RnCPU built-in service connection settings (offline reference)
@@ -217,7 +215,7 @@ TCP/IP retransmit, response monitoring and alive timers are explicitly marked
 `reference_only`, not substituted for `--idle-timeout`. Legacy `--port 5000`
 and Q behavior remain unchanged without a model selection. Independent PLCs
 run in **separate OS processes**; all listeners within one process share the
-same PLC state. The feature is currently in source; published v0.5.0 predates it.
+same PLC state.
 
 ## Profiles, frames and encodings
 
@@ -317,7 +315,7 @@ More fixes: `virtual-plc guide troubleshoot`. Protocol details:
 
 ## Repository safeguards and verified handoff
 
-For the **unreleased source repository**, use the
+For the repository, use the
 [branch/release gate checklist](docs/governance/BRANCH_RELEASE_GATES_20261102.md)
 before configuring `main` protection or creating a `v*` tag.
 The checked-in [latest handoff prompt](docs/handoff/START_NEW_CHAT_VIRTUALPLC_20261102.md)
@@ -357,7 +355,6 @@ Licensed under [MIT](https://github.com/greatgc-flow/VirtualPLC/blob/main/LICENS
 
 ### RnCPU built-in Ethernet remote RUN/STOP setting check (offline reference)
 
-These offline helpers exist only in a source checkout; published v0.5.0 predates them.
 Offline helper `inspect_reference_rncpu_remote_opening()` checks vendor opening settings; see `virtual-plc guide ethernet --json` and [RnCPU opening guide](docs/research/RNCPU_REMOTE_OPENING_SAFETY_20261101.md).
 
 ### R04CPU built-in Ethernet A038H offline timer preflight
