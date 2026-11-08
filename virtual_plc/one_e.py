@@ -9,9 +9,13 @@ from .memory import OutOfRange
 
 # Deliberately narrow, manual-described FX5 CPU device subset. Other devices
 # are refused, rather than inheriting the synthetic Q CPU's entire catalog.
+# Timers and counters are plain storage only (simulator policy: no PLC logic).
 DEVICES = {
     "M": ("bit", 7679), "X": ("bit", 255), "Y": ("bit", 255),
     "D": ("word", 7999),
+    "TS": ("bit", 511), "TN": ("word", 511),
+    "CS": ("bit", 255), "CN": ("word", 255),
+    "R": ("word", 32767),
 }
 READ_MAX = {0: 256, 1: 64}
 WRITE_MAX = {2: 160, 3: 64}
