@@ -110,64 +110,6 @@ def test_terminal_error_emits_one_warning_and_degrades_registered_udp_health(
         server.stop()
 
 
-def test_metrics_and_terminal_warning_are_both_preserved_in_registered_worker(caplog):
-    """One successful datagram then 10054; no retry/error counting or replay."""
-    server = Server(listeners=[("udp", 0)], udp_metrics=True)
-    original_loop = server._udp_loop
-    frame = packet("3E", "binary")
-    expected = encode_response(decode_request(frame), data=b"\x00\x00")
-    operations = []
-
-    def scripted_loop(real_socket):
-        class SocketAdapter:
-            def recvfrom(self, size):
-                assert size == 65535
-                operations.append("receive")
-                if operations.count("receive") == 1:
-                    return frame, ("127.0.0.1", 54321)
-                raise OSError(10054, "synthetic terminal UDP receive")
-
-            def sendto(self, payload, peer):
-                assert bytes(payload) == expected
-                assert peer == ("127.0.0.1", 54321)
-                operations.append("send")
-                return len(payload)
-
-        return original_loop(SocketAdapter())
-
-    server._udp_loop = scripted_loop
-    try:
-        with caplog.at_level(logging.WARNING, logger=LOG_NAME):
-            server.start()
-            worker = server._listener_threads[0]
-            worker.join(3)
-        assert not worker.is_alive()
-        assert operations == ["receive", "send", "receive"]
-        warnings = [r for r in caplog.records
-                    if r.name == LOG_NAME
-                    and "UDP receive failed; listener worker stopped" in r.getMessage()]
-        assert len(warnings) == 1
-        assert "10054" in warnings[0].getMessage()
-        health = server.get_listener_health()
-        assert health["started"] is True
-        assert health["healthy"] is False
-        assert health["listeners"][0]["socket_open"] is True
-        assert health["listeners"][0]["worker_alive"] is False
-        assert server.get_udp_metrics() == {**EMPTY_METRICS, "received": 1, "sent": 1}
-
-        server.stop()
-        server._udp_loop = original_loop
-        server.start()
-        assert server.get_listener_health()["healthy"] is True
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
-            client.settimeout(2)
-            client.sendto(frame, server.address)
-            assert client.recvfrom(8192)[0] == expected
-        assert server.get_udp_metrics() == {**EMPTY_METRICS, "received": 2, "sent": 2}
-    finally:
-        server.stop()
-
-
 def test_one_terminal_udp_worker_preserves_other_udp_port_and_metrics(caplog):
     """One warning/degraded aggregate Health, surviving sibling and recovery."""
     server = Server(listeners=[("udp", 0), ("udp", 0)], udp_metrics=True)

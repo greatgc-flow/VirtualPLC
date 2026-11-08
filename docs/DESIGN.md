@@ -265,6 +265,8 @@ any nonlocal bind, with no UDP timeout semantics implied. A separate
 process provides an independent PLC instance. Physical PLC behavior remains
 unverified; this is a simulator transport policy only.
 
+UDP observability semantics are specified in [BEHAVIOR.md](BEHAVIOR.md#udp-observability-opt-in).
+
 ### UDP datagram response faults (PR #52)
 
 Separate `UdpFaultPlan` (`virtual_plc/udp_faults.py`) reserves post-dispatch UDP `drop`/`delay` atomically under its own plan lock and waits outside the shared PLC request lock; full schema and matching semantics are owned by [FAULTS.md](FAULTS.md#udp-datagram-response-faults-opt-in). Duplicate, corruption, reorder, scheduler and rate limiting are held for separate #13 slices.
