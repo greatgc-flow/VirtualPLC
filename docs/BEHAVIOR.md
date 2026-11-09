@@ -89,7 +89,7 @@ See the [canonical CLI reference](../README.md#cli-reference),
 
 - `.start()` binds/listens and starts workers before returning; `.address` is `(host,
   actual_port)`.
-- `Server(host=...)` permits only numeric loopback hosts or `localhost` by default; `start()` also checks every bound address and, if a name resolved off-loopback, closes all sockets and raises `NonLoopbackBindError` (an `OSError`).
+- `Server(host=...)` permits only numeric loopback hosts or `localhost` by default; `start()` also checks every bound address and, if a name resolved off-loopback, closes all sockets and raises `virtual_plc.server.NonLoopbackBindError`, an `OSError` subclass (not a package export; catch `OSError`).
   `allow_nonlocal=True` explicitly permits an external listener **only** when
   `idle_timeout` is a finite positive value; the CLI equivalent is
   `--allow-nonlocal --idle-timeout N`. This is not network authentication.
