@@ -10,11 +10,26 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     steps:
-      - uses: actions/checkout@v7
+      - name: Require a successful main CI push run for the tagged commit (fail closed)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG_SHA: ${{ github.sha }}
+        run: |
+          count=$(gh api "repos/$GH_REPO/actions/workflows/ci.yml/runs?event=push&branch=main&head_sha=$TAG_SHA&status=completed" \
+            --jq '[.workflow_runs[] | select(.head_sha == env.TAG_SHA and .event == "push" and .head_branch == "main" and .conclusion == "success")] | length')
+          if [ "${count:-0}" -lt 1 ]; then
+            echo "::error::No successful main CI push run for $TAG_SHA. Tag only after main CI is green."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
       - name: Verify release tag
@@ -36,7 +51,7 @@ jobs:
           .smoke/bin/python -m pip install --no-deps dist/*.whl
           .smoke/bin/python -I -m virtual_plc --version
           .smoke/bin/python -I -c "from virtual_plc import Server; s=Server(); s.start(); s.stop()"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-distributions
           path: dist/*
@@ -48,11 +63,11 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release-distributions
           path: dist
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
           skip-existing: true
   github-release:
@@ -61,7 +76,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release-distributions
           path: dist

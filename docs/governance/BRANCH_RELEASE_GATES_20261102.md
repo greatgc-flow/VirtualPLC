@@ -8,9 +8,10 @@
   - `deletion`, `non_fast_forward`: main cannot be deleted or force-pushed.
   - `pull_request`: **0 required approvals** (solo owner; required external
     review is an independent policy choice, not a project gate).
-  - `required_status_checks`, `strict=false`, nine GitHub Actions
-    (integration 15368) contexts: `build`; `test (ubuntu-latest, 3.10|3.11|3.12|3.13)`;
-    `test (windows-latest, 3.10|3.11|3.12|3.13)`.
+  - `required_status_checks`, `strict=false`, eleven GitHub Actions
+    (integration 15368) contexts: `build`; `test (ubuntu-latest, 3.10|3.11|3.12|3.13|3.14)`;
+    `test (windows-latest, 3.10|3.11|3.12|3.13|3.14)`. The `test-macos` job is
+    informational until green on main, then promoted by a ruleset update.
 - Tag ruleset **26796603** `release-tag-immutability`: active, `refs/tags/v*`,
   rules `update`, `deletion`, `non_fast_forward`, no bypass. Creation stays
   allowed: the release workflow triggers on new `v*` tags.
@@ -18,11 +19,13 @@
   pending (closed). Effective main rules via API: `deletion`,
   `non_fast_forward`, `pull_request`, `required_status_checks`.
 - Because `strict=false`, rebase each PR onto current main and get a fresh
-  9/9 before merging (peer-agreed).
+  11/11 before merging (peer-agreed).
 - Repository is **public**. Latest release **v0.6.0** (2026-11-08).
 - Release workflow triggers on **push of `v*` tag**: version/tag assertion,
   full test, wheel build, PyPI publish via trusted identity, GitHub release
-  assets. It does **not** automatically require main CI's 9 checks.
+  assets. Its first step fails closed unless a `ci.yml` **push** run on
+  `main` completed with `success` for the exact tagged commit, so tag only
+  after main CI is green.
 
 Ruleset reference:
 https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets
@@ -33,7 +36,7 @@ https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-
   authorization.** Doing so triggers `.github/workflows/release.yml`
   and can publish to PyPI when the `pypi` environment permits it.
 - Confirm source commit is approved/merged on main, separate main CI
-  is completed success 9/9 at the exact candidate SHA, and
+  is completed success (all required checks) at the exact candidate SHA, and
   `pyproject.toml` project.version equals the prospective tag.
 - Release tags are immutable after creation (tag ruleset); review the
   source commit, built artifacts and release evidence. Never treat

@@ -468,8 +468,11 @@ a mutation test proves that an added lookup-only name fails coverage.
 requirements-dev.txt is the only exact oracle pin; tests/oracle_pin.txt records
 only wheel version/hash/provenance metadata. The test extra declares compatibility.
 Dependency bumps must add tests for new features; a stale wheel hash alone
-does not block a bumped oracle. CI covers Linux/Windows on Python 3.10–3.13
-and installs built wheels in clean environments. Trusted publishing requires
+does not block a bumped oracle. CI covers Linux/Windows on Python 3.10–3.14
+and installs built wheels in clean environments. Python 3.10 stays supported
+after its October 2026 end of life until a user-approved drop (classifiers,
+CI matrix and `requires-python` move together; test-enforced). Third-party
+actions are pinned to commit SHAs (Dependabot updates them). Trusted publishing requires
 the repository PyPI publisher and GitHub environment pypi to be configured.
 
 Open verification items follow `virtual-plc guide divergences`. Windows SIGBREAK needs a console; TerminateProcess cannot flush snapshots.
