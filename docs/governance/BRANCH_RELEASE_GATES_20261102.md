@@ -1,6 +1,6 @@
-# VirtualPLC — GitHub branch and release gates (verified 2026-11-08)
+# VirtualPLC — GitHub branch and release gates (verified 2026-11-08; eleven-check update verified 2026-11-09)
 
-## Verified state: enforced (GitHub API, repo admin, 2026-11-08)
+## Verified state: enforced (GitHub API, repo admin, 2026-11-08; ruleset 26796594 re-verified 2026-11-09: active, 0 bypass, 11 checks)
 
 - Branch ruleset **26796594** `main-ci-pr-gate`: enforcement **active**, target
   `~DEFAULT_BRANCH`, `bypass_actors: []` (none). Emergency path: disable the
@@ -20,7 +20,7 @@
   `non_fast_forward`, `pull_request`, `required_status_checks`.
 - Because `strict=false`, rebase each PR onto current main and get a fresh
   11/11 before merging (peer-agreed).
-- Repository is **public**. Latest release **v0.6.0** (2026-11-08).
+- Repository is **public**. Latest release **v0.7.0** (2026-11-09).
 - Release workflow triggers on **push of `v*` tag**: version/tag assertion,
   full test, wheel build, PyPI publish via trusted identity, GitHub release
   assets. Its first step fails closed unless a `ci.yml` **push** run on
