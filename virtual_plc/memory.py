@@ -19,6 +19,14 @@ def valid_span(device, span):
     )
 
 
+def _integers(values, maximum, message):
+    """Validate every value before any storage changes; bools are stored as 0/1."""
+    values = list(values)
+    if not all(isinstance(value, int) and 0 <= value <= maximum for value in values):
+        raise ValueError(message)
+    return [int(value) for value in values]
+
+
 class Memory:
     """Unsigned point storage per device family; bit devices hold one bit per point."""
 
@@ -47,9 +55,7 @@ class Memory:
         return self._load(device, head, count)
 
     def write_words(self, device, head, values):
-        values = list(values)
-        if not all(0 <= value <= 0xFFFF for value in values):
-            raise ValueError("word out of range")
+        values = _integers(values, 0xFFFF, "word out of range")
         spec = self.check(device, head, len(values), "word")
         if spec.kind == "dword":
             # Heads address native 32-bit points; word counts stream low/high halves.
@@ -63,9 +69,7 @@ class Memory:
         self._store(device, head, values)
 
     def write_bits(self, device, head, values):
-        values = list(values)
-        if not all(value in (0, 1) for value in values):
-            raise ValueError("bit must be 0 or 1")
+        values = _integers(values, 1, "bit must be 0 or 1")
         self.check(device, head, len(values), "bit")
         self._store(device, head, values)
 
@@ -182,6 +186,8 @@ class Memory:
             for address, values in runs.items():
                 if not isinstance(address, str) or not isinstance(values, list) or not values:
                     raise ValueError("snapshot runs need decimal address keys and nonempty lists")
+                if not (address.isascii() and address.isdecimal()):
+                    raise ValueError("snapshot address keys must be plain ASCII decimal digits")
                 head = int(address, 10)
                 maximum = {"bit": 1, "word": 65535, "dword": 0xFFFFFFFF}[spec.kind]
                 if any(type(value) is not int or not 0 <= value <= maximum for value in values):

@@ -2,7 +2,6 @@
 
 from copy import deepcopy
 import json
-import math
 import os
 from pathlib import Path
 import socket
@@ -18,8 +17,10 @@ def _integer(value, minimum, maximum):
 
 
 def _seconds(value):
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
-        raise ValueError("seconds must be finite and nonnegative")
+    # Range first: math.isfinite() overflows on huge ints; NaN fails the range.
+    if (isinstance(value, bool) or not isinstance(value, (int, float))
+            or not 0 <= value <= threading.TIMEOUT_MAX):
+        raise ValueError("seconds must be in 0..threading.TIMEOUT_MAX")
 
 
 # Action type -> (required, optional) parameter names; also drives `virtual-plc guide faults`.

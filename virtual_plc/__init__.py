@@ -10,7 +10,7 @@ except PackageNotFoundError:
 from .ethernet import EthernetSettings
 from .faults import FaultPlan
 from .udp_faults import UdpFaultPlan
-from .memory import Memory
+from .memory import Memory, OutOfRange
 from .server import Server
 
-__all__ = ["Server", "FaultPlan", "UdpFaultPlan", "Memory", "EthernetSettings", "__version__"]
+__all__ = ["Server", "FaultPlan", "UdpFaultPlan", "Memory", "OutOfRange", "EthernetSettings", "__version__"]
