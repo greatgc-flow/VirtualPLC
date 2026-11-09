@@ -9,6 +9,10 @@
 - Release gate: tag only a main commit whose `ci.yml` push run succeeded (release.yml enforces it).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
 
+## 2026-11-09 session close
+
+v0.7.0 is published and verified: PyPI and GitHub assets match, and a clean install from PyPI passed smoke. Independent review scored 100/100. The session records (ballots, consensus, reviews, process lessons) are archived on #25. Next candidates: #13 optional hardware-free scope, #78, #79, and promoting `test-macos` to a required check once it is stably green. #2, #5, #68 and #69 stay blocked on vendor or physical evidence.
+
 ## 2026-11-09 release 0.7.0 — release-note source
 
 Post-0.6.0 improvement round (unanimous ballot ag/cc/cx + independent Fable review; #75 #76 #77 #80 #81 #82 #83). Behaviour changes to list first in release notes:
