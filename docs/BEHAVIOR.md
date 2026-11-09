@@ -39,6 +39,8 @@ storage ranges and alignment before one atomic commit. Duplicate destinations
 are applied in request order (last value wins); invalid later records never
 partially mutate memory.
 
+In 1E, `max_points` also caps random writes and counts word access to bit devices as 16 bit points per word (including the sum across random records), whereas 3E/4E random access is independent of `max_points`.
+
 The optional `Server(slmp_1e=True, slmp_1e_run_switch="STOP", initial_state="STOP")`
 (or CLI `--slmp-1e --slmp-1e-run-switch STOP --initial-state STOP`) models
 Mitsubishi manual p.132: authorized 13H remote RUN returns normal success,
@@ -87,7 +89,7 @@ See the [canonical CLI reference](../README.md#cli-reference),
 
 - `.start()` binds/listens and starts workers before returning; `.address` is `(host,
   actual_port)`.
-- `Server(host=...)` permits only numeric loopback hosts or `localhost` by default.
+- `Server(host=...)` permits only numeric loopback hosts or `localhost` by default; `start()` also checks every bound address and, if a name resolved off-loopback, closes all sockets and raises `NonLoopbackBindError` (an `OSError`).
   `allow_nonlocal=True` explicitly permits an external listener **only** when
   `idle_timeout` is a finite positive value; the CLI equivalent is
   `--allow-nonlocal --idle-timeout N`. This is not network authentication.
@@ -142,7 +144,7 @@ See the [canonical CLI reference](../README.md#cli-reference),
   request lock re-checks shutdown and is discarded. An already executing request is not rolled
   back or forcibly canceled. This is simulated lifecycle policy, not a
   hardware PLC guarantee. UDP suppresses response sends during shutdown.
-- Accepted sockets use TCP_NODELAY; if configuring TCP_NODELAY or the accepted socket timeout raises `OSError`, only that accepted peer is closed and the port continues accepting future connections. EOF, bad framing or `idle_timeout` closes only that
+- Accepted sockets use TCP_NODELAY; if configuring TCP_NODELAY or the accepted socket timeout raises `OSError`, only that accepted peer is closed and the port continues accepting future connections. A reset/aborted `accept()` skips only that peer; any other `accept()` error outside shutdown logs a warning (`TCP accept failed`) and ends that TCP listener worker, visible in `get_listener_health()`. EOF, bad framing or `idle_timeout` closes only that
   client.
 - `response_hook(response_bytes) -> bytes-like` transforms each complete encoded response
   before the fault plan; on TCP a non-bytes-like result closes only that connection ("invalid response_hook result"). TCP `FaultPlan` and UDP `UdpFaultPlan` schemas and actions are owned by [FAULTS.md](FAULTS.md).
@@ -232,11 +234,11 @@ ValueError.
 
 These are local simulator diagnostics, not physical PLC behavior, and are not exposed in MC/SLMP frames. `Server(udp_metrics=True)` enables counters and requires a UDP listener; the default is `False`. There is no CLI metrics flag.
 
-`get_udp_metrics()` returns `None` when disabled, otherwise a locked copy of cumulative counters aggregated across the server's UDP listeners and retained across stop/start: `received` counts datagrams returned by `recvfrom` (including a late shutdown receive); `rejected` counts datagrams that produced no reply before the fault plan; `sent` counts successful sends; `fault_dropped` counts fault-plan drops; and `send_errors` counts send failures. Receive errors are not counted.
+`get_udp_metrics()` returns `None` when disabled, otherwise a locked copy of cumulative counters aggregated across the server's UDP listeners and retained across stop/start: `received` counts datagrams returned by `recvfrom` (including a late shutdown receive); `rejected` counts datagrams that produced no reply before the fault plan; `sent` counts successful sends; `fault_dropped` counts fault-plan drops; `send_errors` counts send failures; and `receive_resets` counts `recvfrom` connection resets (Windows ICMP port unreachable, 10054). Other receive errors are not counted.
 
 `get_listener_health()` returns `started`, `healthy`, and `listeners`; each listener entry has `transport`, `host`, `port`, `socket_open`, `worker_alive`, and `healthy`. Overall health requires a started server and every listener healthy. The snapshot does not restart workers. It attempts the lifecycle lock without waiting; if start or stop holds it, or the server is not started, it returns `started=False`, `healthy=False`, and an empty list.
 
-A terminal `recvfrom` error outside shutdown logs a warning and ends that UDP worker without retry. This includes Windows ICMP-related 10054; stop and start can restore the listener. For UDP, `response_hook` must return bytes-like data; an invalid result is rejected and the worker continues.
+A `recvfrom` connection reset (Windows ICMP-related 10054 after a client closed its port) is not terminal: the worker logs one warning, counts it and keeps serving. Any other `recvfrom` error outside shutdown logs a warning and ends that UDP worker without retry; stop and start can restore the listener. For UDP, `response_hook` must return bytes-like data; an invalid result is rejected and the worker continues.
 
 ## Random access and common devices
 
@@ -260,7 +262,7 @@ The existing server lock covers the whole request, including reads. Writes
 then apply in wire order (word section first), so later duplicate or overlapping
 entries overwrite earlier ones.
 
-Random-access point limits and `0xC053` / `0xC054` error codes follow `WIRE_CLASSES` in `virtual_plc/profiles.py` and `random_access` in `virtual_plc/commands.py` (see [Public API](#public-api) above). Check order in `random_access`: zero total count, then over-limit, then payload length/format (`C057`) first, then per-entry access/alignment (`C05C`) or device range (`C056`) checks (awaiting manual verification). Dwords over bit devices span 32 packed points with 16-point head alignment. The client rejects 256 before
+Random-access point limits and `0xC053` / `0xC054` error codes follow `WIRE_CLASSES` in `virtual_plc/profiles.py` and the shared checks in `virtual_plc/commands.py` (see [Public API](#public-api) above). Check order for both binary and ASCII batch/random requests: complete count fields, zero total count, over-limit count, exact wire payload length (`C057`), then device/value/access/alignment (`C05C`) or device range (`C056`) checks (awaiting manual verification). Zero and over-limit counts take precedence even with short/extra payloads or bad devices: batch word/bit returns `C051`/`C052`, random word/bit returns `C054`/`C053`; the one exception is a zero random count followed by any data, which returns `C057` (the established binary rule, now on both wires). Incomplete fixed batch headers retain `C05C`; incomplete random count headers return `C057`. Malformed ASCII numeric fields (including non-hex values in an otherwise correctly sized request) retain `C05C`, rather than being blanket-remapped to `C057`. CPU type read (`0101`) requires an empty payload; any non-empty payload returns `C057` on 3E/4E binary and ASCII. These are simulator policies, not verified physical PLC behavior. Dwords over bit devices span 32 packed points with 16-point head alignment. The client rejects 256 before
 sending because a count field is only one byte. A valid raw count of 256 does
 not exist. Tests send over-limit and 256-entry frames and require rejection with
 no mutation.

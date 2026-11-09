@@ -4,6 +4,7 @@ Run only on local loopback. Combines registered-worker terminal receive warning,
 listener health degradation, multi-listener sibling isolation, opt-in UDP metrics
 and native Windows Winsock 10054 verification.
 """
+import errno
 import logging
 import socket
 import sys
@@ -19,7 +20,7 @@ LOG_NAME = "virtual_plc.server"
 EMPTY = {"started": False, "healthy": False, "listeners": []}
 EMPTY_METRICS = {
     "received": 0, "rejected": 0, "sent": 0,
-    "fault_dropped": 0, "send_errors": 0,
+    "fault_dropped": 0, "send_errors": 0, "receive_resets": 0,
 }
 
 
@@ -55,7 +56,7 @@ def test_terminal_error_emits_one_warning_and_degrades_registered_udp_health(
                 receives.append(length)
                 entered.set()
                 assert release.wait(4), "UDP receive gate timed out"
-                raise OSError(10054, "synthetic ICMP-like receive failure")
+                raise OSError(errno.EBADF, "synthetic terminal receive failure")
 
         return original_loop(FailingReceive())
 
@@ -92,7 +93,7 @@ def test_terminal_error_emits_one_warning_and_degrades_registered_udp_health(
                         and "UDP receive failed; listener worker stopped"
                         in record.getMessage()]
             assert len(warnings) == 1
-            assert "10054" in warnings[0].getMessage()
+            assert "synthetic terminal" in warnings[0].getMessage()
 
             old_endpoint = server._listener
             server.start()
@@ -135,7 +136,7 @@ def test_one_terminal_udp_worker_preserves_other_udp_port_and_metrics(caplog):
                 first_receives.append(length)
                 blocked.set()
                 assert release.wait(4), "terminal receive gate timed out"
-                raise OSError(10054, "synthetic terminal UDP error")
+                raise OSError(errno.EBADF, "synthetic terminal UDP error")
 
             def sendto(self, *_):
                 raise AssertionError("failed UDP worker must not send")
@@ -186,7 +187,7 @@ def test_one_terminal_udp_worker_preserves_other_udp_port_and_metrics(caplog):
                 and "UDP receive failed; listener worker stopped" in item.getMessage()
             ]
             assert len(warnings) == 1
-            assert "10054" in warnings[0].getMessage()
+            assert "synthetic terminal" in warnings[0].getMessage()
 
             server.start()
             assert server.get_listener_health()["healthy"] is False
@@ -256,8 +257,8 @@ def test_metrics_and_nonblocking_health_from_hook_while_stop_joins(caplog):
 
 @pytest.mark.skipif(sys.platform != "win32",
                     reason="native WSAECONNRESET requires Windows Winsock")
-def test_native_windows_10054_is_logged_unhealthy_then_recoverable(caplog):
-    """Genuine local Windows ICMP after reply to closed UDP client port."""
+def test_native_windows_10054_is_ignored_and_worker_keeps_serving(caplog):
+    """Genuine local Windows ICMP after reply to closed UDP client port (ballot I7a, user-approved)."""
     entered = threading.Event()
     release = threading.Event()
     observed_socket_errors = []
@@ -267,7 +268,7 @@ def test_native_windows_10054_is_logged_unhealthy_then_recoverable(caplog):
         assert release.wait(4), "response gate was not released"
         return response
 
-    server = Server(listeners=[("udp", 0)], response_hook=hook)
+    server = Server(listeners=[("udp", 0)], response_hook=hook, udp_metrics=True)
     original_loop = server._udp_loop
 
     def traced_loop(real_socket):
@@ -296,33 +297,28 @@ def test_native_windows_10054_is_logged_unhealthy_then_recoverable(caplog):
             client.sendto(packet("3E", "binary"), server.address)
             assert entered.wait(3), "native Windows UDP request not handled"
             client.close()
+            server._hook = None
             release.set()
-            worker = server._listener_threads[0]
-            worker.join(3)
-            if worker.is_alive() and not observed_socket_errors:
+            waiter = threading.Event()
+            for _ in range(30):  # the reset surfaces on the next recvfrom poll
+                if observed_socket_errors:
+                    break
+                waiter.wait(0.1)
+            if not observed_socket_errors:
                 pytest.skip("Windows runner suppressed ICMP Port Unreachable "
                             "to recvfrom; native 10054 not reproduced")
-            assert not worker.is_alive()
             assert observed_socket_errors == [10054]
-            report = server.get_listener_health()
-            assert report["started"] is True
-            assert report["healthy"] is False
-            assert report["listeners"][0]["socket_open"] is True
-            assert report["listeners"][0]["worker_alive"] is False
-
-            warnings = [record for record in caplog.records
-                        if record.name == LOG_NAME
-                        and "UDP receive failed; listener worker stopped"
-                        in record.getMessage()]
-            assert len(warnings) == 1
-            assert "10054" in warnings[0].getMessage()
-
-            server.stop()
-            assert server.get_listener_health() == EMPTY
-            server._udp_loop = original_loop
-            server.start()
+            assert server._listener_threads[0].is_alive(), "a receive reset must not stop the worker"
             assert server.get_listener_health()["healthy"] is True
-            _udp_read(server, 0)
+            _udp_read(server, 0)  # same worker keeps serving, no restart needed
+            assert server.get_udp_metrics()["receive_resets"] == 1
+
+            resets = [record for record in caplog.records
+                      if record.name == LOG_NAME and "receive reset ignored" in record.getMessage()]
+            assert len(resets) == 1
+            assert not any("listener worker stopped" in record.getMessage()
+                           for record in caplog.records if record.name == LOG_NAME)
+            server._udp_loop = original_loop
     finally:
         release.set()
         client.close()

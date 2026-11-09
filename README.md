@@ -121,7 +121,7 @@ UDP listeners support the independent drop/delay plan; see [FAULTS](https://gith
 ## Standalone UDP client example (source checkout)
 
 The pinned `pymcprotocol==0.3.0` client uses TCP. For UDP, use the
-stdlib-only, **IPv4 loopback-only** [3E binary D0 reader](examples/udp_read_d0.py).
+stdlib-only, **loopback-only** (127.0.0.1 or `--host ::1`) [3E binary D0 reader](examples/udp_read_d0.py).
 It sends exactly one complete request datagram and validates the sender,
 frame header, length, status and word size; malformed replies fail closed.
 No retry, authentication, physical PLC compatibility or nonlocal target.

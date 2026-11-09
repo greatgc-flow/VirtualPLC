@@ -42,6 +42,10 @@ def is_loopback_host(host):
         return False
 
 
+class NonLoopbackBindError(OSError):
+    """A loopback-only Server resolved its host to a non-loopback address."""
+
+
 class Server:
     def __init__(self, host="127.0.0.1", port=0, profile="Q", memory=None,
                  response_hook=None, max_points=None, idle_timeout=None,
@@ -98,6 +102,7 @@ class Server:
             raise ValueError("physical STOP requires initial_state=STOP")
         self.slmp_1e_run_switch = slmp_1e_run_switch
         self.slmp_1e = slmp_1e
+        self._allow_nonlocal = allow_nonlocal
         if not is_loopback_host(host):
             if not allow_nonlocal:
                 raise ValueError("non-loopback host requires allow_nonlocal=True (CLI: --allow-nonlocal)")
@@ -167,7 +172,7 @@ class Server:
         self._fault_plan = fault_plan
         self._udp_fault_plan = udp_fault_plan
         self._udp_metrics = ({"received": 0, "rejected": 0, "sent": 0,
-                              "fault_dropped": 0, "send_errors": 0}
+                              "fault_dropped": 0, "send_errors": 0, "receive_resets": 0}
                              if udp_metrics else None)
         self._udp_metrics_lock = threading.Lock()
         self._connection_number = 0
@@ -329,6 +334,14 @@ class Server:
                     listener.close()
                     raise
                 opened.append((transport, listener))
+                # A name such as "localhost" is resolved by the OS: verify the
+                # actual bound address before any worker starts.
+                if not self._allow_nonlocal:
+                    bound = listener.getsockname()[0]
+                    if not is_loopback_host(bound.split("%", 1)[0]):
+                        raise NonLoopbackBindError(
+                            f"{self._bind_address[0]!r} bound to non-loopback {bound}; "
+                            "use a literal loopback host or allow_nonlocal=True")
         except BaseException:
             for _, listener in opened:
                 listener.close()
@@ -433,12 +446,23 @@ class Server:
 
     def _udp_loop(self, listener):
         """UDP socket lifecycle: receive, validate, respond, or drop one datagram."""
+        resets_logged = False
         while not self._stopping.is_set():
             try:
                 # Receive the full OS datagram before enforcing our smaller cap:
                 # Winsock raises WSAEMSGSIZE on an undersized recvfrom buffer.
                 packet, peer = listener.recvfrom(65535)
             except socket.timeout:
+                continue
+            except ConnectionResetError as error:
+                # Windows reports an earlier reply's ICMP port-unreachable as
+                # WSAECONNRESET (10054) on the next recvfrom; the socket stays
+                # usable, so keep serving. Warn once per worker, count all.
+                self._count_udp("receive_resets")
+                if not resets_logged:
+                    resets_logged = True
+                    LOG.warning("UDP receive reset ignored (e.g. Windows ICMP port unreachable); "
+                                "further resets are only counted: %s", error)
                 continue
             except OSError as error:
                 if not self._stopping.is_set():
@@ -497,7 +521,13 @@ class Server:
                 connection, _ = listener.accept()
             except socket.timeout:
                 continue
-            except OSError:
+            except (ConnectionResetError, ConnectionAbortedError) as error:
+                # A peer that vanished before accept completed affects only itself.
+                self._log("close: TCP accept reset/aborted: %s", error)
+                continue
+            except OSError as error:
+                if not self._stopping.is_set():
+                    LOG.warning("TCP accept failed; listener worker stopped: %s", error)
                 return
             # An accepted peer may fail socket configuration (e.g. Winsock
             # TCP_NODELAY/timeout errors). Close only that peer; keep this
