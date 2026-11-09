@@ -346,8 +346,10 @@ python -m build
 python -m twine check dist/*
 ```
 
-CI tests Windows/Linux on Python 3.10–3.13 and installs built wheels in clean
-environments. Tags must match pyproject version; trusted publishing requires
+CI tests Windows/Linux on Python 3.10–3.14 (plus one macOS job), runs the bundled
+tests from the extracted sdist, and installs built wheels in clean
+environments. Tags must match pyproject version and point at a commit whose
+main CI succeeded; trusted publishing requires
 the PyPI publisher and GitHub environment pypi to be configured.
 
 See [DESIGN](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/DESIGN.md), [BEHAVIOR](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md) and [FAULTS](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/FAULTS.md).

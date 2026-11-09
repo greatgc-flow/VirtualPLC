@@ -3,7 +3,7 @@
 ## Current state
 - Released version: v0.6.0 (2026-11-08).
 - Upstream client oracle pin: `pymcprotocol==0.3.0` (`requirements-dev.txt`).
-- Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh 9/9 before merging (strict=false).
+- Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh required checks (11 after the 3.14 ruleset update) before merging (strict=false).
 - Open issues: #2, #5, #13, #14, #22, #25. Open PRs: #56-#63 (all #13 UDP/IPv6 slices; #63 rebuild in progress).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
 

@@ -255,7 +255,8 @@ def test_accepted_sockets_enable_tcp_nodelay(server_factory, monkeypatch):
                 peer = connection.getpeername()
             except OSError:
                 return result  # A listener or unconnected socket is not an accepted client.
-            configured.append((connection.getsockname(), peer, connection.getsockopt(level, option)))
+            # macOS reports an enabled TCP_NODELAY as a nonzero value (e.g. 4), not 1.
+            configured.append((connection.getsockname(), peer, int(bool(connection.getsockopt(level, option)))))
         return result
 
     monkeypatch.setattr(socket.socket, "setsockopt", record_option)
