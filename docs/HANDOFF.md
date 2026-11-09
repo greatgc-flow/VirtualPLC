@@ -1,7 +1,7 @@
 # VirtualPLC — Project Handoff
 
 ## Current state
-- Released version: v0.6.0 (2026-11-08).
+- Released version: v0.7.0 (2026-11-09); previous v0.6.0 (2026-11-08).
 - Upstream client oracle pin: `pymcprotocol==0.3.0` (`requirements-dev.txt`).
 - Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh required checks before merging (strict=false).
 - Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #13 (narrowed hardware-free scope), #25 (handoff), #78 (keyword-only API, 1.0), #79 (memory cell cap). Open PRs: none.
@@ -9,9 +9,9 @@
 - Release gate: tag only a main commit whose `ci.yml` push run succeeded (release.yml enforces it).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
 
-## Unreleased (candidate 0.7.0) — release-note source
+## 2026-11-09 release 0.7.0 — release-note source
 
-Post-0.6.0 improvement round (unanimous ballot ag/cc/cx + independent Fable review; #75 #76 #77 #80 #81 and this follow-up). Behaviour changes to list first in release notes:
+Post-0.6.0 improvement round (unanimous ballot ag/cc/cx + independent Fable review; #75 #76 #77 #80 #81 #82 #83). Behaviour changes to list first in release notes:
 - `Memory.write_words/write_bits` reject non-integer values (floats, strings) with ValueError before storing anything; bools still stored as 0/1.
 - `Memory.load` address keys must be plain ASCII decimal digits.
 - `idle_timeout`, fault `seconds`/`pause` and UDP delay above `threading.TIMEOUT_MAX` are rejected at configuration (CLI exits 2).
@@ -19,7 +19,7 @@ Post-0.6.0 improvement round (unanimous ballot ag/cc/cx + independent Fable revi
 - ASCII requests use the binary end-code order: truncated/extra ASCII payloads now C057 (was C05C); over-limit counts win over bad payloads. `0101` with a payload returns C057 (binary answered OK).
 - Windows UDP 10054 no longer stops the UDP worker (user-approved); new `receive_resets` metric key.
 - TCP `response_hook` must return bytes-like data (else that connection closes); `start()` refuses a host name that binds off-loopback (`NonLoopbackBindError`, an OSError).
-Fixes: cross-connection TCP stop race, UDP `rejected` count on unexpected errors, TCP accept warning/recovery. Additions: `OutOfRange` export, IPv6 UDP example. CI: SHA-pinned actions, Python 3.14, sdist test run, per-SHA main concurrency, release CI gate, informational macOS job.
+Fixes: cross-connection TCP stop race, UDP `rejected` count on unexpected errors, TCP accept warning/recovery. Additions: `OutOfRange` export, IPv6 UDP example. Packaging: the sdist now ships examples/ and tools/. CI: SHA-pinned actions, Python 3.14, sdist test run, per-SHA main concurrency, release CI gate, informational macOS job.
 
 ## 2026-11-08 release 0.6.0
 

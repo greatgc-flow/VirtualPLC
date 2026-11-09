@@ -164,13 +164,18 @@ def test_tcp_response_hook_must_return_bytes_like(slmp_1e):
     """M3: TCP validates the hook result like UDP; the bad connection closes cleanly."""
     import socket
     frame = req(1, head=0, count=1) if slmp_1e else request(data=device_data())
-    with Server(slmp_1e=slmp_1e, response_hook=lambda response: 123) as plc:
+    calls = []
+
+    def first_call_invalid(response):
+        calls.append(response)
+        return 123 if len(calls) == 1 else response
+
+    with Server(slmp_1e=slmp_1e, response_hook=first_call_invalid) as plc:
         with socket.create_connection(plc.address, timeout=2) as client:
             client.settimeout(2)
             client.sendall(frame)
             assert client.recv(64) == b""
-        # The same listener keeps serving other clients once the hook is fixed.
-        plc._hook = None
+        # The same listener keeps serving the next client (public API only).
         with socket.create_connection(plc.address, timeout=2) as client:
             client.settimeout(2)
             client.sendall(frame)

@@ -66,9 +66,9 @@ def test_udp_metrics_count_valid_invalid_and_oversized_on_real_loopback():
             client.sendto(b"Z" * 9000, server.address)
             assert udp_exchange(client, good, server.address) == encode_response(
                 decode_request(good), data=b"\x00\x00")
-        assert server.get_udp_metrics() == {
-            **EMPTY, "received": 3, "rejected": 2, "sent": 1,
-        }
+    assert server.get_udp_metrics() == {  # after stop(): counting finished
+        **EMPTY, "received": 3, "rejected": 2, "sent": 1,
+    }
 
 
 def test_udp_metrics_fault_drop_is_postdispatch_not_rejected():
@@ -87,9 +87,9 @@ def test_udp_metrics_fault_drop_is_postdispatch_not_rejected():
             assert udp_exchange(client, read, server.address) == encode_response(
                 decode_request(read), data=b"\x34\x12")
         assert server.memory.read_words("D", 0, 1) == [0x1234]
-        assert server.get_udp_metrics() == {
-            **EMPTY, "received": 2, "sent": 1, "fault_dropped": 1,
-        }
+    assert server.get_udp_metrics() == {  # after stop(): counting finished
+        **EMPTY, "received": 2, "sent": 1, "fault_dropped": 1,
+    }
 
 
 def test_udp_metrics_two_listeners_aggregate_per_instance():
@@ -101,9 +101,9 @@ def test_udp_metrics_two_listeners_aggregate_per_instance():
                 client.settimeout(2)
                 assert udp_exchange(client, read, (host, port)) == encode_response(
                     decode_request(read), data=b"\x00\x00")
-        assert server.get_udp_metrics() == {
-            **EMPTY, "received": 2, "sent": 2,
-        }
+    assert server.get_udp_metrics() == {  # after stop(): counting finished
+        **EMPTY, "received": 2, "sent": 2,
+    }
 
 
 def test_udp_metrics_restart_retains_cumulative_counts():
@@ -226,9 +226,11 @@ def test_udp_metrics_preserves_existing_bytes_like_response_hooks(wrapper):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
             client.settimeout(2)
             assert udp_exchange(client, frame, server.address) == expected
-        assert server.get_udp_metrics() == {
-            **EMPTY, "received": 1, "sent": 1,
-        }
+    # Read after stop(): the client can receive the reply before the worker
+    # increments "sent" (observed flake on CI ubuntu 3.14).
+    assert server.get_udp_metrics() == {
+        **EMPTY, "received": 1, "sent": 1,
+    }
 
 
 @pytest.mark.parametrize("frame,wire", [("3E", "binary"), ("4E", "ascii")])

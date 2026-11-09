@@ -137,7 +137,7 @@ between this raw UDP example and the tested TCP-only pinned client.
 
 ## CLI reference
 
-Run `virtual-plc guide options` for the generated flag/default table, or `virtual-plc --help`; see `virtual-plc guide run` for quick-start flags.
+Run `virtual-plc guide options` for the generated flag/default table, or `virtual-plc --help`; see `virtual-plc guide run` for quick-start flags. Long options must be spelled in full; abbreviations exit 2.
 
 | Guide topic | Contents |
 |---|---|
