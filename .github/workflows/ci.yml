@@ -32,6 +32,9 @@ jobs:
       - run: python -m pytest -q
   test-macos:
     # Informational until green on main; not a required ruleset check yet.
+    # continue-on-error keeps a red macOS job from failing the run that the
+    # release gate (release.yml) requires to conclude "success".
+    continue-on-error: true
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

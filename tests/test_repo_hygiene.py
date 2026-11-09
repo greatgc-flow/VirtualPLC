@@ -57,7 +57,9 @@ def test_ci_does_not_cancel_main_runs():
 def test_ci_has_one_macos_job():
     """F12: a single macOS job (not required until green on main)."""
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    assert "macos-latest" in ci
+    assert ci.count("runs-on: macos-latest") == 1
+    macos_job = ci.split("  test-macos:", 1)[1].split("\n  build:", 1)[0]
+    assert "continue-on-error: true" in macos_job, "informational job must not fail the run the release gate needs"
 
 
 @repo_only

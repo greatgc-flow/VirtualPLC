@@ -125,7 +125,7 @@ The `Server` constructor validates model/PLC profile matching before listening. 
 
 ## 6. Regression and verification
 
-`tests/test_ethernet_settings.py` provides table-driven model defaults, Q/R units/ranges, invalid JSON, override precedence, introspection without binding, profile mismatch, legacy-mode safety, TCP/UDP data-code isolation, shared RUN-write protection, STOP/enable overrides and source/fidelity reporting. CI covers Linux and Windows on Python 3.10–3.13.
+`tests/test_ethernet_settings.py` provides table-driven model defaults, Q/R units/ranges, invalid JSON, override precedence, introspection without binding, profile mismatch, legacy-mode safety, TCP/UDP data-code isolation, shared RUN-write protection, STOP/enable overrides and source/fidelity reporting. CI covers Linux and Windows on Python 3.10–3.14 (see the CI matrix guard in tests/test_repo_hygiene.py).
 
 Read-only discovery for unimplemented interfaces:
 
