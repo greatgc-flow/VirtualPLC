@@ -40,24 +40,54 @@ class CommandError(Exception):
     """A request rejected with the end code in args[0]."""
 
 
+def _check_data_shape(request, profile, max_points):
+    """Check counts and wire lengths before decoding any device or value."""
+    wire = profile.wire
+    ascii_wire = request.wire == "ascii"
+    scale = 2 if ascii_wire else 1
+    descriptor_size = (wire.ascii_code_size + wire.ascii_address_size
+                       if ascii_wire else wire.descriptor_size)
+    bit = request.subcommand == wire.bit_subcommand
+    write = request.command in (0x1401, 0x1402)
+    reader = Reader(request.data, request.wire)
+    if request.command in (0x0401, 0x1401):
+        if len(request.data) < descriptor_size + 2 * scale:
+            raise CommandError(EndCode.REQUEST_DATA_ERROR)
+        reader.take(descriptor_size)
+        points = reader.number(2)
+        cap = profile.batch_max.get((request.wire, "bit" if bit else "word"), 1 << 16)
+        if max_points is not None:
+            cap = min(cap, max_points)
+        if not 0 < points <= cap:
+            raise CommandError(EndCode.BIT_POINTS_OUT_OF_RANGE if bit else EndCode.POINTS_OUT_OF_RANGE)
+        expected = reader.offset
+        if write:
+            expected += (points if ascii_wire else (points + 1) // 2) if bit else 2 * points * scale
+    else:
+        counts = [reader.number(1) for _ in range(1 if bit else 2)]
+        total = sum(counts)
+        over = (total > wire.random_bit_max if bit else
+                counts[0] * 12 + counts[1] * 14 > wire.random_write_weight_max if write else
+                total > wire.random_read_max)
+        if total == 0 and len(request.data) != reader.offset:
+            raise CommandError(EndCode.DATA_LENGTH_MISMATCH)  # established binary rule, now on both wires
+        if total == 0 or over:
+            raise CommandError(EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE if bit else EndCode.RANDOM_POINTS_OUT_OF_RANGE)
+        widths = (wire.bit_value_size,) if bit else (2, 4)
+        expected = reader.offset + sum(count * (descriptor_size + (width * scale if write else 0))
+                                       for count, width in zip(counts, widths))
+    if len(request.data) != expected:
+        raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
+
+
 def batch(request, memory, max_points, control=None):
-    """Batch read (0401) or write (1401); the subcommand selects bit or word units."""
+    """Batch read (0401) or write (1401); shape was checked before normalization."""
     wire = memory.profile.wire
-    if len(request.data) < wire.descriptor_size + 2:
-        raise CommandError(EndCode.REQUEST_DATA_ERROR)
     reader = Reader(request.data, "binary")
     device, head = read_device(reader, memory.profile)
     points = reader.number(2)
     payload = request.data[reader.offset:]
     bit, write = request.subcommand == wire.bit_subcommand, request.command == 0x1401
-    cap = memory.profile.batch_max.get((request.wire, "bit" if bit else "word"), 1 << 16)
-    if max_points is not None:
-        cap = min(cap, max_points)
-    if not 0 < points <= cap:
-        raise CommandError(EndCode.BIT_POINTS_OUT_OF_RANGE if bit else EndCode.POINTS_OUT_OF_RANGE)
-    expected = ((points + 1) // 2 if bit else 2 * points) if write else 0
-    if len(payload) != expected:
-        raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
     try:
         if write:
             values = unpack_bits(payload, points) if bit else unpack_words(payload)
@@ -85,21 +115,7 @@ def random_access(request, memory, max_points, control=None):
     bit = request.subcommand == wire.bit_subcommand
     write = request.command == 0x1402
     count_size = 1 if bit else 2
-    if len(data) < count_size:
-        raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
     groups = ((data[0], wire.bit_value_size),) if bit else ((data[0], 2), (data[1], 4))
-    total = sum(count for count, _ in groups)
-    if total == 0:
-        if len(data) != count_size:
-            raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
-        raise CommandError(EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE if bit else EndCode.RANDOM_POINTS_OUT_OF_RANGE)
-    if bit and total > wire.random_bit_max:
-        raise CommandError(EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE)
-    if not bit and ((data[0] * 12 + data[1] * 14 > wire.random_write_weight_max) if write else (total > wire.random_read_max)):
-        raise CommandError(EndCode.RANDOM_POINTS_OUT_OF_RANGE)
-    expected = count_size + sum(count * (wire.descriptor_size + (width if write else 0)) for count, width in groups)
-    if len(data) != expected:
-        raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
     entries = []
     offset = count_size
     try:
@@ -145,6 +161,8 @@ def echo(request, memory, max_points, control=None):
 
 
 def cputype(request, memory, max_points, control=None):
+    if request.data:
+        raise CommandError(EndCode.DATA_LENGTH_MISMATCH)
     profile = memory.profile
     pad = 0 if control is None else control.text_pad
     return profile.cpu_name.encode("ascii").ljust(16, bytes([pad])) + struct.pack("<H", profile.cpu_code)
@@ -230,8 +248,10 @@ def dispatch(request, memory, max_points, control=None):
                 and control.state == "RUN"
                 and not ethernet.values["allow_write_during_run"]):
             raise CommandError(EndCode.RUN_WRITE_DISABLED)
-        # Control uses the shared Reader directly; data handlers consume canonical binary.
-        parsed = request if handler is control_request else normalize_request(
+        if handler in (batch, random_access):
+            _check_data_shape(request, memory.profile, max_points)
+        # Control and CPU type use raw data; data handlers consume canonical binary.
+        parsed = request if handler in (control_request, cputype) else normalize_request(
             request, memory.profile, ascii_dword_order=control.ascii_dword_order if control is not None else "swapped",
             text_pad=control.text_pad if control is not None else 0,
             ascii_numbering=control.ascii_numbering if control is not None else "compat")
@@ -239,7 +259,7 @@ def dispatch(request, memory, max_points, control=None):
     except CommandError as error:
         return error.args[0], b""
     except LengthError:
-        code = EndCode.DATA_LENGTH_MISMATCH if handler is control_request else EndCode.REQUEST_DATA_ERROR
+        code = EndCode.DATA_LENGTH_MISMATCH if handler in (control_request, batch, random_access) else EndCode.REQUEST_DATA_ERROR
         return code, b""
     except ValueError:
         return EndCode.REQUEST_DATA_ERROR, b""

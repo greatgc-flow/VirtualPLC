@@ -191,8 +191,8 @@ def test_control_table_and_error_provenance():
         assert ERROR_CODES[code] == {"name": name, "source": source, "status": "unverified"}
 
 
-def test_older_ascii_data_error_mapping_is_preserved(server_factory):
+def test_truncated_ascii_word_payload_is_a_length_error_like_binary(server_factory):
     server = server_factory()
     with socket.create_connection(server.address, timeout=1) as connection:
-        # Truncated ASCII word payload: the established M3 policy is C05C.
-        assert transact(connection, "3E", "ascii", 0x1401, b"D*000000000112") == (0xC05C, error_info("ascii", 0x1401))
+        # Truncated ASCII word payload: C057, matching binary (ballot I10; was C05C before 0.7).
+        assert transact(connection, "3E", "ascii", 0x1401, b"D*000000000112") == (0xC057, error_info("ascii", 0x1401))
