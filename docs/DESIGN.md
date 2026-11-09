@@ -427,7 +427,7 @@ never touches SM/SD, apart from the explicit SD203 state mirror on transitions.
 
 ## 8. Open items
 
-Canonical simulator policies and unverified vendor behaviors live in `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`). Remaining open design items: SM/SD per-range read-only enforcement, real-PLC unaligned bit-head word reads, and bit-device dword views; see [FX5 1E/3E frame distinction and limits](research/FX5_SLMP_FRAME_SCOPE_20261031.md) and [BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in).
+Canonical simulator policies and unverified vendor behaviors live in `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`). Remaining open design items: SM/SD per-range read-only enforcement, real-PLC unaligned bit-head word reads, bit-device dword views, keyword-only `Server` parameters for 1.0 (#78) and an optional stored-cell cap (#79); see [FX5 1E/3E frame distinction and limits](research/FX5_SLMP_FRAME_SCOPE_20261031.md) and [BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in).
 
 
 ## 9. Server lifecycle and CLI

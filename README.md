@@ -318,8 +318,8 @@ More fixes: `virtual-plc guide troubleshoot`. Protocol details:
 For the repository, use the
 [branch/release gate checklist](docs/governance/BRANCH_RELEASE_GATES_20261102.md)
 before configuring `main` protection or creating a `v*` tag.
-The checked-in [latest handoff prompt](docs/handoff/START_NEW_CHAT_VIRTUALPLC_20261102.md)
-records technical state and CI evidence; fetch remote main first.
+The [handoff log](docs/HANDOFF.md) records current state and CI evidence
+(older prompts under `docs/handoff/` are historical); fetch remote main first.
 An active GitHub ruleset cannot be inferred from a successful CI run.
 
 ## Development and releases
