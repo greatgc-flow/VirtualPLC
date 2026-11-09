@@ -174,7 +174,7 @@ def test_listener_health_called_by_udp_hook_during_stop_never_deadlocks():
             server.stop()
 
 
-@pytest.mark.parametrize("error_code", [10054, 10038])
+@pytest.mark.parametrize("error_code", [9, 10038])  # EBADF, WSAENOTSOCK; resets (10054) are non-terminal
 def test_unexpected_udp_receive_error_is_reported_once_and_worker_stops(
         caplog, error_code):
     """Terminal receive errors must not silently strand a dead UDP worker."""

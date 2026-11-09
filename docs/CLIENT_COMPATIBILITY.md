@@ -56,4 +56,4 @@ No runtime behavior changes are introduced by this document.
 
 ## Raw UDP client example (source checkout only)
 
-The [standalone 3E binary D0 reader](../examples/udp_read_d0.py) uses Python's standard-library `socket` module on IPv4 loopback only (checking response source, frame header, length, and end code); it is a minimal simulator example (no retries, 1E/4E, or ASCII) and follows [README safety](../README.md#30-second-quickstart).
+The [standalone 3E binary D0 reader](../examples/udp_read_d0.py) uses Python's standard-library `socket` module on loopback only (IPv4 or `--host ::1`) (checking response source, frame header, length, and end code); it is a minimal simulator example (no retries, 1E/4E, or ASCII) and follows [README safety](../README.md#30-second-quickstart).
