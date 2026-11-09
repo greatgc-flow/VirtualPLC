@@ -1,5 +1,8 @@
 # VirtualPLC — NEW CHAT START / 2026-11-02 (RUNTIME + GOVERNANCE)
 
+> **Historical snapshot.** Superseded by the "Current state" section of [docs/HANDOFF.md](../HANDOFF.md)
+> (for example, 11 required checks on Python 3.10–3.14 since 2026-11-09).
+
 ## Role, authorization and priority
 
 You are continuing development of the GitHub repository

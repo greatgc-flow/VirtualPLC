@@ -3,8 +3,8 @@
 ## Current state
 - Released version: v0.6.0 (2026-11-08).
 - Upstream client oracle pin: `pymcprotocol==0.3.0` (`requirements-dev.txt`).
-- Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh required checks (11 after the 3.14 ruleset update) before merging (strict=false).
-- Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #13 (narrowed hardware-free scope), #25 (handoff), #78 (keyword-only API, 1.0), #79 (memory cell cap). Open PRs: none besides this follow-up.
+- Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh required checks before merging (strict=false).
+- Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #13 (narrowed hardware-free scope), #25 (handoff), #78 (keyword-only API, 1.0), #79 (memory cell cap). Open PRs: none.
 - Ruleset 26796594 requires 11 checks (build + Ubuntu/Windows 3.10–3.14) since 2026-11-09; `test-macos` is informational.
 - Release gate: tag only a main commit whose `ci.yml` push run succeeded (release.yml enforces it).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).

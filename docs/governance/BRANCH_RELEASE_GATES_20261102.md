@@ -15,7 +15,7 @@
 - Tag ruleset **26796603** `release-tag-immutability`: active, `refs/tags/v*`,
   rules `update`, `deletion`, `non_fast_forward`, no bypass. Creation stays
   allowed: the release workflow triggers on new `v*` tags.
-- Verification: throwaway PR #66 could not be merged while the 9 checks were
+- Verification: throwaway PR #66 could not be merged while the (then nine) checks were
   pending (closed). Effective main rules via API: `deletion`,
   `non_fast_forward`, `pull_request`, `required_status_checks`.
 - Because `strict=false`, rebase each PR onto current main and get a fresh
