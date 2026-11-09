@@ -433,7 +433,7 @@ CLI options: build_parser is the SSOT; see `virtual-plc guide options`.
 Use `virtual-plc guide options` (generated from argparse), `--help`, and the
 [human CLI reference](../README.md#cli-reference), plus
 [embedding/snapshot examples](../README.md#memory-seeding-snapshots-and-embedding).
-Package exports are `Server`, `FaultPlan`, `UdpFaultPlan`, `Memory`, `EthernetSettings` and `__version__`.
+Package exports are `Server`, `FaultPlan`, `UdpFaultPlan`, `Memory`, `OutOfRange`, `EthernetSettings` and `__version__`.
 Context exit stops/joins workers. Seed direct memory before start and take
 snapshots after stop; wire requests remain the synchronization boundary.
 Invalid configuration fails before bind. Bind failures exit 1 without a

@@ -3,7 +3,6 @@
 import socket
 import ipaddress
 import logging
-import math
 import sys
 import threading
 
@@ -20,6 +19,15 @@ LOG = logging.getLogger(__name__)
 
 ACCEPT_POLL = 0.1  # seconds between stop checks of the accept/receive loops
 MAX_UDP_DATAGRAM = 8192  # one complete MC frame per datagram; bound allocation
+
+
+def _bytes_like(value):
+    """True when a response_hook result can be sent as-is (bytes-like)."""
+    try:
+        memoryview(value)
+    except TypeError:
+        return False
+    return True
 
 
 def is_loopback_host(host):
@@ -46,9 +54,10 @@ class Server:
             raise ValueError("port must be an integer 0..65535")
         if max_points is not None and (type(max_points) is not int or max_points < 1):
             raise ValueError("max_points must be None or an integer >= 1")
+        # Range first (NaN fails it); math.isfinite() would overflow on huge ints.
         if idle_timeout is not None and (type(idle_timeout) not in (int, float)
-                or not math.isfinite(idle_timeout) or idle_timeout <= 0):
-            raise ValueError("idle_timeout must be None or a finite number > 0")
+                or not 0 < idle_timeout <= threading.TIMEOUT_MAX):
+            raise ValueError("idle_timeout must be None or a number in (0, threading.TIMEOUT_MAX]")
         if type(allow_nonlocal) is not bool:
             raise ValueError("allow_nonlocal must be a boolean")
         if type(max_clients) is not int or max_clients < 1:
@@ -415,10 +424,8 @@ class Server:
 
         if self._hook is not None:
             response = self._hook(response)
-            try:
-                memoryview(response)
-            except TypeError as error:
-                raise ValueError("UDP response_hook must return bytes-like data") from error
+            if not _bytes_like(response):
+                raise ValueError("UDP response_hook must return bytes-like data")
         if len(response) > MAX_UDP_DATAGRAM:
             self._log("UDP drop: oversized %sresponse", "1E " if self.slmp_1e else "")
             return None
@@ -453,6 +460,7 @@ class Server:
                 self._log("UDP drop: %s", error)
                 continue
             except Exception as error:
+                self._count_udp("rejected")  # no reply was produced for this datagram
                 print(f"UDP worker: {type(error).__name__}: {error}", file=sys.stderr, flush=True)
                 continue
             if self._stopping.is_set():
@@ -565,6 +573,10 @@ class Server:
                     if self.slmp_1e:
                         packet = bytes(buffer[:size])
                         with self._request_lock:
+                            # Another connection may have held the lock while
+                            # stop() was signalled: do not start this request.
+                            if self._stopping.is_set():
+                                return "server shutdown"
                             response = dispatch_1e(packet, self.memory, self._max_points,
                                                    control=self, requester=connection_id)
                     else:
@@ -575,6 +587,8 @@ class Server:
                 if self.slmp_1e:
                     if self._hook is not None:
                         response = self._hook(response)
+                        if not _bytes_like(response):
+                            return "invalid response_hook result"
                     try:
                         connection.sendall(response)
                     except OSError:
@@ -583,6 +597,8 @@ class Server:
                 if self.ethernet is not None and request.wire != self.ethernet.values["communication_data_code"]:
                     return "communication data code mismatch"
                 with self._request_lock:
+                    if self._stopping.is_set():
+                        return "server shutdown"
                     end_code, data = dispatch(request, self.memory, self._max_points, self)
                     action = None
                     if self._fault_plan is not None:
@@ -593,6 +609,8 @@ class Server:
                 response = encode_response(request, end_code, data, ascii_dword_order=self.ascii_dword_order)
                 if self._hook is not None:
                     response = self._hook(response)
+                    if not _bytes_like(response):
+                        return "invalid response_hook result"
                 try:
                     if action is None:
                         connection.sendall(response)

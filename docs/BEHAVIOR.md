@@ -22,7 +22,7 @@ words / 10 aligned bit groups), plus 04H random bit writes (1–80 points), 05H 
 **Unlike batch responses**, `15H` replies with only model code `F3H`
 (binary) or `F3` (ASCII); `16H` echoes only the original byte count
 and data (binary length byte; ASCII two-character hexadecimal length).
-The 16H loopback length is 1–254 bytes. Neither diagnostic uses the batch
+The 16H loopback length is 1–254 bytes; a non-hexadecimal ASCII loopback payload closes the TCP connection as malformed framing (simulator policy). Neither diagnostic uses the batch
 subheader/status. The type code is a manual-sourced,
 synthetic module identity; no actual FX5 hardware identity is implied.
 Supported 1E devices are M (0..7679), X/Y (0..377 octal (0..255 decimal)), D (0..7999), TS/TN (0..511), CS/CN (0..255), and R (0..32767); timers and counters use plain independent storage (simulator policy: no PLC logic; see [FX5 1E device range research](research/FX5_SLMP_1E_DEVICE_RANGE_JY997D56001K.md)). Invalid PC numbers,
@@ -138,13 +138,14 @@ See the [canonical CLI reference](../README.md#cli-reference),
   lifecycle lock is separate from the shared TCP/UDP request lock.
 - On TCP, a recv may contain multiple complete, pipelined requests. After
   shutdown is signaled, the frame-processing loop does not start dispatch of
-  the next buffered request. An already executing request is not rolled
+  the next buffered request, and a request still waiting for the shared
+  request lock re-checks shutdown and is discarded. An already executing request is not rolled
   back or forcibly canceled. This is simulated lifecycle policy, not a
   hardware PLC guarantee. UDP suppresses response sends during shutdown.
 - Accepted sockets use TCP_NODELAY; if configuring TCP_NODELAY or the accepted socket timeout raises `OSError`, only that accepted peer is closed and the port continues accepting future connections. EOF, bad framing or `idle_timeout` closes only that
   client.
 - `response_hook(response_bytes) -> bytes-like` transforms each complete encoded response
-  before the fault plan; TCP `FaultPlan` and UDP `UdpFaultPlan` schemas and actions are owned by [FAULTS.md](FAULTS.md).
+  before the fault plan; on TCP a non-bytes-like result closes only that connection ("invalid response_hook result"). TCP `FaultPlan` and UDP `UdpFaultPlan` schemas and actions are owned by [FAULTS.md](FAULTS.md).
 - Q/L/QnA/iQ-L/iQ-R have synthetic CPU identities; names occupy 16 bytes, filled with
   `text_pad` (default NUL).
 - Echo response: length uint16 + text. ASCII encodes numeric fields as uppercase hex.
@@ -181,7 +182,9 @@ See the [canonical CLI reference](../README.md#cli-reference),
   manual-derived, code assignment unverified, real-PLC verification still open in #2).
   `max_points` defaults to `None` and acts as an optional additional batch cap
   (`min(manual_cap, max_points)` when set); direct `Memory` calls (`read_words`,
-  `write_words`, `read_bits`, `write_bits`) are not capped.
+  `write_words`, `read_bits`, `write_bits`) are not capped. Direct writes validate
+  every value as an integer (bools stored as 0/1) in range before storing any,
+  and raise ValueError otherwise.
 - Random counts are uint8; total count zero or over-limit returns C053 (bits) or C054 (words/dwords) (manual-derived per SH-080008 p.98/105/108 and SH-081257 3.5; C053/C054 assignment unverified, not verified PLC behavior). Limits are keyed on the request wire class (`Wire` in `profiles.py`) and independent of `max_points`: read (0403) `words + dwords <= 192` (Q-class) / `96` (iQ-R); word/dword write (1402) `words*12 + dwords*14 <= 1920` (Q-class) / `960` (iQ-R); bit write (1402) `points <= 188` (Q-class) / `94` (iQ-R). A single zero count with the other nonzero is valid. Responses put words before dwords; dwords store low word first.
 - Duplicate/overlapping random writes apply in wire order. SS/SC/SN use STS/STC/STN
   client names.
@@ -217,7 +220,7 @@ See the [canonical CLI reference](../README.md#cli-reference),
 - An unexpected handler/hook exception is logged to stderr and closes only that
   connection; committed work is not rolled back.
 - `idle_timeout=None` leaves idle sockets open indefinitely; a positive seconds value
-  closes idle/incomplete clients.
+  (at most `threading.TIMEOUT_MAX`) closes idle/incomplete clients.
 - `ascii_dword_order` accepts only `swapped` (default) or `client`; invalid
   configuration raises ValueError.
 - `text_pad` accepts an integer 0..255 or one character with code point 0..255;
@@ -700,7 +703,7 @@ traceback; invalid configuration exits 2. Verbose logging reports one-line
 command/frame/wire/end-code summaries and close reasons, excluding payloads.
 It is off by default; unexpected worker errors still report to stderr.
 
-Memory.load(data) validates complete JSON before overlaying native points.
+Memory.load(data) validates complete JSON before overlaying native points; address keys must be plain ASCII decimal digits (no sign, spaces or underscores).
 Memory.dump() groups contiguous stored points using the same schema; explicit
 zeros are retained. Values are unsigned bits/words/native dwords. See
 [seeding examples](../README.md#memory-seeding-snapshots-and-embedding).
