@@ -281,6 +281,9 @@ def test_second_listener_timeout_failure_rolls_back_all_and_allows_restart(
         def bind(self, address):
             self.bound = True
 
+        def getsockname(self):  # post-bind loopback check (ballot D3)
+            return ("127.0.0.1", 0)
+
         def settimeout(self, timeout):
             if len(created) == 2 and created[1] is self:
                 raise OSError("injected listener timeout setup failure")

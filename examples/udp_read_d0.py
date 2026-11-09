@@ -1,4 +1,4 @@
-"""Standalone MC 3E binary UDP client: read D0 on IPv4 loopback only.
+"""Standalone MC 3E binary UDP client: read D0 on IPv4/IPv6 loopback only.
 
 Run a *source checkout* simulator in another terminal:
     python -m virtual_plc --listen udp:5000
@@ -34,23 +34,25 @@ def read_d0(port, host="127.0.0.1", timeout=1.0):
     if type(port) is not int or not 1 <= port <= 65535:
         raise ValueError("port must be an integer 1..65535")
     if not isinstance(host, str):
-        raise ValueError("host must be a literal IPv4 loopback address")
+        raise ValueError("host must be a literal loopback IP address")
     try:
-        target_ip = ipaddress.IPv4Address(host)
-    except ipaddress.AddressValueError as error:
-        raise ValueError("host must be a literal IPv4 loopback address") from error
+        target_ip = ipaddress.ip_address(host)
+    except ValueError as error:
+        raise ValueError("host must be a literal loopback IP address") from error
     if not target_ip.is_loopback:
-        raise ValueError("example permits IPv4 loopback only")
+        raise ValueError("example permits loopback (127.0.0.0/8 or ::1) only")
     if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
         raise ValueError("timeout must be a finite positive number")
 
     target = (str(target_ip), port)
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as connection:
+    family = socket.AF_INET6 if target_ip.version == 6 else socket.AF_INET
+    with socket.socket(family, socket.SOCK_DGRAM) as connection:
         connection.settimeout(timeout)
         connection.sendto(READ_D0, target)
         reply, sender = connection.recvfrom(8192)
 
-    if sender != target:
+    # IPv6 senders are (host, port, flowinfo, scope_id): compare host and port.
+    if tuple(sender[:2]) != target:
         raise ValueError("UDP response source does not match the requested endpoint")
     if len(reply) != 13 or reply[:7] != RESPONSE_PREFIX:
         raise ValueError("invalid 3E binary response header or size")
@@ -62,9 +64,10 @@ def read_d0(port, host="127.0.0.1", timeout=1.0):
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Loopback-only 3E UDP D0 reader")
     parser.add_argument("port", type=int, help="local simulator UDP listener port")
+    parser.add_argument("--host", default="127.0.0.1", help="literal loopback IP (127.0.0.1 or ::1)")
     args = parser.parse_args(argv)
     try:
-        value = read_d0(args.port)
+        value = read_d0(args.port, host=args.host)
     except (OSError, ValueError) as error:
         print("UDP read failed: %s" % error, file=sys.stderr)
         return 1
