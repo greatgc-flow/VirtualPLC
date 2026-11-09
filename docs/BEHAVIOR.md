@@ -39,6 +39,8 @@ storage ranges and alignment before one atomic commit. Duplicate destinations
 are applied in request order (last value wins); invalid later records never
 partially mutate memory.
 
+In 1E, `max_points` also caps random writes and counts word access to bit devices as 16 bit points per word (including the sum across random records), whereas 3E/4E random access is independent of `max_points`.
+
 The optional `Server(slmp_1e=True, slmp_1e_run_switch="STOP", initial_state="STOP")`
 (or CLI `--slmp-1e --slmp-1e-run-switch STOP --initial-state STOP`) models
 Mitsubishi manual p.132: authorized 13H remote RUN returns normal success,
@@ -260,7 +262,7 @@ The existing server lock covers the whole request, including reads. Writes
 then apply in wire order (word section first), so later duplicate or overlapping
 entries overwrite earlier ones.
 
-Random-access point limits and `0xC053` / `0xC054` error codes follow `WIRE_CLASSES` in `virtual_plc/profiles.py` and `random_access` in `virtual_plc/commands.py` (see [Public API](#public-api) above). Check order in `random_access`: zero total count, then over-limit, then payload length/format (`C057`) first, then per-entry access/alignment (`C05C`) or device range (`C056`) checks (awaiting manual verification). Dwords over bit devices span 32 packed points with 16-point head alignment. The client rejects 256 before
+Random-access point limits and `0xC053` / `0xC054` error codes follow `WIRE_CLASSES` in `virtual_plc/profiles.py` and the shared checks in `virtual_plc/commands.py` (see [Public API](#public-api) above). Check order for both binary and ASCII batch/random requests: complete count fields, zero total count, over-limit count, exact wire payload length (`C057`), then device/value/access/alignment (`C05C`) or device range (`C056`) checks (awaiting manual verification). Zero and over-limit counts take precedence even with short/extra payloads or bad devices: batch word/bit returns `C051`/`C052`, random word/bit returns `C054`/`C053`; the one exception is a zero random count followed by any data, which returns `C057` (the established binary rule, now on both wires). Incomplete fixed batch headers retain `C05C`; incomplete random count headers return `C057`. Malformed ASCII numeric fields (including non-hex values in an otherwise correctly sized request) retain `C05C`, rather than being blanket-remapped to `C057`. CPU type read (`0101`) requires an empty payload; any non-empty payload returns `C057` on 3E/4E binary and ASCII. These are simulator policies, not verified physical PLC behavior. Dwords over bit devices span 32 packed points with 16-point head alignment. The client rejects 256 before
 sending because a count field is only one byte. A valid raw count of 256 does
 not exist. Tests send over-limit and 256-entry frames and require rejection with
 no mutation.

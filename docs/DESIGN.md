@@ -411,6 +411,10 @@ vendor verification.
 
 Response bodies: cputype = 16-byte name filled with `text_pad` (default 0x00) + 2-byte
 code; echo = 2-byte length + echoed data.
+CPU type requests require an empty payload (`C057` otherwise) on 3E/4E binary
+and ASCII. Data commands check counts and exact wire lengths before ASCII
+normalization, so zero/over-limit counts precede length and device errors on
+both wires; see the check order and malformed-field exceptions in BEHAVIOR.md.
 
 0xC200 LOCKED and 0xC201 WRONG_PASSWORD (`source: memory`,
 `status: unverified`), and 0xC202 INVALID_STATE (`source: design`,
