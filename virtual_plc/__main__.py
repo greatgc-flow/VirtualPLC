@@ -68,7 +68,8 @@ class GuideParser(argparse.ArgumentParser):
 
 
 def build_parser():
-    parser = GuideParser(prog="virtual-plc", description="Virtual Mitsubishi MC protocol PLC (not for industrial use)")
+    parser = GuideParser(prog="virtual-plc", description="Virtual Mitsubishi MC protocol PLC (not for industrial use)",
+                         allow_abbrev=False)
     parser.add_argument("--version", action="version", version=__version__, help="show installed version")
     parser.add_argument("--host", default="127.0.0.1", help="bind address (loopback by default)")
     parser.add_argument("--allow-nonlocal", action="store_true", help="explicitly permit non-loopback binding (unsafe; requires --idle-timeout)")
@@ -82,7 +83,8 @@ def build_parser():
     parser.add_argument("--slmp-1e-run-switch", choices=("RUN", "STOP"), default=None,
                         help="optional 1E simulated physical RUN/STOP selector; STOP also requires --initial-state STOP")
     parser.add_argument("--ethernet-config", metavar="FILE", help="JSON Ethernet timer/policy overrides (requires --ethernet-model)")
-    parser.add_argument("--show-effective-ethernet", action="store_true", help="print model defaults/overrides and fidelity as JSON without binding")
+    parser.add_argument("--show-effective-ethernet", action="store_true",
+                        help="print model defaults/overrides and fidelity as JSON without binding; validates server options, including host safety")
     parser.add_argument("--password", help="simulated lock password (not authentication)")
     parser.add_argument("--initial-state", choices=("RUN", "STOP", "PAUSE"), default="RUN", help="initial CPU state")
     parser.add_argument("--max-points", type=int, default=None, help="optional batch point cap below manual limit")
