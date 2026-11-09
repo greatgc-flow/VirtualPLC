@@ -19,7 +19,7 @@ def test_1e_max_points_16(wire, command, device, count, expected):
     random = command in (4, 5)
     if wire == "ascii":
         prefix = f"{command:02X}FF0000".encode()
-        name = f"{device:>2}".encode().hex().upper()
+        name = f"{device:<2}".encode().hex().upper()
         value = b"00" if command == 4 else b"0000"
         if random:
             data = f"{count:02X}00".encode() + b"".join(
@@ -28,7 +28,7 @@ def test_1e_max_points_16(wire, command, device, count, expected):
             data = f"{name}00000000{count:02X}00".encode() + (value * count if command == 3 else b"")
     else:
         prefix = bytes([command, 0xFF, 0, 0])
-        name = f"{device:>2}".encode()[::-1]
+        name = f"{device:<2}".encode()[::-1]
         value = bytes(1 if command == 4 else 2)
         if random:
             data = bytes([count, 0]) + b"".join((i * 16).to_bytes(4, "little") + name + value for i in range(count))

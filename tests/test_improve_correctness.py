@@ -169,9 +169,12 @@ def test_tcp_response_hook_must_return_bytes_like(slmp_1e):
             client.settimeout(2)
             client.sendall(frame)
             assert client.recv(64) == b""
-        # The listener keeps serving other clients.
-        with Server(slmp_1e=slmp_1e) as other, socket.create_connection(other.address, timeout=2):
-            pass
+        # The same listener keeps serving other clients once the hook is fixed.
+        plc._hook = None
+        with socket.create_connection(plc.address, timeout=2) as client:
+            client.settimeout(2)
+            client.sendall(frame)
+            assert client.recv(64)[:2] in (b"\x81\x00", b"\xd0\x00")  # 1E / 3E normal response
         assert plc.get_listener_health()["healthy"]
 
 
