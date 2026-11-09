@@ -12,6 +12,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+# Workflow files are repository-only (not shipped in the sdist); the sdist CI run skips these.
+repo_only = pytest.mark.skipif(not (ROOT / ".github").is_dir(), reason="repository-only check")
 
 
 def _pyproject_version():
@@ -20,6 +22,7 @@ def _pyproject_version():
 
 
 @pytest.mark.parametrize("workflow", WORKFLOWS, ids=lambda p: p.name)
+@repo_only
 def test_third_party_actions_are_pinned_to_commit_shas(workflow):
     """I4: every `uses:` is owner/repo@<40-hex SHA> with a version comment."""
     refs = re.findall(r"uses:\s*(\S+)(.*)", workflow.read_text(encoding="utf-8"))
@@ -29,6 +32,7 @@ def test_third_party_actions_are_pinned_to_commit_shas(workflow):
         assert re.search(r"#\s*v\d", rest), f"{ref} needs a '# vX' comment"
 
 
+@repo_only
 def test_ci_matrix_matches_python_classifiers():
     """I5: CI tests exactly the Python versions the package classifies."""
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
@@ -41,6 +45,7 @@ def test_ci_matrix_matches_python_classifiers():
     assert min(matrix, key=lambda v: int(v.split(".")[1])) == minimum
 
 
+@repo_only
 def test_ci_does_not_cancel_main_runs():
     """I13: only pull-request runs cancel; main runs get one group per SHA."""
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
@@ -48,12 +53,14 @@ def test_ci_does_not_cancel_main_runs():
     assert "cancel-in-progress: ${{ github.event_name == 'pull_request' }}" in ci
 
 
+@repo_only
 def test_ci_has_one_macos_job():
     """F12: a single macOS job (not required until green on main)."""
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert "macos-latest" in ci
 
 
+@repo_only
 def test_release_requires_green_main_ci_for_tagged_sha():
     """M1: release fails closed unless ci.yml push run on main succeeded for the tag SHA."""
     release = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
