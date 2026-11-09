@@ -39,7 +39,7 @@ for reset scenarios.
 Each step has `action`, optional `match` (default `{}`), and optional positive
 integer `times` (default 1). Unknown fields are rejected. An action is an object
 with a required `type` and the parameters listed below. Numeric times/pauses
-must be finite and nonnegative; byte counts and field values must be integers.
+must be finite, nonnegative and at most `threading.TIMEOUT_MAX`; byte counts and field values must be integers.
 
 ## Matching and ordering
 
