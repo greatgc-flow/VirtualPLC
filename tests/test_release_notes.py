@@ -128,3 +128,15 @@ def test_release_workflow_exact_extract_step_and_job_wiring():
     assert "if:" not in step  # the gate cannot be switched off
     github_release = text[text.index("  github-release:"):]
     assert "name: release-notes\n          path: release-notes\n" in github_release
+
+
+def test_unreleased_section_already_satisfies_the_release_note_contract():
+    """Catch link/fence drift when it is written, not at release time."""
+    match = re.search(r"^## Unreleased[ \t]*$", HANDOFF, re.M)
+    if match is None:
+        pytest.skip("no Unreleased section")
+    rest = HANDOFF[match.end():]
+    following = re.search(r"^## ", rest, re.M)
+    body = rest[:following.start()] if following else rest
+    probe = "## 2099-01-01 release 99.0.0 — release-note source\n" + body
+    assert _tool().extract("99.0.0", probe).strip()

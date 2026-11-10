@@ -121,7 +121,8 @@ rather than pretending its close/RST/partial-send actions work for UDP.
 
 Nonlocal network binds continue to require `--allow-nonlocal` and
 `--idle-timeout`; that timeout does **not** add UDP session semantics.
-There is no authentication or UDP rate limiting. Run on loopback or on
+There is no authentication; UDP rate limiting is off unless `--udp-rate-limit` is set
+(per source IP; flood protection, not access control). Run on loopback or on
 an isolated, trusted **test** network only; never connect to production PLCs.
 
 For local UDP diagnostics and opt-in TCP session counters (`Server(tcp_metrics=True)`), see [UDP observability](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md#udp-observability-opt-in).
