@@ -56,7 +56,7 @@ out-of-contract hypotheticals are recommendations.
 | Release notes | HANDOFF `## <date> release X.Y.Z — release-note source` section is published **unchanged**; `tools/release_notes.py` only extracts and validates (no code fences; links only inline `[text](https://...)`) and fails the release before building | A translating Markdown parser kept growing edge cases; restricting the input contract removed the class of bugs |
 | UDP fault actions (0.10.0) | `duplicate`, `truncate(n)`, `corrupt_header` applied after dispatch; reorder deferred | Datagram-native faults without cross-request state |
 | UDP rate limit (0.10.0) | Opt-in token bucket per source IP, dropped right after `recvfrom` (before parse, fault plan and the shared request lock), `rate_limited` metric, 1024-peer LRU, persists across stop/start | Prevents a UDP flood from starving TCP clients; per-IP because source ports are cheap |
-| Keyword-only API (#78) | Design only: 0.10.x DeprecationWarning for positional use after `profile`, 1.0 adds `*` | No call in the repository breaks; owner decisions pending (see #78 comment) |
+| Keyword-only API (#78) | Implemented in 0.11.0 (DeprecationWarning); 1.0 adds `*` and removes the shim (owner timeline) | No call in the repository breaks; owner decisions recorded 2026-11-11 (R9, #78) |
 
 ## 3. Process
 
@@ -107,6 +107,7 @@ ag A-7D, later ag G-7D) were rested.
 | r7–r10 | 0.9.1 RC | 99.86 → 99.79 → 99.67 → (redesign) 99.81 → 99.93 → **100.00**; ag cross-check 100 |
 | r11 | 0.10.0 candidate | 99.5 (two doc findings) → 99.9 (date finding) → re-score of the released commit: **100** |
 | r12 | 0.11.0 candidate (#98) | 99.6 (shim warned on invalid calls) → fixed with a `bind()` oracle test → **100** |
+| final | whole-product audit of v0.11.1 | 99.76 → six minor findings fixed in 0.11.2 |
 
 ## 5. Results
 

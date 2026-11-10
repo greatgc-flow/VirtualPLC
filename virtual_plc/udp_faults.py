@@ -8,7 +8,7 @@ from copy import deepcopy
 import ipaddress
 import threading
 
-from .faults import _integer, _load_steps, _seconds
+from .faults import _copy_steps, _integer, _load_steps, _seconds
 
 # Action type -> (required, optional) parameter names; also drives `virtual-plc guide faults`.
 UDP_ACTION_FIELDS = {
@@ -78,7 +78,7 @@ class UdpFaultPlan:
     def __init__(self, steps):
         if not isinstance(steps, list):
             raise ValueError("UDP fault steps must be a list")
-        self._steps = deepcopy(steps)
+        self._steps = _copy_steps(steps)
         for step in self._steps:
             _validate(step)
         self._lock = threading.Lock()

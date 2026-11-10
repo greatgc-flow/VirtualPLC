@@ -93,6 +93,8 @@ abnormal response from the decoded request and discards the hook's bytes.
 | `partial_send` | `chunks`: nonempty positive byte-count list; optional `pause` seconds (default 0) | Send those prefix chunks, then any remainder, pausing between nonempty chunks |
 
 Header corruption is restricted to offsets shared by every response header.
+A TCP response shorter than offset+1 bytes (for example a short `response_hook`
+result) is sent unchanged and the connection stays open; the use is still consumed.
 Truncating past the end preserves the response; n=0 sends nothing. For code != 0,
 bad_end_code formats the response as an abnormal frame carrying error information per
 SH-080008 (route, command, subcommand) with read data dropped and response length set
@@ -149,7 +151,8 @@ error semantics remain unverified; see [behavior](BEHAVIOR.md).
 
 ## UDP datagram response faults (opt-in)
 
-UDP uses an independent UdpFaultPlan(steps) or --udp-fault-plan FILE;
+UDP uses an independent UdpFaultPlan(steps), UdpFaultPlan.from_file(path)
+(the same {"steps": [...]} file) or --udp-fault-plan FILE;
 the TCP FaultPlan (which includes RST, close and partial_send) remains
 rejected on all UDP listeners. The option defaults to None (no effect).
 An empty UDP plan is valid. Example udp.json:
@@ -165,7 +168,8 @@ virtual-plc --listen udp:5000 --udp-fault-plan udp.json
 ```
 
 Python: from virtual_plc import Server, UdpFaultPlan; construct
-Server(listeners=[('udp',0)], udp_fault_plan=UdpFaultPlan(steps)).
+Server(listeners=[('udp',0)], udp_fault_plan=UdpFaultPlan(steps)), or
+UdpFaultPlan.from_file(path) to load a file.
 An explicitly supplied UDP plan with TCP-only listeners raises ValueError
 before binding. Use of a TCP FaultPlan with any UDP listener remains invalid.
 

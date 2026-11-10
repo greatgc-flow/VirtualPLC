@@ -247,6 +247,8 @@ class Server:
         self._listener_threads = []
 
     def set_state(self, state):
+        if type(state) is not str or state not in CPU_STATES:
+            raise ValueError("state must be RUN, STOP or PAUSE")
         self.memory.write_words("SD", 203, [CPU_STATES[state]])
         self.state = state
 

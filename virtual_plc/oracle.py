@@ -183,11 +183,25 @@ def _read_json(path):
         text = content.decode(encoding)
     except UnicodeDecodeError as error:
         raise ValueError("invalid observations: not UTF-8/UTF-16 text") from error
-    return json.loads(text, object_pairs_hook=no_duplicate_keys)
+    try:
+        return json.loads(text, object_pairs_hook=no_duplicate_keys)
+    except RecursionError:
+        raise ValueError("invalid observations: JSON nesting too deep") from None
 
 
 def _render(value):
     return json.dumps(value, sort_keys=True, indent=2, ensure_ascii=True) + "\n"
+
+
+def _emit(text):
+    """UTF-8 bytes with LF newlines, identical to the report file on every OS."""
+    binary = getattr(sys.stdout, "buffer", None)
+    if binary is None:  # e.g. redirect_stdout(io.StringIO()): text is already LF-only
+        sys.stdout.write(text)
+        return
+    sys.stdout.flush()
+    binary.write(text.encode("utf-8"))
+    sys.stdout.flush()
 
 
 def _write_report(path, content):
@@ -224,10 +238,10 @@ def main(argv=None):
                          help="atomically save the exact JSON printed to stdout")
     arguments = parser.parse_args(argv)
     if arguments.command == "plan":
-        sys.stdout.write(_render(catalog()))
+        _emit(_render(catalog()))
         return 0
     if arguments.command == "template":
-        sys.stdout.write(_render(observation_template()))
+        _emit(_render(observation_template()))
         return 0
     try:
         if arguments.report and Path(arguments.report).resolve() == Path(arguments.observations).resolve():
@@ -236,11 +250,11 @@ def main(argv=None):
         output = _render(result)
         if arguments.report:
             _write_report(arguments.report, output)
-    except (ValueError, OSError, UnicodeError) as error:
+    except (ValueError, OSError, UnicodeError, RecursionError) as error:
         message = " ".join(str(error).split())
         print("physical-oracle: invalid evidence or report: " + message, file=sys.stderr)
         return 2
-    sys.stdout.write(output)
+    _emit(output)
     return 0 if result["complete_manual_vector_match"] else 1
 
 

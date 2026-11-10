@@ -48,6 +48,10 @@ class Memory:
         if max_cells is not None and (type(max_cells) is not int or max_cells <= 0):
             raise ValueError("max_cells must be a positive int or None")
         self.max_cells = max_cells  # opt-in safety cap on distinct stored points (#79)
+        if type(profile) is not str or profile not in PROFILES:
+            raise ValueError(f"unknown profile {profile!r}; choose one of: {', '.join(PROFILES)}")
+        if limits is not None and not isinstance(limits, dict):
+            raise ValueError("limits must be a dict of device -> (minimum, maximum) or None")
         self.profile = PROFILES[profile]
         self._limits = {name: (spec.minimum, spec.maximum) for name, spec in self.profile.devices.items()}
         for name, span in (limits or {}).items():
