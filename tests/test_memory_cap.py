@@ -177,7 +177,9 @@ def _exit_code(arguments):
 
 
 @pytest.mark.parametrize("value", ["0", "-5"])
-def test_cli_rejects_nonpositive_max_cells(capsys, value):
+def test_cli_rejects_nonpositive_max_cells(capsys, monkeypatch, value):
+    # A validation regression must fail fast, not start serving forever.
+    monkeypatch.setattr(cli.Server, "start", lambda self: pytest.fail("must not bind"))
     assert _exit_code(["--port", "0", "--max-cells", value]) == 2
     assert "max_cells" in capsys.readouterr().err
 
