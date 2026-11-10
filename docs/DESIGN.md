@@ -268,6 +268,9 @@ process provides an independent PLC instance. Physical PLC behavior remains
 unverified; this is a simulator transport policy only.
 
 UDP observability semantics are specified in [BEHAVIOR.md](BEHAVIOR.md#udp-observability-opt-in).
+Opt-in TCP session counters mirror that contract (no CLI flag, `None` when
+disabled, cumulative across restarts) and are updated under the session-table
+lock; see [BEHAVIOR.md](BEHAVIOR.md#tcp-session-counters-opt-in).
 
 ### UDP datagram response faults (PR #52)
 

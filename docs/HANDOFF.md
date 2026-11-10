@@ -9,6 +9,10 @@
 - Release gate: tag only a main commit whose `ci.yml` push run succeeded (release.yml enforces it).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
 
+## Unreleased
+
+- #13 (narrowed scope, point 3): opt-in TCP session counters, `Server(tcp_metrics=True)` + `server.get_tcp_metrics()` (`accepted`, `rejected` at `max_clients`, `idle_closed`, `closed`), mirroring the UDP counters: `None` when disabled, requires a TCP listener, cumulative across stop/start, no CLI flag. Semantics: [BEHAVIOR.md](BEHAVIOR.md#tcp-session-counters-opt-in).
+
 ## 2026-11-10 release 0.8.0 — release-note source
 
 MECE completeness review (7 product areas x 6 quality dimensions + 8 cross-closure checks), two rounds of independent scoring with fixes in between, plus a newcomer sample project. Behaviour changes to list first in release notes:
