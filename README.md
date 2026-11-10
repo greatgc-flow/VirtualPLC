@@ -124,7 +124,7 @@ Nonlocal network binds continue to require `--allow-nonlocal` and
 There is no authentication or UDP rate limiting. Run on loopback or on
 an isolated, trusted **test** network only; never connect to production PLCs.
 
-For local UDP diagnostics, see [UDP observability](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md#udp-observability-opt-in).
+For local UDP diagnostics and opt-in TCP session counters (`Server(tcp_metrics=True)`), see [UDP observability](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md#udp-observability-opt-in).
 
 ## UDP response faults (optional)
 

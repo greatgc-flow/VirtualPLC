@@ -19,6 +19,7 @@ LOG = logging.getLogger(__name__)
 
 ACCEPT_POLL = 0.1  # seconds between stop checks of the accept/receive loops
 MAX_UDP_DATAGRAM = 8192  # one complete MC frame per datagram; bound allocation
+IDLE_TIMEOUT = "idle timeout"  # TCP close reason counted as tcp_metrics idle_closed
 
 
 def _bytes_like(value):
@@ -56,7 +57,7 @@ class Server:
       wire: ascii_dword_order, ascii_numbering, text_pad, slmp_1e, slmp_1e_run_switch,
         ethernet_model, ethernet_overrides
       test hooks: fault_plan (TCP), udp_fault_plan, response_hook(bytes) -> bytes,
-        udp_metrics, verbose
+        udp_metrics, tcp_metrics, verbose
     Hooks must return: stop() joins the workers that run them.
     Usage and a pytest fixture: `virtual-plc guide embed`.
     """
@@ -67,7 +68,8 @@ class Server:
                  ascii_dword_order="swapped", text_pad=0x00, ascii_numbering="compat", verbose=False,
                  allow_nonlocal=False, max_clients=64, listeners=None,
                  ethernet_model=None, ethernet_overrides=None, slmp_1e=False,
-                 slmp_1e_run_switch="RUN", udp_fault_plan=None, udp_metrics=False):
+                 slmp_1e_run_switch="RUN", udp_fault_plan=None, udp_metrics=False,
+                 tcp_metrics=False):
         if type(port) is not int or not 0 <= port <= 65535:
             raise ValueError("port must be an integer 0..65535")
         if max_points is not None and (type(max_points) is not int or max_points < 1):
@@ -144,6 +146,8 @@ class Server:
             raise ValueError("UDP fault plan requires at least one UDP listener")
         if type(udp_metrics) is not bool:
             raise ValueError("udp_metrics must be a boolean")
+        if type(tcp_metrics) is not bool:
+            raise ValueError("tcp_metrics must be a boolean")
         # Type checks first: membership tests below would raise TypeError/AttributeError.
         if type(profile) is not str:
             raise ValueError("profile must be a string")
@@ -157,6 +161,8 @@ class Server:
             raise ValueError("response_hook must be callable or None")
         if udp_metrics and not any(transport == "udp" for transport, _ in listen_specs):
             raise ValueError("udp_metrics requires at least one UDP listener")
+        if tcp_metrics and not any(transport == "tcp" for transport, _ in listen_specs):
+            raise ValueError("tcp_metrics requires at least one TCP listener")
         if initial_state not in CPU_STATES:
             raise ValueError("initial_state must be RUN, STOP or PAUSE")
         if profile not in PROFILES:
@@ -202,6 +208,9 @@ class Server:
                               "fault_dropped": 0, "send_errors": 0, "receive_resets": 0}
                              if udp_metrics else None)
         self._udp_metrics_lock = threading.Lock()
+        # Guarded by _clients_lock, the lock that already admits/removes sessions.
+        self._tcp_metrics = ({"accepted": 0, "rejected": 0, "idle_closed": 0, "closed": 0}
+                             if tcp_metrics else None)
         self._connection_number = 0  # never reset: unique 1E STOP-owner IDs across restarts
         self._fault_connection = 0   # FaultPlan match.connection: admitted TCP sessions since start()
         self._max_points = max_points
@@ -317,6 +326,24 @@ class Server:
         if self._udp_metrics is not None:
             with self._udp_metrics_lock:
                 self._udp_metrics[key] += 1
+
+    def get_tcp_metrics(self):
+        """Return a copy of opt-in TCP session counters, or None if disabled.
+
+        Local Python diagnostics only: never exposed over SLMP/MC frames.
+        Counts aggregate all TCP listeners of this Server instance and persist
+        across stop()/start() cycles so post-run assertions can inspect them.
+        """
+        if self._tcp_metrics is None:
+            return None
+        with self._clients_lock:
+            return dict(self._tcp_metrics)
+
+    def _count_tcp(self, *keys):
+        """Caller holds _clients_lock, so snapshots match the session table."""
+        if self._tcp_metrics is not None:
+            for key in keys:
+                self._tcp_metrics[key] += 1
 
     def __enter__(self):
         self.start()
@@ -575,6 +602,7 @@ class Server:
                 self._connection_number += 1  # unique for STOP owner, including cross-port TCP
                 connection_id = self._connection_number
                 rejected = self._stopping.is_set() or len(self._clients) >= self._max_clients
+                self._count_tcp("rejected" if rejected else "accepted")
                 if not rejected:
                     self._fault_connection += 1  # refused connections take no fault ordinal
                     worker = threading.Thread(target=self._serve, daemon=True,
@@ -589,6 +617,7 @@ class Server:
             except RuntimeError:
                 with self._clients_lock:
                     self._clients.pop(connection, None)
+                    self._count_tcp("closed")
                 connection.close()
                 self._log("close: could not start client worker")
 
@@ -607,6 +636,9 @@ class Server:
                         self._remote_stop_owner_connected = False
                 with self._clients_lock:
                     self._clients.pop(connection, None)
+                    if reason == IDLE_TIMEOUT:
+                        self._count_tcp("idle_closed")
+                    self._count_tcp("closed")
 
     def _serve_frames(self, connection, connection_id, ordinal):
         """connection_id: unique 1E STOP-owner ID; ordinal: FaultPlan match.connection."""
@@ -616,7 +648,7 @@ class Server:
             try:
                 chunk = connection.recv(65536)
             except socket.timeout:
-                return "idle timeout"
+                return IDLE_TIMEOUT
             except OSError:
                 return "receive error/reset"
             if not chunk:

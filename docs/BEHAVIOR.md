@@ -275,6 +275,10 @@ These are local simulator diagnostics, not physical PLC behavior, and are not ex
 
 A `recvfrom` connection reset (Windows ICMP-related 10054 after a client closed its port) is not terminal: the worker logs one warning, counts it and keeps serving. Any other `recvfrom` error outside shutdown logs a warning and ends that UDP worker without retry; stop and start can restore the listener. For UDP, `response_hook` must return bytes-like data; an invalid result is rejected and the worker continues.
 
+### TCP session counters (opt-in)
+
+`Server(tcp_metrics=True)` enables TCP session counters and requires a TCP listener; the default is `False`, and there is no CLI flag. Like the UDP counters they are local diagnostics, never exposed in MC/SLMP frames. `get_tcp_metrics()` returns `None` when disabled, otherwise a copy of cumulative counters aggregated across the server's TCP listeners and retained across stop/start: `accepted` counts sessions admitted under `max_clients`; `rejected` counts accepted sockets closed at once because `max_clients` sessions were open (or the server was stopping); `idle_closed` counts sessions closed by `idle_timeout`; and `closed` counts every admitted session that ended, for any reason (EOF, error, idle timeout, fault close or `stop()`). Sockets that fail setup before admission are not counted. Counters change under the same lock as the session table, so `accepted - closed` is the number of open sessions in a snapshot and is 0 after `stop()`.
+
 ## Random access and common devices
 
 ### Wire layout and mutation

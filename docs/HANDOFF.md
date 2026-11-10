@@ -12,6 +12,7 @@
 ## Unreleased
 
 - #79: opt-in stored-cell cap `Memory(max_cells=N)` / CLI `--max-cells N` (default unchanged: uncapped). Only new points count (overwrites always allowed; SD203 counts); a write past the cap answers C056 on 3E/4E and 1E and changes nothing (whole-request check; 3E/4E random writes now commit via `write_atomic`); an over-cap `--init`/`Memory.load` raises ValueError / exits 2. New `memory.CellCapExceeded` (subclass of `OutOfRange`) and `Memory.stored_cells`.
+- #13 (narrowed scope, point 3): opt-in TCP session counters, `Server(tcp_metrics=True)` + `server.get_tcp_metrics()` (`accepted`, `rejected` at `max_clients`, `idle_closed`, `closed`), mirroring the UDP counters: `None` when disabled, requires a TCP listener, cumulative across stop/start, no CLI flag. Semantics: [BEHAVIOR.md](BEHAVIOR.md#tcp-session-counters-opt-in).
 
 ## 2026-11-10 release 0.8.0 — release-note source
 
