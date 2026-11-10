@@ -187,7 +187,9 @@ See the [canonical CLI reference](../README.md#cli-reference),
   the whole request and answer `C056` (the address/device-capacity code already used for
   range errors; 1E batch writes, whose other storage errors map to C05C, also use C056).
   `Memory.load` / `--init` snapshots that would exceed the cap raise ValueError (exit 2)
-  and leave memory unchanged.
+  and leave memory unchanged. Because the server writes SD203 when it is built, a
+  snapshot (or pre-seeded `Memory`) must leave one free cell for SD203 unless it already
+  contains SD203; otherwise `Server(...)` raises `CellCapExceeded` naming SD203 (CLI exit 2).
 - Profile devices expose `code`, `base`, `kind`, `minimum`, `maximum`; ranges remain
   synthetic.
 - `.read_words(device, head, count)` / `.read_bits(...)` return unsigned lists;

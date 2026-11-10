@@ -7,3 +7,4 @@ dist/
 .manual/
 oracle-captures/
 oracle-reports/
+.claude/worktrees/

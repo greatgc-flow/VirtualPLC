@@ -92,8 +92,10 @@ def test_oracle_compare_reads_bom_and_utf16_observation_files(tmp_path, encoding
 
 
 def _github_links(text):
+    # main and tag-pinned (vX.Y.Z) URLs are checked against the current tree: shallow CI
+    # checkouts have no tags, and released sections must keep resolving anyway.
     base = "https://github.com/greatgc-flow/VirtualPLC/"
-    for match in re.finditer(re.escape(base) + r"(?:blob|tree)/main/([^)\s#]+)(?:#([^)\s]+))?", text):
+    for match in re.finditer(re.escape(base) + r"(?:blob|tree)/(?:main|v\d+\.\d+\.\d+)/([^)\s#]+)(?:#([^)\s]+))?", text):
         yield match.group(1), match.group(2)
 
 
