@@ -25,7 +25,7 @@ This file is for agents developing this repository. For product usage, run
   prefer minimal CLI, explicit overrides and verifiable behavior.
 - `virtual_plc/guide.py` owns compact English usage prose; tables are generated.
 - README is the human entry point (`guide:run` recipes test-enforced); BEHAVIOR/FAULTS explain semantics.
-- Release notes: a HANDOFF `release X.Y.Z — release-note source` section; no code fences, https links only.
+- Release notes: a HANDOFF `release X.Y.Z — release-note source` section; no fences, inline https links only.
 - Update docs/DESIGN.md when design decisions or open items change.
 - `requirements-dev.txt` is the only exact oracle pin; test_oracle_pin.py checks it.
 - The wheel hash is checked only for its recorded version. Keep the full suite and

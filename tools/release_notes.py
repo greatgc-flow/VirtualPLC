@@ -1,12 +1,13 @@
 """Print the curated release notes for one version from docs/HANDOFF.md.
 
 Each release has a section headed ``## <date> release X.Y.Z — release-note source``.
-Its body (up to the next ``## `` heading) becomes the top of the GitHub release
-notes. The format is deliberately restricted so it renders the same in HANDOFF
-and on the release page, with nothing to translate:
+Its body (up to the next ATX ``## `` heading) is published unchanged at the top
+of the GitHub release notes. The format is deliberately restricted so nothing
+needs translating:
 
 * plain Markdown text, bullets and inline code; no code fences;
-* links must be absolute ``https://`` URLs.
+* links only as inline ``[text](https://...)``; reference-style links,
+  ``<...>`` autolinks/HTML and non-https targets are rejected.
 
 Anything else fails closed (exit 1) so the release stops before building.
 
@@ -20,6 +21,8 @@ from pathlib import Path
 HEADING = r"^## [^\n]*\brelease {version} \S+ release-note source[ \t]*$"
 FENCE = re.compile(r"^\s*(```|~~~)", re.M)
 NON_HTTPS_LINK = re.compile(r"\]\((?!https://)")
+OTHER_LINK = re.compile(r"^ {0,3}\[[^\]]+\]:|\]\[|<(?!https://)[A-Za-z/!]", re.M)
+CODE_SPAN = re.compile(r"`[^`\n]*`")
 
 
 def extract(version, handoff_text):
@@ -35,8 +38,9 @@ def extract(version, handoff_text):
         raise LookupError("release %s note section is empty" % version)
     if FENCE.search(body):
         raise LookupError("release %s notes must not contain code fences" % version)
-    if NON_HTTPS_LINK.search(body):
-        raise LookupError("release %s notes may only link absolute https:// URLs" % version)
+    prose = CODE_SPAN.sub("", body)  # inline code may show any syntax literally
+    if NON_HTTPS_LINK.search(prose) or OTHER_LINK.search(prose):
+        raise LookupError("release %s notes may only use inline [text](https://...) links" % version)
     return body + "\n"
 
 

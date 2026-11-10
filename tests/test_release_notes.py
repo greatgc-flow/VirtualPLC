@@ -59,6 +59,9 @@ def test_body_runs_to_the_next_level_two_heading_and_normalises_crlf():
     HEAD + "see [B](BEHAVIOR.md#x)\n",                            # relative link
     HEAD + "see [H](http://example.com)\n",                       # non-https link
     HEAD + "see [R](/README.md)\n",                               # root-relative link
+    HEAD + "see [B][b]\n\n[b]: BEHAVIOR.md\n",                    # reference-style link
+    HEAD + "see <http://example.com>\n",                          # non-https autolink
+    HEAD + 'see <a href="BEHAVIOR.md">B</a>\n',                   # raw HTML link
 ])
 def test_contract_violations_fail_closed(text):
     with pytest.raises(LookupError):
@@ -117,5 +120,7 @@ def test_release_workflow_exact_extract_step_and_job_wiring():
             " > release-notes/notes.md\n") in text
     assert "continue-on-error" not in text
     assert "needs: [build, publish]" in text
+    step = text[text.index("- name: Extract curated release notes"):text.index("python tools/release_notes.py")]
+    assert "if:" not in step  # the gate cannot be switched off
     github_release = text[text.index("  github-release:"):]
     assert "name: release-notes\n          path: release-notes\n" in github_release

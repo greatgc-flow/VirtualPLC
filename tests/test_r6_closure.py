@@ -58,3 +58,35 @@ def test_write_atomic_overlay_keeps_cap_atomicity_and_dword_halves():
     big.write_words("LTN", 4, [0x5678, 0x1234])
     big.write_atomic([("LTN", 4, "word", [0xBEEF])])  # low half only: high half read through
     assert big.read_words("LTN", 4, 2) == [0xBEEF, 0x1234]
+
+
+def test_preseeded_sd203_needs_no_extra_cell():
+    """BEHAVIOR: one free cell is needed for SD203 'unless it already contains SD203'."""
+    memory = Memory(max_cells=2)
+    memory.write_words("D", 0, [5])
+    memory.write_words("SD", 203, [0])
+    Server(memory=memory, port=0)  # RUN overwrites SD203 in place
+    assert memory.read_words("SD", 203, 1) == [1] and memory.stored_cells == 2
+
+
+def test_init_snapshot_with_sd203_fits_exactly_at_the_cap(tmp_path):
+    snapshot = tmp_path / "with_sd203.json"
+    snapshot.write_text(json.dumps({"D": {"0": [1, 2]}, "SD": {"203": [0]}}), encoding="utf-8")
+    result = _cli("--init", str(snapshot), "--max-cells", "3",
+                  "--ethernet-model", "qj71e71", "--show-effective-ethernet")
+    assert result.returncode == 0, result.stderr
+
+
+def test_write_atomic_never_scans_or_copies_the_family():
+    """F1 (0.9.1): a small random write must not iterate or copy a large device family."""
+    class NoScan(dict):
+        def _scan(self, *args):
+            pytest.fail("write_atomic scanned or copied the whole device family")
+        copy = __iter__ = keys = items = values = _scan
+
+    for cap in (None, 60000):
+        memory = Memory(max_cells=cap)
+        memory.write_words("D", 0, list(range(1, 50001)))
+        memory._cells["D"] = NoScan(dict.items(memory._cells["D"]))
+        memory.write_atomic([("D", 7, "word", [99]), ("D", 60000, "word", [5])])
+        assert dict.get(memory._cells["D"], 7) == 99 and dict.get(memory._cells["D"], 60000) == 5
