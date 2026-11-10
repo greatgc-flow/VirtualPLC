@@ -182,4 +182,4 @@ def test_offline_preflight_never_opens_socket_or_changes_simulator(monkeypatch, 
         result = inspect("R04CPU", number, port)
         assert result["simulator_bind_affected"] is False
     assert build_parser().get_default("max_clients") == 64
-    assert Server.__init__.__defaults__ is not None
+    assert getattr(Server.__init__, "__wrapped__", Server.__init__).__defaults__ is not None  # #78 shim

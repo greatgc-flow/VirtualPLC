@@ -10,6 +10,11 @@
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
 - Session record (requirements, design, process, scores, results) for 0.8.0–0.10.0: [SESSION_20261110](handoff/SESSION_20261110_MECE_REVIEW_AND_RELEASES.md).
 
+## Unreleased
+
+- Deprecated (#78, keyword-only API): passing a `Server` parameter after `profile`, or a `Memory` parameter after `profile`, positionally now emits a `DeprecationWarning` that names the parameters and points at the calling line; 1.0 makes them keyword-only (positional use will raise `TypeError`). `Server(host, port, profile)` and `Memory(profile)` stay positional and warning-free, keyword calls never warn, and behaviour is otherwise unchanged (including the `TypeError` for duplicate, surplus or unknown arguments; `inspect.signature` and `help()` are unchanged, while raw `Server.__init__.__defaults__` now belongs to a thin wrapper whose original is `__wrapped__`). Use keywords, e.g. `Server(port=0, memory=m)` or `Memory("Q", limits=..., max_cells=...)`. Plan: [DESIGN.md](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/DESIGN.md#keyword-only-api-78-0110-deprecation-10-enforcement); details: [BEHAVIOR.md](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md#public-api).
+- Internal positional `Memory(...)` calls (`Memory.load`, CLI `--init/--limit/--max-cells`) now use keywords, so the package itself emits no warning. The repository test suite runs with `DeprecationWarning`/`PendingDeprecationWarning` as errors (pytest `filterwarnings`), a static guard rejects positional extras in code and documented snippets, and the bottling_line demos run with `-W error::DeprecationWarning`.
+
 ## 2026-11-10 release 0.10.0 — release-note source
 
 Two opt-in UDP additions for #13 (default behaviour unchanged) plus a test-reliability fix. Independent review: 42-cell grid + C1–C8.

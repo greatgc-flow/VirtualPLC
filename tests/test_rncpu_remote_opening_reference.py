@@ -104,4 +104,4 @@ def test_offline_reference_never_binds_or_changes_listener_defaults(inspect, mon
     assert inspect("open_by_program")["simulator_network_affected"] is False
     assert inspect("do_not_open_by_program")["simulator_network_affected"] is False
     assert build_parser().get_default("max_clients") == 64
-    assert Server.__init__.__defaults__ is not None
+    assert getattr(Server.__init__, "__wrapped__", Server.__init__).__defaults__ is not None  # #78 shim

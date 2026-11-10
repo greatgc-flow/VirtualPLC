@@ -211,4 +211,4 @@ def test_reference_timer_has_no_network_or_runtime_side_effect(inspect, monkeypa
     assert report["simulator_network_affected"] is False
     assert report["physical_hardware_certified"] is False
     assert build_parser().get_default("max_clients") == 64
-    assert Server.__init__.__defaults__ is not None
+    assert getattr(Server.__init__, "__wrapped__", Server.__init__).__defaults__ is not None  # #78 shim

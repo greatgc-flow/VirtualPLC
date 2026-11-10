@@ -109,6 +109,22 @@ treats `[]` as a no-op and rejects `None` with `ValueError`.
 See the [canonical CLI reference](../README.md#cli-reference),
 [embedding examples](../README.md#memory-seeding-snapshots-and-embedding), or `--help`.
 
+- Keyword-only API (#78): `Server(host, port, profile, ...)` and `Memory(profile, ...)`
+  keep those leading parameters positional. Since 0.11.0, passing any later
+  parameter positionally (e.g. `Server("127.0.0.1", 0, "Q", memory)` or
+  `Memory("Q", limits)`) emits a `DeprecationWarning` attributed to the calling line
+  that names the parameters; the call otherwise behaves exactly as before, and
+  calls that would not bind (a parameter given twice, too many positional
+  arguments, or an unknown keyword) still raise the same `TypeError` without a
+  warning. Argument values are validated later, so with warnings as errors a
+  positional extra that also has an invalid value surfaces the
+  `DeprecationWarning` before the `ValueError`. 1.0 makes those parameters keyword-only (positional use then
+  raises `TypeError`). Use keywords, e.g. `Server(port=0, memory=m)`,
+  `Memory("Q", limits=..., max_cells=...)`. `inspect.signature` and `help()` are
+  unchanged; until 1.0, `Server.__init__`/`Memory.__init__` are thin wrappers whose
+  own `__defaults__`/`__code__` are `(self, *args, **kwargs)` (the original is
+  `__wrapped__`). `EthernetSettings`, `FaultPlan`, `UdpFaultPlan` and the `Memory`
+  read/write methods are not affected.
 - `.start()` binds/listens and starts workers before returning; `.address` is `(host,
   actual_port)`.
 - `Server(host=...)` permits only numeric loopback hosts or `localhost` by default; `start()` also checks every bound address and, if a name resolved off-loopback, closes all sockets and raises `virtual_plc.server.NonLoopbackBindError`, an `OSError` subclass (not a package export; catch `OSError`).

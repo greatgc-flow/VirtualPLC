@@ -316,6 +316,11 @@ runs before server construction, so `--initial-state` sets SD203 (a snapshot's
 SD203 is overwritten). Writing SD203 changes the word
 without changing CPU state. For a pytest fixture, run `virtual-plc guide embed`.
 
+Pass options by keyword. Only `Server(host, port, profile)` and `Memory(profile)`
+may be positional; since 0.11.0 any later positional argument emits a
+`DeprecationWarning`, and 1.0 makes those parameters keyword-only
+([#78](https://github.com/greatgc-flow/VirtualPLC/issues/78)).
+
 ## Response faults
 
 Save faults.json and pass `--fault-plan faults.json`:

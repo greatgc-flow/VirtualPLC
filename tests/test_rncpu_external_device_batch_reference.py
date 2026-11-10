@@ -251,7 +251,7 @@ def test_no_network_runtime_listener_or_hardware_access(lint, monkeypatch):
     assert lint([row(1, 5005), row(2, 1024)])["simulator_network_affected"] is False
     assert lint([])["simulator_network_affected"] is False
     assert build_parser().get_default("max_clients") == 64
-    assert Server.__init__.__defaults__ is not None
+    assert getattr(Server.__init__, "__wrapped__", Server.__init__).__defaults__ is not None  # #78 shim
 
 
 def test_invalid_port_and_missing_slot_can_be_reported_together(lint):

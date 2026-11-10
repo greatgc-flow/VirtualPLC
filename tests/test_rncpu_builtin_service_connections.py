@@ -96,4 +96,4 @@ def test_no_automatic_rncpu_or_got_listeners_or_socket_access(monkeypatch):
     assert catalog["rncpu_builtin"]["service_connection_reference"][
         "simulator_network_affected"] is False
     assert build_parser().get_default("max_clients") == 64
-    assert Server.__init__.__defaults__ is not None
+    assert getattr(Server.__init__, "__wrapped__", Server.__init__).__defaults__ is not None  # #78 shim

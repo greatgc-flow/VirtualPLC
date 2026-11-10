@@ -224,7 +224,7 @@ def main(argv=None):
             options["ethernet_model"] = args.ethernet_model
             options["ethernet_overrides"] = overrides
         if args.init is not None or args.limit or args.max_cells is not None:
-            options["memory"] = Memory(args.profile, dict(args.limit), args.max_cells)
+            options["memory"] = Memory(args.profile, limits=dict(args.limit), max_cells=args.max_cells)
         if args.init is not None:
             # Load before Server() so its initial_state rewrites any snapshot SD203 mirror.
             options["memory"].load(json.loads(Path(args.init).read_text(encoding="utf-8-sig")))

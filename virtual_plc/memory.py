@@ -3,6 +3,7 @@
 from collections import ChainMap
 from copy import deepcopy
 
+from ._compat import warn_positional
 from .profiles import PROFILES
 
 
@@ -42,6 +43,7 @@ def _store_halves(cells, head, values):
 class Memory:
     """Unsigned point storage per device family; bit devices hold one bit per point."""
 
+    @warn_positional(1)  # profile; limits and max_cells become keyword-only in 1.0 (#78)
     def __init__(self, profile="Q", limits=None, max_cells=None):
         if max_cells is not None and (type(max_cells) is not int or max_cells <= 0):
             raise ValueError("max_cells must be a positive int or None")
@@ -211,7 +213,7 @@ class Memory:
         """
         if not isinstance(data, dict):
             raise ValueError("memory snapshot must be an object")
-        staged = Memory(self.profile.name, self._limits, self.max_cells)
+        staged = Memory(self.profile.name, limits=self._limits, max_cells=self.max_cells)
         staged._cells = deepcopy(self._cells)
         for name, runs in data.items():
             spec = self.profile.devices.get(name)
