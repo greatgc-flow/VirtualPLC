@@ -44,6 +44,11 @@ packages = ["virtual_plc"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# #78: positional use of to-be-keyword-only parameters must not creep back in.
+filterwarnings = [
+    "error::DeprecationWarning",
+    "error::PendingDeprecationWarning",
+]
 markers = [
     "slow: real pinned-client reset timeout/sleep/reconnect behavior",
     "client_misbehaviour: client-misbehaviour observed with the pinned client",

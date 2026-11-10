@@ -15,8 +15,9 @@ SAMPLE = Path(__file__).resolve().parents[1] / "examples" / "bottling_line"
 
 
 def run_script(name, *args, timeout=60):
-    return subprocess.run([sys.executable, str(SAMPLE / name), *args], cwd=SAMPLE,
-                          capture_output=True, text=True, timeout=timeout)
+    # -W: the demos must stay free of deprecated positional calls (#78).
+    return subprocess.run([sys.executable, "-W", "error::DeprecationWarning", str(SAMPLE / name), *args],
+                          cwd=SAMPLE, capture_output=True, text=True, timeout=timeout)
 
 
 def test_sample_files_exist_and_readme_references_every_script():

@@ -7,6 +7,7 @@ import sys
 import threading
 
 from . import faults
+from ._compat import warn_positional
 from .codec import decode_request, encode_response, frame_size
 from .commands import CPU_STATES, dispatch
 from .ethernet import EthernetSettings
@@ -51,6 +52,8 @@ class NonLoopbackBindError(OSError):
 class Server:
     """Local MC-protocol PLC simulator; use as a context manager or start()/stop().
 
+    host, port and profile may be positional; pass every other parameter by keyword
+    (positional use is deprecated and keyword-only from 1.0, #78).
     Keyword groups (all optional; bad values raise ValueError before binding):
       endpoints: host, port, listeners=[("tcp"|"udp", port), ...], allow_nonlocal,
         max_clients (concurrent TCP sessions), idle_timeout
@@ -64,6 +67,7 @@ class Server:
     Usage and a pytest fixture: `virtual-plc guide embed`.
     """
 
+    @warn_positional(3)  # host, port, profile; the rest become keyword-only in 1.0 (#78)
     def __init__(self, host="127.0.0.1", port=0, profile="Q", memory=None,
                  response_hook=None, max_points=None, idle_timeout=None,
                  initial_state="RUN", latch_ranges=None, password=None, fault_plan=None,

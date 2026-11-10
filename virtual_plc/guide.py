@@ -297,6 +297,7 @@ Embed in Python (stdlib only). Leaving the with-block stops the server and joins
       host, port = server.address       # connect clients here
   snapshot = memory.dump()              # AFTER stop; same JSON schema as --init
 Server keywords: {keywords}.
+Only host, port, profile (Server) and profile (Memory) may be positional; the rest warn and are keyword-only in 1.0.
 Bad values raise ValueError before binding; Server(profile=...) and Memory(profile) must match.
 Memory API: read_words/write_words/read_bits/write_bits(device, head, ...), load(dict), dump().
 Live state: server.state ("RUN"/"STOP"/"PAUSE"), server.set_state(s), server.reset_count, server.locked.

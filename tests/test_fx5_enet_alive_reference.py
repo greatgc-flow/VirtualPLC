@@ -164,4 +164,4 @@ def test_no_sockets_or_server_option_mutation(inspect, monkeypatch):
                     "interval": {"value": 100, "unit": "ms"}})[
                         "simulator_network_affected"] is False
     assert build_parser().get_default("max_clients") == 64
-    assert Server.__init__.__defaults__ is not None
+    assert getattr(Server.__init__, "__wrapped__", Server.__init__).__defaults__ is not None  # #78 shim
