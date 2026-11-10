@@ -15,7 +15,9 @@ from pathlib import Path
 REPO_BLOB = "https://github.com/greatgc-flow/VirtualPLC/blob/v{version}/"
 
 HEADING = r"^## [^\n]*\brelease {version} \S+ release-note source[ \t]*\r?$"
-FENCE = re.compile(r"^\s*(```|~~~)")
+FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")  # CommonMark-style opener/closer
+CODE_SPAN = re.compile(r"(`+).+?\1")
+LINK = re.compile(r"\]\(([^)\s]+)(\s+\"[^\"]*\")?\)")
 
 
 def extract(version, handoff_text):
@@ -24,36 +26,50 @@ def extract(version, handoff_text):
     match = pattern.search(handoff_text)
     if match is None:
         raise LookupError("no 'release %s — release-note source' section in HANDOFF" % version)
-    body_lines, in_fence = [], False
+    base = REPO_BLOB.format(version=version)
+    body_lines, fence = [], None  # fence = (char, length) of the open code fence
     for line in handoff_text[match.end():].splitlines()[1:]:
-        if FENCE.match(line):
-            in_fence = not in_fence
-        elif not in_fence and line.startswith("## "):
-            break  # next section; a '## ' inside a code fence is content
+        opener = FENCE.match(line)
+        if fence is None:
+            if opener:
+                fence = (opener.group(1)[0], len(opener.group(1)))
+            elif line.startswith("## "):
+                break  # next section; a '## ' inside a code fence is content
+            else:
+                line = _absolute_links(line, base)
+        elif (opener and opener.group(1)[0] == fence[0] and len(opener.group(1)) >= fence[1]
+              and not opener.group(2).strip()):
+            fence = None  # closes only on the same char, at least as long, nothing after
         body_lines.append(line)
-    if in_fence:
+    if fence is not None:
         raise LookupError("release %s note section has an unterminated code fence" % version)
     body = "\n".join(body_lines).strip()
     if not body:
         raise LookupError("release %s note section is empty" % version)
-    return _absolute_links(body, REPO_BLOB.format(version=version)) + "\n"
+    return body + "\n"
 
 
-def _absolute_links(text, base):
-    """HANDOFF lives in docs/: make its relative links work on the release page.
+def _absolute_links(line, base):
+    """HANDOFF lives in docs/: make relative links outside code work on the release page.
 
     Links are pinned to the release tag so anchors keep working after docs move.
     """
     def fix(match):
-        target = match.group(1)
+        target, title = match.group(1), match.group(2) or ""
         if target.startswith(("http://", "https://", "mailto:", "#")):
             return match.group(0)
         if target.startswith("/"):  # repository-root path
             path = posixpath.normpath(target.lstrip("/"))
         else:
             path = posixpath.normpath(posixpath.join("docs", target))
-        return "](" + base + path + ")"
-    return re.sub(r"\]\(([^)\s]+)\)", fix, text)
+        return "](" + base + path + title + ")"
+    pieces, position = [], 0
+    for span in CODE_SPAN.finditer(line):  # leave inline code spans untouched
+        pieces.append(LINK.sub(fix, line[position:span.start()]))
+        pieces.append(span.group(0))
+        position = span.end()
+    pieces.append(LINK.sub(fix, line[position:]))
+    return "".join(pieces)
 
 
 def main(argv=None):
@@ -64,7 +80,7 @@ def main(argv=None):
     path = Path(argv[1]) if len(argv) == 2 else Path(__file__).resolve().parents[1] / "docs" / "HANDOFF.md"
     try:
         sys.stdout.write(extract(argv[0], path.read_text(encoding="utf-8")))
-    except (LookupError, OSError) as error:
+    except (LookupError, OSError, UnicodeDecodeError) as error:
         print("release notes: %s" % error, file=sys.stderr)
         return 1
     return 0
