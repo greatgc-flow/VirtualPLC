@@ -260,7 +260,7 @@ UDP is a datagram adapter over the existing MC 3E/4E decoder/dispatcher:
 one exact 8192-byte-maximum frame per packet, no stream reassembly, silent
 discard on malformed/oversized packet, reply to sender address. It does not implement retransmission, client sessions, UDP request
 faults, authentication or rate limiting; the independently opt-in UDP
-**response** drop/delay actions are documented in the next subsection. TCP-specific FaultPlans are rejected for
+**response** datagram fault actions are documented in the next subsection. TCP-specific FaultPlans are rejected for
 mixed/UDP configurations rather than being silently misapplied. Loopback
 guard stays in effect; `--allow-nonlocal --idle-timeout` is required for
 any nonlocal bind, with no UDP timeout semantics implied. A separate
@@ -274,7 +274,25 @@ lock; see [BEHAVIOR.md](BEHAVIOR.md#tcp-session-counters-opt-in).
 
 ### UDP datagram response faults (PR #52)
 
-Separate `UdpFaultPlan` (`virtual_plc/udp_faults.py`) reserves post-dispatch UDP `drop`/`delay` atomically under its own plan lock and waits outside the shared PLC request lock; full schema and matching semantics are owned by [FAULTS.md](FAULTS.md#udp-datagram-response-faults-opt-in). Duplicate, corruption, reorder, scheduler and rate limiting are held for separate #13 slices.
+Separate `UdpFaultPlan` (`virtual_plc/udp_faults.py`) reserves post-dispatch UDP `drop`/`delay`/`duplicate`/`truncate`/`corrupt_header` atomically under its own plan lock and waits outside the shared PLC request lock; full schema and matching semantics are owned by [FAULTS.md](FAULTS.md#udp-datagram-response-faults-opt-in).
+
+Datagram-native actions (#13): `udp_faults.UDP_ACTION_FIELDS` is the UDP action
+schema (FAULTS.md table and `guide faults` are checked against it), and
+`udp_faults.datagrams(response, action)` maps one reserved action to the ordered
+list of reply datagrams, so the worker has a single send loop. Decisions:
+`duplicate` is one execution and two sends, each counted in `sent`;
+`truncate` requires n >= 1 (n=0 would equal `drop`, and an empty datagram is
+never emitted); `corrupt_header` keeps the TCP bounds (offset 0..8, xor 1..255)
+and leaves a reply shorter than the offset unchanged rather than failing,
+because 1E replies can be 2 bytes and the plan is validated without knowing
+the frame. The match model (command, global nth, peer IP) is unchanged and
+one action applies per response.
+
+Remaining #13 scope: **reorder** is not implemented. It needs a held reply
+that is released by a later response (or by stop/timeout), i.e. cross-request
+state in the listener worker plus a bounded release rule; it does not fall out
+of the one-response/one-action model. Scheduler and rate limiting also remain
+out of scope.
 
 ## 1. Verified client facts (pinned pymcprotocol 0.3.0)
 

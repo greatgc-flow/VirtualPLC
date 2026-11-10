@@ -16,6 +16,7 @@ from .codec import FRAMES, WIRES
 from .commands import COMMAND_NAMES, supported_commands
 from .ethernet import model_catalog, reference_catalog
 from .faults import ACTION_FIELDS
+from .udp_faults import UDP_ACTION_FIELDS
 from .profiles import PROFILES
 from .server import Server
 
@@ -66,7 +67,7 @@ Multi-port: virtual-plc --listen tcp:5000 --listen tcp:5001 --listen udp:5000 (o
 1E batch mode: virtual-plc --slmp-1e --listen tcp:5000 --listen udp:5000 (not full FX5 hardware).
 Physical switch edge: --slmp-1e --slmp-1e-run-switch STOP --initial-state STOP; 13H ACK succeeds yet CPU stays STOP.
 --listen replaces --port. UDP accepts one exact MC frame/datagram; no TCP fault plan with UDP.
-Optional --udp-fault-plan FILE enables UDP response drop/delay only (no stream faults).
+Optional --udp-fault-plan FILE enables UDP response datagram faults only (no stream faults).
 -v logs requests/close reasons (no payloads/passwords). TCP idle timeout defaults to none.
 """.strip("\n")
 
@@ -160,7 +161,7 @@ OPTIONS_TAIL = ("DEV:LO-HI repeats (--limit D:0-99 --limit M:0-15); its endpoint
 FAULTS_HEAD = """
 Faults change TCP replies AFTER the command ran; writes are never rolled back. TCP fault plans with
 UDP are rejected (RST/stream-close/partial-send do not apply). UDP uses separate
---udp-fault-plan FILE or Server(udp_fault_plan=UdpFaultPlan(steps)) for drop/delay
+--udp-fault-plan FILE or Server(udp_fault_plan=UdpFaultPlan(steps)) for datagram faults
 AFTER dispatch. UDP match: command (1E byte with --slmp-1e), global nth, peer IP. No plan = inert.
 For TCP, opt in with --fault-plan FILE or
 Server(fault_plan=FaultPlan(steps)); without a plan nothing is matched or delayed.
@@ -297,7 +298,7 @@ Memory API: read_words/write_words/read_bits/write_bits(device, head, ...), load
 Live state: server.state ("RUN"/"STOP"/"PAUSE"), server.set_state(s), server.reset_count, server.locked.
 Memory calls are not synchronized with wire requests: never load, mutate or dump while serving; use a client.
 FaultPlan(steps) or FaultPlan.from_file(path) -> Server(fault_plan=...); schema: virtual-plc guide faults.
-UdpFaultPlan(steps) -> Server(listeners=[('udp', 0)], udp_fault_plan=...); drop/delay only.
+UdpFaultPlan(steps) -> Server(listeners=[('udp', 0)], udp_fault_plan=...); datagram actions: guide faults.
 Observability: server.get_listener_health(), server.get_udp_metrics() (udp_metrics=True),
   server.get_tcp_metrics() (tcp_metrics=True); see docs/BEHAVIOR.md#udp-observability-opt-in.
 response_hook(bytes) -> bytes transforms every complete reply before it is sent; hooks must return
@@ -327,10 +328,21 @@ pytest fixture:
 def _faults(parser):
     actions = []
     for kind, (required, optional) in ACTION_FIELDS.items():
-        parts = sorted(required) + [f"[{name}]" for name in sorted(optional)]
-        signature = f"{kind}({', '.join(parts)})" if parts else kind
+        signature = _signature(kind, required, optional)
         actions.append(f"  {signature:<34}{EFFECTS[kind]}")
-    return "\n".join([FAULTS_HEAD, *actions, FAULTS_TAIL])
+    return "\n".join([FAULTS_HEAD, *actions, FAULTS_TAIL, _udp_actions()])
+
+
+def _signature(kind, required, optional):
+    parts = sorted(required) + [f"[{name}]" for name in sorted(optional)]
+    return f"{kind}({', '.join(parts)})" if parts else kind
+
+
+def _udp_actions():
+    names = ", ".join(_signature(kind, *fields) for kind, fields in UDP_ACTION_FIELDS.items())
+    return (f"UDP actions (--udp-fault-plan): {names}.\n"
+            "  duplicate sends the same reply datagram twice for one execution; truncate needs n >= 1;\n"
+            "  corrupt_header takes offset 0..8 and xor 1..255, and leaves a shorter reply unchanged.")
 
 
 def _memory(parser):

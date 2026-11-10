@@ -1,4 +1,4 @@
-"""UDP-only datagram response faults: opt-in drop and delay (#13).
+"""UDP-only datagram response faults: drop, delay, duplicate, truncate, corrupt_header (#13).
 
 No physical PLC, no production network, no assumptions about datagram
 arrival timing. Every socket uses loopback + port 0.
@@ -32,7 +32,21 @@ def recv_udp(sock, frame, target):
     None, {}, ({"action": {"type": "drop"}},),
     [{"action": {"type": "rst"}}],
     [{"action": {"type": "partial_send", "chunks": [1]}}],
-    [{"action": {"type": "duplicate"}}],
+    [{"action": {"type": "reorder"}}],
+    [{"action": {"type": "bad_end_code", "code": 1}}],
+    [{"action": {"type": ["drop"]}}],
+    [{"action": {"type": "duplicate", "count": 2}}],
+    [{"action": {"type": "truncate"}}],
+    [{"action": {"type": "truncate", "n": 0}}],
+    [{"action": {"type": "truncate", "n": True}}],
+    [{"action": {"type": "truncate", "n": "1"}}],
+    [{"action": {"type": "truncate", "n": 1.0}}],
+    [{"action": {"type": "truncate", "n": 1, "seconds": 0}}],
+    [{"action": {"type": "corrupt_header", "offset": 9}}],
+    [{"action": {"type": "corrupt_header", "offset": -1}}],
+    [{"action": {"type": "corrupt_header", "xor": 0}}],
+    [{"action": {"type": "corrupt_header", "xor": 256}}],
+    [{"action": {"type": "corrupt_header", "mask": 1}}],
     [{"action": {"type": "delay", "seconds": -1}}],
     [{"action": {"type": "delay", "seconds": float("nan")}}],
     [{"action": {"type": "delay", "seconds": True}}],
@@ -221,3 +235,120 @@ def test_udp_json_schema_is_strict(tmp_path, document):
     path.write_text(document, encoding="utf-8")
     with pytest.raises(ValueError):
         UdpFaultPlan.from_file(path)
+
+
+# --- #13 datagram-native actions: duplicate, truncate, corrupt_header ---
+
+def test_udp_plan_new_actions_validate_and_fill_defaults():
+    faults = plan([
+        {"action": {"type": "duplicate"}},
+        {"action": {"type": "truncate", "n": 1}},
+        {"action": {"type": "corrupt_header"}},
+        {"action": {"type": "corrupt_header", "offset": 8, "xor": 255}},
+    ])
+    peer = {"peer": "127.0.0.1"}
+    assert faults.select(1, **peer) == {"type": "duplicate"}
+    assert faults.select(1, **peer) == {"type": "truncate", "n": 1}
+    assert faults.select(1, **peer) == {"type": "corrupt_header", "offset": 0, "xor": 1}
+    assert faults.select(1, **peer) == {"type": "corrupt_header", "offset": 8, "xor": 255}
+    assert faults.select(1, **peer) is None
+
+
+def test_udp_action_fields_are_the_schema_source():
+    from virtual_plc.udp_faults import UDP_ACTION_FIELDS
+    assert set(UDP_ACTION_FIELDS) == {"drop", "delay", "duplicate", "truncate", "corrupt_header"}
+
+
+def test_udp_duplicate_sends_same_reply_twice_for_one_execution():
+    hook_calls = []
+    faults = plan([{"match": {"command": "0x1401"}, "action": {"type": "duplicate"}}])
+    write = packet("3E", "binary", 0x1401, data=device_data(payload=b"\x34\x12"))
+    read = packet("4E", "binary", serial=0x3344)
+    with Server(listeners=[("udp", 0)], udp_fault_plan=faults, udp_metrics=True,
+                response_hook=lambda response: hook_calls.append(response) or response) as server:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            first = recv_udp(client, write, server.address)
+            assert first == encode_response(decode_request(write))
+            assert client.recvfrom(8192)[0] == first
+            assert len(hook_calls) == 1  # one dispatch, two datagrams
+            # The next datagram is the read reply: no third copy precedes it.
+            assert recv_udp(client, read, server.address) == encode_response(
+                decode_request(read), data=b"\x34\x12")
+    metrics = server.get_udp_metrics()
+    assert (metrics["received"], metrics["sent"], metrics["fault_dropped"]) == (2, 3, 0)
+    assert len(hook_calls) == 2
+
+
+@pytest.mark.parametrize("n, kept", [(1, 1), (5, 5), (10**6, None)])
+def test_udp_truncate_sends_prefix_after_committed_write(n, kept):
+    faults = plan([{"match": {"nth": 1}, "action": {"type": "truncate", "n": n}}])
+    write = packet("3E", "binary", 0x1401, data=device_data(payload=b"\x34\x12"))
+    full = encode_response(decode_request(write))
+    with Server(listeners=[("udp", 0)], udp_fault_plan=faults, udp_metrics=True) as server:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            assert recv_udp(client, write, server.address) == full[:kept]
+            assert server.memory.read_words("D", 0, 1) == [0x1234]
+            assert recv_udp(client, write, server.address) == full  # times=1 exhausted
+    assert server.get_udp_metrics()["sent"] == 2
+
+
+@pytest.mark.parametrize("frame, wire", [("3E", "binary"), ("4E", "ascii")])
+def test_udp_corrupt_header_flips_one_byte(frame, wire):
+    faults = plan([{"action": {"type": "corrupt_header", "offset": 1, "xor": 0xFF}}])
+    read = packet(frame, wire, serial=0x1234)
+    full = encode_response(decode_request(read), data=b"\x00\x00")
+    with Server(listeners=[("udp", 0)], udp_fault_plan=faults) as server:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            reply = recv_udp(client, read, server.address)
+            assert reply == full[:1] + bytes([full[1] ^ 0xFF]) + full[2:]
+            assert recv_udp(client, read, server.address) == full
+
+
+def test_udp_corrupt_header_offset_past_short_1e_reply_is_unchanged():
+    """A 1E binary write reply is 2 bytes; offsets beyond a datagram never raise."""
+    faults = plan([{"action": {"type": "corrupt_header", "offset": 8}},
+                   {"action": {"type": "corrupt_header", "offset": 1, "xor": 0x80}}])
+    frame = one_e_request(3, head=0, count=1, payload=b"\x34\x12")
+    with Server(slmp_1e=True, listeners=[("udp", 0)], udp_fault_plan=faults) as server:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            assert recv_udp(client, frame, server.address) == b"\x83\x00"
+            assert recv_udp(client, frame, server.address) == b"\x83\x80"
+            assert server.memory.read_words("D", 0, 1) == [0x1234]
+
+
+def test_udp_fault_cli_rejects_invalid_new_action_before_bind(tmp_path, monkeypatch, capsys):
+    from virtual_plc import __main__ as cli
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Server must not be constructed for an invalid plan")
+
+    monkeypatch.setattr(cli, "Server", forbidden)
+    for action in ({"type": "truncate", "n": 0}, {"type": "corrupt_header", "offset": 9},
+                   {"type": "reorder"}):
+        bad = tmp_path / "bad.json"
+        bad.write_text(json.dumps({"steps": [{"action": action}]}), encoding="utf-8")
+        with pytest.raises(SystemExit) as error:
+            cli.main(["--listen", "udp:0", "--udp-fault-plan", str(bad)])
+        assert error.value.code == 2
+        assert "guide faults" in capsys.readouterr().err
+
+
+def test_udp_actions_documented_in_faults_doc_and_guide():
+    from pathlib import Path
+    from virtual_plc import guide
+    from virtual_plc.__main__ import build_parser
+    from virtual_plc.udp_faults import UDP_ACTION_FIELDS
+    root = Path(__file__).resolve().parents[1]
+    section = (root / "docs/FAULTS.md").read_text(encoding="utf-8").split(
+        "## UDP datagram response faults", 1)[1]
+    rows = "\n".join(line for line in section.splitlines() if line.startswith("|"))
+    assert not [kind for kind in UDP_ACTION_FIELDS if f"`{kind}`" not in rows]
+    udp_line = next(line for line in guide.render(build_parser(), "faults").splitlines()
+                    if line.startswith("UDP actions"))
+    assert all(kind in udp_line for kind in UDP_ACTION_FIELDS)
+    assert "reorder" in (root / "docs/DESIGN.md").read_text(encoding="utf-8").split(
+        "### UDP datagram response faults", 1)[1].split("\n## ", 1)[0].lower()

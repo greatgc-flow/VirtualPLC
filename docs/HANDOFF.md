@@ -9,6 +9,10 @@
 - Release gate: tag only a main commit whose `ci.yml` push run succeeded (release.yml enforces it).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
 
+## Unreleased
+
+- #13 (narrowed scope, UDP fault-injection model): `UdpFaultPlan` / `--udp-fault-plan` gain datagram-native post-dispatch actions next to `drop`/`delay`: `duplicate` (same reply datagram sent twice, one execution; `sent` counts both), `truncate` (`n` >= 1, first n bytes) and `corrupt_header` (optional `offset` 0..8, `xor` 1..255; a shorter reply is sent unchanged). Match model unchanged (command, global nth, peer IP); invalid plans raise ValueError before bind (CLI exit 2, `guide faults`). Schema source: `udp_faults.UDP_ACTION_FIELDS`; semantics: [FAULTS.md](FAULTS.md#udp-datagram-response-faults-opt-in). Default behaviour unchanged. Remaining #13: UDP reorder (see [DESIGN.md](DESIGN.md)).
+
 ## 2026-11-10 release 0.9.0 — release-note source
 
 Two opt-in additions; default behaviour is unchanged (no breaking changes).
