@@ -20,7 +20,7 @@
   `non_fast_forward`, `pull_request`, `required_status_checks`.
 - Because `strict=false`, rebase each PR onto current main and get a fresh
   11/11 before merging (peer-agreed).
-- Repository is **public**. Latest release **v0.9.1** (2026-11-10).
+- Repository is **public**. Latest release **v0.10.0** (2026-11-11).
 - Release workflow triggers on **push of `v*` tag**: version/tag assertion,
   full test, wheel build, PyPI publish via trusted identity, GitHub release
   assets. Its first step fails closed unless a `ci.yml` **push** run on
