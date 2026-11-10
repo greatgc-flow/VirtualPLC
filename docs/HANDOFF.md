@@ -1,7 +1,7 @@
 # VirtualPLC — Project Handoff
 
 ## Current state
-- Released version: v0.10.0 (2026-11-11); previous v0.9.1 (2026-11-11).
+- Released version: v0.10.0 (2026-11-10); previous v0.9.1 (2026-11-10). Release dates are UTC (GitHub `publishedAt`).
 - Upstream client oracle pin: `pymcprotocol==0.3.0` (`requirements-dev.txt`).
 - Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh required checks before merging (strict=false).
 - Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #13 (narrowed hardware-free scope), #25 (handoff), #78 (keyword-only API, 1.0; design comment posted), #95 (UDP rate-limit/fault-action review follow-ups).
@@ -10,7 +10,7 @@
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
 - Session record (requirements, design, process, scores, results) for 0.8.0–0.10.0: [SESSION_20261110](handoff/SESSION_20261110_MECE_REVIEW_AND_RELEASES.md).
 
-## 2026-11-11 release 0.10.0 — release-note source
+## 2026-11-10 release 0.10.0 — release-note source
 
 Two opt-in UDP additions for #13 (default behaviour unchanged) plus a test-reliability fix. Independent review: 42-cell grid + C1–C8.
 

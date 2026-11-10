@@ -110,12 +110,14 @@ ag A-7D, later ag G-7D) were rested.
 
 ### 5.1 Releases
 
+Dates are UTC release dates (GitHub `publishedAt`); the session ran into 2026-11-11 KST.
+
 | Version | Date | Highlights |
 |---|---|---|
 | 0.8.0 | 2026-11-10 | MECE review fixes (~70 findings), bottling-line sample, closure tests |
 | 0.9.0 | 2026-11-10 | `Memory(max_cells=N)` / `--max-cells`, opt-in TCP metrics |
-| 0.9.1 | 2026-11-11 | Random-write overlay (perf), SD203 cap message, release-notes gate |
-| 0.10.0 | 2026-11-11 | UDP fault actions, per-IP UDP rate limit, flaky-test fix |
+| 0.9.1 | 2026-11-10 | Random-write overlay (perf), SD203 cap message, release-notes gate |
+| 0.10.0 | 2026-11-10 | UDP fault actions, per-IP UDP rate limit, flaky-test fix |
 
 ### 5.2 Pull requests
 
@@ -138,7 +140,8 @@ ag A-7D, later ag G-7D) were rested.
 
 ## 6. Peer instruction diet (R7) — in progress
 
-An audit of per-turn / per-ask instruction payloads for cc, cx, ag and peerhub
-(sizes, frequency, redundancy, stale content, and workspace-only rules stored
-in global locations) is running; its prioritised action list will be appended
-here, and configuration changes are applied only with owner approval.
+Status as of 2026-11-10 (UTC): an audit of per-turn / per-ask instruction
+payloads for cc, cx, ag and peerhub (sizes, frequency, redundancy, stale
+content, and workspace-only rules stored in global locations) was started and
+had not reported when 0.10.0 was released. Its prioritised action list is
+tracked outside this release; configuration changes need owner approval.
