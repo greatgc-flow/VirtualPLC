@@ -123,10 +123,11 @@ Dates are UTC release dates (GitHub `publishedAt`); the session ran into 2026-11
 | 0.10.0 | 2026-11-10 | UDP fault actions, per-IP UDP rate limit, flaky-test fix |
 | 0.11.0 | 2026-11-10 | `DeprecationWarning` for positional `Server`/`Memory` parameters after `profile` (#78 step 1; 1.0 enforces) |
 | 0.11.1 | 2026-11-10 | `-v` logs one line per IP per 10 s for UDP rate-limit drops; rate limit × fault-action tests; troubleshoot hint (#95) |
+| 0.11.2 | 2026-11-11 | Whole-product audit fixes: oracle stdout bytes, deep-JSON exit 2, ValueError for bad profile/limits/state, `UdpFaultPlan.from_file` documented, TCP `corrupt_header` short-reply guard |
 
 ### 5.2 Pull requests
 
-#86 (0.8.0), #87, #89, #90 (0.9.0), #91 (0.9.1), #92, #93, #94, #96 (0.10.0), #97 (session record), #98, #99 (0.11.0), #100, #101 (0.11.1).
+#86 (0.8.0), #87, #89, #90 (0.9.0), #91 (0.9.1), #92, #93, #94, #96 (0.10.0), #97 (session record), #98, #99 (0.11.0), #100, #101 (0.11.1), #102 (final audit fixes).
 
 ### 5.3 Issues filed (lessons learned / follow-ups)
 
