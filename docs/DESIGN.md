@@ -281,8 +281,8 @@ schema (FAULTS.md table and `guide faults` are checked against it), and
 `udp_faults.datagrams(response, action)` maps one reserved action to the ordered
 list of reply datagrams, so the worker has a single send loop. Decisions:
 `duplicate` is one execution and two sends, each counted in `sent`;
-`truncate` requires n >= 1 (n=0 would equal `drop`, and an empty datagram is
-never emitted); `corrupt_header` keeps the TCP bounds (offset 0..8, xor 1..255)
+`truncate` requires n >= 1 (n=0 would equal `drop`; truncate itself never
+produces an empty datagram, though an empty `response_hook` result is still sent); `corrupt_header` keeps the TCP bounds (offset 0..8, xor 1..255)
 and leaves a reply shorter than the offset unchanged rather than failing,
 because 1E replies can be 2 bytes and the plan is validated without knowing
 the frame. The match model (command, global nth, peer IP) is unchanged and

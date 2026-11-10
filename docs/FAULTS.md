@@ -206,7 +206,9 @@ other UDP listeners.
   `udp_metrics=True`, `sent` (or `send_errors`) counts each datagram, so one
   duplicated response adds 2.
 - `truncate` with n at or past the response length sends the response
-  unchanged. n=0 is rejected (use `drop`): no empty datagram is ever sent.
+  unchanged. n=0 is rejected (use `drop`): truncate itself never produces an empty
+  datagram. (A `response_hook` that returns `b""` is still sent as an empty
+  datagram, twice under `duplicate`.)
 - `corrupt_header` mirrors the TCP bounds (offsets shared by every 3E/4E
   response header). A datagram shorter than offset+1 bytes (for example a
   2-byte binary 1E reply, or a short hook result) is sent unchanged; the use

@@ -347,8 +347,110 @@ def test_udp_actions_documented_in_faults_doc_and_guide():
         "## UDP datagram response faults", 1)[1]
     rows = "\n".join(line for line in section.splitlines() if line.startswith("|"))
     assert not [kind for kind in UDP_ACTION_FIELDS if f"`{kind}`" not in rows]
+    for kind, (required, optional) in UDP_ACTION_FIELDS.items():
+        row = next(line for line in rows.splitlines() if line.startswith(f"| `{kind}` |"))
+        assert not [name for name in required | optional if f"`{name}`" not in row], kind
+    # A response_hook may itself return b""; only truncate is guaranteed non-empty.
+    design = (root / "docs/DESIGN.md").read_text(encoding="utf-8")
+    assert "truncate itself never produces an empty datagram" in " ".join(section.split())
+    assert "truncate itself never produces an empty datagram" in " ".join(design.split())
+    assert "no empty datagram is ever sent" not in section
+    assert "an empty datagram is\nnever emitted" not in design
     udp_line = next(line for line in guide.render(build_parser(), "faults").splitlines()
                     if line.startswith("UDP actions"))
     assert all(kind in udp_line for kind in UDP_ACTION_FIELDS)
     assert "reorder" in (root / "docs/DESIGN.md").read_text(encoding="utf-8").split(
         "### UDP datagram response faults", 1)[1].split("\n## ", 1)[0].lower()
+
+
+# --- PR #92 review closure: stop/send-error paths and wire coverage ---
+
+def test_udp_duplicate_second_send_suppressed_by_stop(monkeypatch):
+    import virtual_plc.server as server_module
+    holder = []
+
+    def stop_after_first(response, action):
+        yield response
+        holder[0]._stopping.set()  # stop requested between the two sends
+        yield response
+
+    monkeypatch.setattr(server_module, "datagrams", stop_after_first)
+    faults = plan([{"action": {"type": "duplicate"}}])
+    read = packet("3E", "binary")
+    with Server(listeners=[("udp", 0)], udp_fault_plan=faults, udp_metrics=True) as server:
+        holder.append(server)
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            assert recv_udp(client, read, server.address) == encode_response(
+                decode_request(read), data=b"\x00\x00")
+            server.stop()  # joins the worker: counting is finished
+            client.settimeout(0.08)
+            with pytest.raises(OSError):  # timeout, or reset once the port is closed
+                client.recvfrom(8192)
+    metrics = server.get_udp_metrics()
+    assert (metrics["received"], metrics["sent"], metrics["send_errors"]) == (1, 1, 0)
+
+
+def test_udp_duplicate_counts_each_failed_send(monkeypatch):
+    attempts = []
+    both_attempted = threading.Event()
+    real_sendto = socket.socket.sendto
+    faults = plan([{"action": {"type": "duplicate"}}])
+    with Server(listeners=[("udp", 0)], udp_fault_plan=faults, udp_metrics=True) as server:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+
+            def failing_sendto(sock, *args):
+                if sock is client:
+                    return real_sendto(sock, *args)
+                attempts.append(args[0])
+                if len(attempts) == 2:
+                    both_attempted.set()
+                raise OSError("synthetic send failure")
+
+            monkeypatch.setattr(socket.socket, "sendto", failing_sendto)
+            client.sendto(packet("3E", "binary"), server.address)
+            assert both_attempted.wait(3)
+    metrics = server.get_udp_metrics()  # after stop(): counting finished
+    assert (metrics["received"], metrics["sent"], metrics["send_errors"]) == (1, 0, 2)
+    assert attempts[0] == attempts[1]
+
+
+WIRE_CASES = [("1E", "binary"), ("1E", "ascii"), ("4E", "ascii")]
+
+
+def _wire_case(frame, wire):
+    """(Server keywords, idempotent request) for one frame/wire combination."""
+    if frame == "1E":
+        payload = b"\x34\x12" if wire == "binary" else b"1234"
+        return {"slmp_1e": True}, one_e_request(3, wire=wire, head=0, count=1, payload=payload)
+    return {}, packet(frame, wire, serial=0x1234)
+
+
+@pytest.mark.parametrize("frame, wire", WIRE_CASES)
+def test_udp_duplicate_on_1e_and_ascii_wires(frame, wire):
+    options, frame_bytes = _wire_case(frame, wire)
+    faults = plan([{"action": {"type": "duplicate"}}])
+    with Server(listeners=[("udp", 0)], udp_fault_plan=faults, udp_metrics=True,
+                **options) as server:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            first = recv_udp(client, frame_bytes, server.address)
+            second = client.recvfrom(8192)[0]
+            full = recv_udp(client, frame_bytes, server.address)  # plan exhausted
+            assert first == second == full and len(full) > 1
+    metrics = server.get_udp_metrics()
+    assert (metrics["received"], metrics["sent"]) == (2, 3)
+
+
+@pytest.mark.parametrize("frame, wire", WIRE_CASES)
+def test_udp_truncate_on_1e_and_ascii_wires(frame, wire):
+    options, frame_bytes = _wire_case(frame, wire)
+    faults = plan([{"action": {"type": "truncate", "n": 1}}])
+    with Server(listeners=[("udp", 0)], udp_fault_plan=faults, **options) as server:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            short = recv_udp(client, frame_bytes, server.address)
+            full = recv_udp(client, frame_bytes, server.address)  # plan exhausted
+            assert len(full) > 1 and short == full[:1]
+            if frame == "1E":
+                assert server.memory.read_words("D", 0, 1) == [0x1234]
