@@ -195,8 +195,12 @@ def _render(value):
 
 def _emit(text):
     """UTF-8 bytes with LF newlines, identical to the report file on every OS."""
+    binary = getattr(sys.stdout, "buffer", None)
+    if binary is None:  # e.g. redirect_stdout(io.StringIO()): text is already LF-only
+        sys.stdout.write(text)
+        return
     sys.stdout.flush()
-    sys.stdout.buffer.write(text.encode("utf-8"))
+    binary.write(text.encode("utf-8"))
     sys.stdout.flush()
 
 

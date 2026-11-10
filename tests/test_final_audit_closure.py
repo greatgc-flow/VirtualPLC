@@ -138,3 +138,17 @@ def test_troubleshoot_explains_orphaned_1e_stop_owner(parser):
 @pytest.fixture
 def parser():
     return cli.build_parser()
+
+
+@pytest.mark.parametrize("command", ["plan", "template"])
+def test_oracle_main_works_under_redirect_stdout_string_io(command):
+    import contextlib
+    import io
+
+    captured = io.StringIO()
+    with contextlib.redirect_stdout(captured):
+        assert oracle.main([command]) == 0
+    completed = subprocess.run([sys.executable, "-m", "virtual_plc.oracle", command], capture_output=True,
+                               env=dict(os.environ, PYTHONPATH=str(ROOT)), timeout=60)
+    assert completed.returncode == 0, completed.stderr
+    assert captured.getvalue() == completed.stdout.decode("utf-8")
