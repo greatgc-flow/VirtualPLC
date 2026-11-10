@@ -1,20 +1,20 @@
 # VirtualPLC — Project Handoff
 
 ## Current state
-- Released version: v0.11.0 (2026-11-10); previous v0.10.0 (2026-11-10). Release dates are UTC (GitHub `publishedAt`).
+- Released version: v0.11.1 (2026-11-10); previous v0.11.0 (2026-11-10). Release dates are UTC (GitHub `publishedAt`).
 - Upstream client oracle pin: `pymcprotocol==0.3.0` (`requirements-dev.txt`).
 - Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh required checks before merging (strict=false).
-- Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #13 (narrowed hardware-free scope), #25 (handoff), #78 (keyword-only API, 1.0; design comment posted), #95 (UDP rate-limit/fault-action review follow-ups).
+- Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #13 (narrowed hardware-free scope), #25 (handoff), #78 (keyword-only API, 1.0; design comment posted).
 - Ruleset 26796594 requires 11 checks (build + Ubuntu/Windows 3.10–3.14) since 2026-11-09; `test-macos` is informational.
 - Release gate: tag only a main commit whose `ci.yml` push run succeeded (release.yml enforces it).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
-- Session record (requirements, design, process, scores, results) for 0.8.0–0.11.0: [SESSION_20261110](handoff/SESSION_20261110_MECE_REVIEW_AND_RELEASES.md).
+- Session record (requirements, design, process, scores, results) from 0.8.0 onward: [SESSION_20261110](handoff/SESSION_20261110_MECE_REVIEW_AND_RELEASES.md).
 
-## Unreleased
+## 2026-11-10 release 0.11.1 — release-note source
 
 Review follow-ups for the UDP rate limit and UDP fault actions ([#95](https://github.com/greatgc-flow/VirtualPLC/issues/95)).
 
-- Changed: under `-v`, a UDP flood no longer logs one stderr line per rate-limited datagram. The first drop of a burst per source IP is logged, then at most one summary line per IP per 10 s ("N more datagrams dropped from IP in the last T s"); the log state shares the 1024-peer LRU bound. Without `-v` nothing is logged, and the `rate_limited` metric is unchanged. Details: [BEHAVIOR.md](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md#udp-rate-limit-opt-in).
+- Changed: under `-v`, a UDP flood no longer logs one stderr line per rate-limited datagram. The first drop of a burst per source IP is logged, then at most one summary line per IP per 10 s ("N more datagrams dropped from IP in the last T s"); the log state shares the 1024-peer LRU bound. Without `-v` nothing is logged, and the `rate_limited` metric is unchanged. Details: [BEHAVIOR.md](https://github.com/greatgc-flow/VirtualPLC/blob/v0.11.1/docs/BEHAVIOR.md#udp-rate-limit-opt-in).
 - Guide: `guide troubleshoot` now notes that `--udp-rate-limit` drops are silent and visible via `rate_limited` (udp_metrics) or `-v`.
 - Tests: rate limit combined with `truncate` and `corrupt_header` on 1E binary/ASCII and 3E/4E ASCII frames, and a `times: 2` step under the limiter (rate-limited datagrams consume neither nth nor times).
 - Docs: DESIGN.md open items record that POSIX-only socket behaviour is caught only by Linux CI on Windows hosts.
