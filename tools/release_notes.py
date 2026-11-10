@@ -17,7 +17,9 @@ REPO_BLOB = "https://github.com/greatgc-flow/VirtualPLC/blob/v{version}/"
 HEADING = r"^## [^\n]*\brelease {version} \S+ release-note source[ \t]*\r?$"
 FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")  # CommonMark-style opener/closer
 CODE_SPAN = re.compile(r"(`+).+?\1")
-LINK = re.compile(r"\]\(([^)\s]+)(\s+\"[^\"]*\")?\)")
+# Target: <angle form> or bare; optional "title", 'title' or (title).
+LINK = re.compile(r"\]\((<[^>\n]*>|[^)\s]+)(\s+(?:\"[^\"]*\"|'[^']*'|\([^)]*\)))?\)")
+ABSOLUTE = re.compile(r"(?:[A-Za-z][A-Za-z0-9+.-]*:|//|#)")  # any URI scheme, //host, #anchor
 
 
 def extract(version, handoff_text):
@@ -56,13 +58,17 @@ def _absolute_links(line, base):
     """
     def fix(match):
         target, title = match.group(1), match.group(2) or ""
-        if target.startswith(("http://", "https://", "mailto:", "#")):
+        if target.startswith("<") and target.endswith(">"):
+            target = target[1:-1]
+        if ABSOLUTE.match(target):
             return match.group(0)
         if target.startswith("/"):  # repository-root path
             path = posixpath.normpath(target.lstrip("/"))
         else:
             path = posixpath.normpath(posixpath.join("docs", target))
-        return "](" + base + path + title + ")"
+        if path == ".." or path.startswith("../"):
+            raise LookupError("release note link escapes the repository: %s" % target)
+        return "](" + base + path.replace(" ", "%20") + title + ")"
     pieces, position = [], 0
     for span in CODE_SPAN.finditer(line):  # leave inline code spans untouched
         pieces.append(LINK.sub(fix, line[position:span.start()]))
@@ -79,10 +85,13 @@ def main(argv=None):
         return 2
     path = Path(argv[1]) if len(argv) == 2 else Path(__file__).resolve().parents[1] / "docs" / "HANDOFF.md"
     try:
-        sys.stdout.write(extract(argv[0], path.read_text(encoding="utf-8")))
+        notes = extract(argv[0], path.read_text(encoding="utf-8"))
     except (LookupError, OSError, UnicodeDecodeError) as error:
         print("release notes: %s" % error, file=sys.stderr)
         return 1
+    # Always UTF-8, whatever the console/locale code page (e.g. cp949 on Windows).
+    sys.stdout.buffer.write(notes.encode("utf-8"))
+    sys.stdout.flush()
     return 0
 
 

@@ -163,3 +163,75 @@ def test_release_notes_cli_exit_codes(tmp_path):
     bad.write_bytes(b"\xff\xfe\x00broken")
     undecodable = run(version, str(bad))
     assert undecodable.returncode == 1 and "Traceback" not in undecodable.stderr
+
+
+# --- r9 closure: UTF-8 output, fence/heading/link edge cases, exact workflow wiring ----
+
+def _notes_cli(*args):
+    return subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "release_notes.py"), *args],
+                          capture_output=True)
+
+
+def test_release_notes_cli_writes_utf8_whatever_the_locale(tmp_path):
+    handoff = tmp_path / "HANDOFF.md"
+    handoff.write_text("## d release 1.0.0 — release-note source\n\ndash — arrow →\n",
+                       encoding="utf-8")
+    result = _notes_cli("1.0.0", str(handoff))
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.replace(b"\r\n", b"\n") == "dash — arrow →\n".encode("utf-8")
+
+
+@pytest.mark.parametrize("body,expected", [
+    ("a\n```\n~~~\n## x\n```\nb\n## n\n", "a\n```\n~~~\n## x\n```\nb\n"),        # ~~~ does not close ```
+    ("a\n```\n## x\n`````\nb\n## n\nold\n", "a\n```\n## x\n`````\nb\n"),      # longer closer closes
+    ("a\n```\n``` py\n## x\n```  \nb\n## n\n", "a\n```\n``` py\n## x\n```  \nb\n"),  # info string
+    ("a\n\n    ```\n## n\nold\n", "a\n\n    ```\n"),                              # 4-space indent
+    ("a\n   ```\n## x\n   ```\nb\n## n\n", "a\n   ```\n## x\n   ```\nb\n"),       # 3-space fence
+    ("a\n##x\n# H1\nb\n## n\n", "a\n##x\n# H1\nb\n"),                            # not section breaks
+])
+def test_release_notes_fence_and_section_boundaries(body, expected):
+    assert _release_notes().extract("1.0.0", HEAD + body) == expected
+
+
+def test_release_notes_link_edge_cases():
+    rn = _release_notes()
+    base = "https://github.com/greatgc-flow/VirtualPLC/blob/v1.0.0/"
+    body = ("``f[i](x) ` `` [l](y.md) [h](http://e.x) [m](mailto:a@b) [H](HTTPS://X) [f](ftp://x) "
+            "[p](//h/p) [s](x.md 'S') [q](x.md (Q)) [v](<a b.md>)\n")
+    notes = rn.extract("1.0.0", HEAD + body)
+    assert "``f[i](x) ` ``" in notes and "[l](%sdocs/y.md)" % base in notes
+    for kept in ("[h](http://e.x)", "[m](mailto:a@b)", "[H](HTTPS://X)", "[f](ftp://x)", "[p](//h/p)"):
+        assert kept in notes
+    assert "[s](%sdocs/x.md 'S')" % base in notes and "[q](%sdocs/x.md (Q))" % base in notes
+    assert "[v](%sdocs/a%%20b.md)" % base in notes
+    with pytest.raises(LookupError):
+        rn.extract("1.0.0", HEAD + "[x](../../outside.md)\n")
+
+
+def test_release_notes_heading_must_match_version_and_suffix_exactly():
+    rn = _release_notes()
+    with pytest.raises(LookupError):
+        rn.extract("1.0.0", "## d release 1x0x0 — release-note source\nb\n")
+    with pytest.raises(LookupError):
+        rn.extract("1.0.0", "## d release 1.0.0\nb\n")
+    assert rn.extract("1.0.0", "## d release 1.0.0 — release-note source  \t\nb\n") == "b\n"
+
+
+def test_release_notes_cli_errors_are_clean(tmp_path):
+    for args in (("99.99.99",), ("1.0.0", str(tmp_path / "missing.md"))):
+        result = _notes_cli(*args)
+        assert result.returncode == 1 and result.stdout == b"" and b"Traceback" not in result.stderr
+    assert _notes_cli("1", "2", "3").returncode == 2
+
+
+@pytest.mark.skipif(not (ROOT / ".github").is_dir(), reason="repository-only check")
+def test_release_workflow_exact_extract_step_and_job_wiring():
+    text = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    text = text.replace("\r\n", "\n")
+    assert ("          mkdir -p release-notes\n"
+            '          python tools/release_notes.py "${RELEASE_TAG#v}" docs/HANDOFF.md'
+            " > release-notes/notes.md\n") in text
+    assert "continue-on-error" not in text
+    assert "needs: [build, publish]" in text
+    github_release = text[text.index("  github-release:"):]
+    assert "name: release-notes\n          path: release-notes\n" in github_release
