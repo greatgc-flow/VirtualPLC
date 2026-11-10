@@ -1,5 +1,6 @@
 """Sparse device storage and atomic request operations (M1)."""
 
+from collections import ChainMap
 from copy import deepcopy
 
 from .profiles import PROFILES
@@ -94,6 +95,8 @@ class Memory:
         """
         if operations is None:
             raise ValueError("write_atomic operations cannot be None; use [] for no-op")
+        # Stage per-device overlays that read through to the live cells (ChainMap
+        # writes go to the overlay), so a small write never copies a large family.
         staged = {}
         for device, head, unit, raw_values in operations:
             if unit not in ("bit", "word"):
@@ -106,7 +109,7 @@ class Memory:
                 raise ValueError("write_atomic value out of range")
             spec = self.check(device, head, len(values), unit)
             if device not in staged:
-                staged[device] = self._cells[device].copy()
+                staged[device] = ChainMap({}, self._cells[device])
             cells = staged[device]
             if spec.kind == "bit":
                 if unit == "word":
@@ -116,11 +119,14 @@ class Memory:
                 _store_halves(cells, head, values)
             else:
                 cells.update(enumerate(values, head))
-        if self.max_cells is not None and sum(
-                len(staged.get(name, cells)) for name, cells in self._cells.items()) > self.max_cells:
-            raise CellCapExceeded(f"stored-cell cap {self.max_cells} exceeded")
+        if self.max_cells is not None:
+            new = sum(1 for name, view in staged.items()
+                      for point in view.maps[0] if point not in self._cells[name])
+            if new and self.stored_cells + new > self.max_cells:
+                raise CellCapExceeded(f"stored-cell cap {self.max_cells} exceeded")
         # Single commit point under request lock; failures above leave state as-is.
-        self._cells.update(staged)
+        for name, view in staged.items():
+            self._cells[name].update(view.maps[0])
 
     def check(self, device, head, count, unit):
         """Validate one access; `count` is in `unit`s. Returns the device spec."""

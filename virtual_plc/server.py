@@ -10,7 +10,7 @@ from . import faults
 from .codec import decode_request, encode_response, frame_size
 from .commands import CPU_STATES, dispatch
 from .ethernet import EthernetSettings
-from .memory import Memory, valid_span
+from .memory import CellCapExceeded, Memory, valid_span
 from .one_e import frame_size_1e, dispatch_1e, _command_and_wire
 from .udp_faults import UdpFaultPlan, datagrams
 from .profiles import PROFILES
@@ -196,7 +196,11 @@ class Server:
         self.password = password
         self.locked = False
         self.reset_count = 0
-        self.set_state(initial_state)
+        try:
+            self.set_state(initial_state)
+        except CellCapExceeded as error:
+            raise CellCapExceeded(
+                "%s: the server's SD203 CPU-state mirror needs one stored cell" % error) from error
         self._bind_address = (host, port)
         self._listen_specs = tuple(listen_specs)
         self.addresses = [(transport, host, bind_port) for transport, bind_port in self._listen_specs]

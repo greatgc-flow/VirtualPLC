@@ -196,7 +196,7 @@ Device names by kind (Q-class profiles lack LT*/LST*/LC*/LZ/RD; see guide profil
 MEMORY_TAIL = """
 --limit DEV:LO-HI (repeatable) sets the inclusive valid points of a device; requests outside get an error.
 --max-cells N caps distinct stored points (default none); a write adding points past N gets C056 and changes
-nothing (overwrites always succeed; SD203 counts); an --init snapshot over N exits 2. Python: Memory(max_cells=N).
+nothing (overwrites always succeed; SD203 counts); an --init snapshot whose points plus SD203 exceed N exits 2. Python: Memory(max_cells=N).
 --latch-range DEV:LO-HI (repeatable) selects latch ranges; default: all of L. SM and SD are never cleared.
 Latch ranges are cleared by latchclear and preserved by remote_run(clear_mode=1).
 Example: virtual-plc --init seed.json --limit D:0-102 --latch-range D:100-101 --dump-on-exit saved.json
