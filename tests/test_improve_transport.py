@@ -3,7 +3,6 @@
 import errno
 import logging
 import socket
-import threading
 
 import pytest
 
@@ -87,22 +86,23 @@ def test_tcp_terminal_accept_error_logs_one_warning(caplog):
     """I7b: a terminal accept() failure outside shutdown is logged, like UDP."""
     server = Server()
     original_loop = server._accept_loop
-    done = threading.Event()
 
     def scripted(real_socket):
         class Terminal:
             def accept(self):
                 raise OSError(errno.EBADF, "synthetic terminal accept failure")
 
-        try:
-            return original_loop(Terminal())
-        finally:
-            done.set()
+        return original_loop(Terminal())
 
     server._accept_loop = scripted
     with caplog.at_level(logging.WARNING, logger=LOG_NAME):
         with server:
-            assert done.wait(3)
+            # Join the worker itself: an Event set inside the loop's thread
+            # fires before Thread.is_alive() turns False, so health could
+            # still see a live worker (observed ~4% in repeated runs).
+            worker = server._listener_threads[0]
+            worker.join(3)
+            assert not worker.is_alive()
             assert server.get_listener_health()["healthy"] is False
     warnings = [r for r in caplog.records
                 if r.name == LOG_NAME and "TCP accept failed" in r.getMessage()]
