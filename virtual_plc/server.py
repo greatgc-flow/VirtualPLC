@@ -548,10 +548,13 @@ class Server:
             if self._stopping.is_set():
                 return
             # Before any size check or parse: a flood never takes the request lock.
-            if self._udp_rate_limiter is not None and not self._udp_rate_limiter.allow(peer[0]):
-                self._count_udp("rate_limited")
-                self._log("UDP drop: rate limit exceeded for %s", peer[0])
-                continue
+            if self._udp_rate_limiter is not None:
+                allowed, note = self._udp_rate_limiter.admit(peer[0])
+                if note is not None:
+                    self._log(*note)  # first drop per IP, then one summary per interval
+                if not allowed:
+                    self._count_udp("rate_limited")
+                    continue
             if not packet or len(packet) > MAX_UDP_DATAGRAM:
                 self._count_udp("rejected")
                 self._log("UDP drop: empty or oversized datagram")

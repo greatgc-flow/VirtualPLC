@@ -4,6 +4,7 @@ A token bucket per peer IP drops over-limit datagrams before parsing or
 dispatch, so a UDP flood never takes the shared request lock that TCP clients
 need. Clocks are injected (no sleeps); real sockets bind loopback port 0.
 """
+import logging
 import re
 import socket
 import struct
@@ -15,9 +16,10 @@ import pytest
 import virtual_plc.__main__ as cli
 from test_ipv6_loopback_transport import ipv6_loopback
 from test_m3_m4_raw import packet
+from test_slmp_1e import req as one_e_request
 from virtual_plc import Server, UdpFaultPlan
 from virtual_plc.codec import decode_request, encode_response
-from virtual_plc.udp_rate_limit import MAX_TRACKED_PEERS, UdpRateLimiter
+from virtual_plc.udp_rate_limit import DROP_LOG_INTERVAL, MAX_TRACKED_PEERS, UdpRateLimiter
 
 
 class Clock:
@@ -402,3 +404,171 @@ def test_rate_limited_datagram_leaves_duplicate_step_unconsumed_and_permitted_on
         "received": 3, "rejected": 0, "sent": 3, "fault_dropped": 0,
         "send_errors": 0, "receive_resets": 0, "rate_limited": 1,
     }
+
+
+# --- rate limit x reply-shaping fault actions (#95) ----------------------------
+
+FAULT_WIRE_CASES = [("1E", "binary"), ("1E", "ascii"), ("3E", "ascii"), ("4E", "ascii")]
+SHAPING_ACTIONS = [{"type": "truncate", "n": 1}, {"type": "corrupt_header", "offset": 0, "xor": 1}]
+
+
+def _idempotent_request(frame, wire):
+    """(Server keywords, request whose reply is identical every time)."""
+    if frame == "1E":
+        payload = b"\x34\x12" if wire == "binary" else b"1234"
+        return {"slmp_1e": True}, one_e_request(3, wire=wire, head=0, count=1, payload=payload)
+    return {}, packet(frame, wire, serial=0x1234)
+
+
+def _shaped(reply, action):
+    if action["type"] == "truncate":
+        return reply[:action["n"]]
+    return bytes([reply[0] ^ action["xor"]]) + reply[1:]
+
+
+@pytest.mark.parametrize("action", SHAPING_ACTIONS, ids=lambda action: action["type"])
+@pytest.mark.parametrize("frame, wire", FAULT_WIRE_CASES)
+def test_rate_limited_datagram_leaves_shaping_step_for_the_next_permitted_one(frame, wire, action):
+    options, request = _idempotent_request(frame, wire)
+    faults = UdpFaultPlan([{"match": {"nth": 2}, "action": dict(action)}])
+    with Server(listeners=[("udp", 0)], udp_metrics=True, udp_fault_plan=faults,
+                udp_rate_limit=(1, 60), **options) as server:
+        server._udp_rate_limiter._clock = scripted(0, 0, 60)
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            for _ in range(3):
+                client.sendto(request, server.address)
+            # 1 is nth 1 (full reply); 2 is rate limited before the plan;
+            # 3 is therefore nth 2 and gets the fault.
+            full, shaped = [client.recvfrom(8192)[0] for _ in range(2)]
+        assert len(full) > 1 and shaped == _shaped(full, action) != full
+    assert server.get_udp_metrics() == {
+        "received": 3, "rejected": 0, "sent": 2, "fault_dropped": 0,
+        "send_errors": 0, "receive_resets": 0, "rate_limited": 1,
+    }
+
+
+@pytest.mark.parametrize("action", [{"type": "truncate", "n": 4},
+                                    {"type": "corrupt_header", "offset": 0, "xor": 1}],
+                         ids=lambda action: action["type"])
+def test_rate_limited_datagrams_do_not_consume_times_of_a_multi_shot_step(action):
+    faults = UdpFaultPlan([{"times": 2, "action": dict(action)}])
+    with Server(listeners=[("udp", 0)], udp_metrics=True, udp_fault_plan=faults,
+                udp_rate_limit=(1, 60)) as server:
+        server._udp_rate_limiter._clock = scripted(0, 0, 60, 60, 120)
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            for serial in range(1, 6):
+                client.sendto(packet("4E", "binary", serial=serial), server.address)
+            # 2 and 4 are rate limited; 1 and 3 take the step's two shots; 5 is clean.
+            replies = [client.recvfrom(8192)[0] for _ in range(3)]
+
+    def clean(serial):
+        return encode_response(decode_request(packet("4E", "binary", serial=serial)), data=b"\x00\x00")
+
+    assert [serial_of(reply) for reply in replies] == [1, 3, 5]
+    assert replies[0] == _shaped(clean(1), action) != clean(1)
+    assert replies[1] == _shaped(clean(3), action) != clean(3)
+    assert replies[2] == clean(5)
+    assert server.get_udp_metrics() == {
+        "received": 5, "rejected": 0, "sent": 3, "fault_dropped": 0,
+        "send_errors": 0, "receive_resets": 0, "rate_limited": 2,
+    }
+
+
+# --- -v drop logging is throttled per source IP (#95) ---------------------------
+
+def _notes(limiter, ip, count):
+    return [limiter.admit(ip)[1] for _ in range(count)]
+
+
+def _text(note):
+    return note[0] % note[1:]
+
+
+def test_first_drop_per_ip_is_reported_then_suppressed_within_the_interval():
+    clock = Clock()
+    limiter = UdpRateLimiter(1, 3600, clock=clock)
+    assert limiter.admit("10.0.0.1") == (True, None)
+    allowed, note = limiter.admit("10.0.0.1")
+    assert allowed is False
+    assert _text(note).startswith("UDP drop: rate limit exceeded for 10.0.0.1")
+    clock.now = DROP_LOG_INTERVAL - 0.5
+    assert _notes(limiter, "10.0.0.1", 20) == [None] * 20
+
+
+def test_one_summary_per_interval_counts_every_suppressed_drop():
+    clock = Clock()
+    limiter = UdpRateLimiter(1, 3600, clock=clock)
+    limiter.admit("a")
+    assert limiter.admit("a")[1] is not None          # first drop at t=0, reported
+    assert _notes(limiter, "a", 7) == [None] * 7      # suppressed
+    clock.now = DROP_LOG_INTERVAL
+    allowed, note = limiter.admit("a")                # 8th suppressed drop closes the interval
+    assert allowed is False
+    assert _text(note) == ("UDP drop: rate limit: 8 more datagrams dropped from a "
+                           f"in the last {DROP_LOG_INTERVAL:.1f} s")
+    assert _notes(limiter, "a", 5) == [None] * 5      # a new interval started at the summary
+
+
+def test_permitted_datagram_after_the_interval_flushes_the_pending_summary():
+    clock = Clock()
+    limiter = UdpRateLimiter(1, 30, clock=clock)
+    limiter.admit("a")
+    limiter.admit("a")                                 # first drop, reported
+    _notes(limiter, "a", 3)                            # suppressed
+    clock.now = 30.0                                   # one token refilled
+    allowed, note = limiter.admit("a")
+    assert allowed is True
+    assert _text(note) == "UDP drop: rate limit: 3 more datagrams dropped from a in the last 30.0 s"
+    clock.now = 61.0
+    assert limiter.admit("a") == (True, None)          # nothing pending
+
+
+def test_new_burst_after_a_quiet_interval_reports_its_first_drop_again():
+    clock = Clock()
+    limiter = UdpRateLimiter(1, 1, clock=clock)
+    limiter.admit("a")
+    assert limiter.admit("a")[1] is not None
+    clock.now = DROP_LOG_INTERVAL + 1
+    assert limiter.admit("a") == (True, None)
+    allowed, note = limiter.admit("a")
+    assert allowed is False and _text(note).startswith("UDP drop: rate limit exceeded for a")
+
+
+def test_drop_reports_are_independent_per_ip_and_bounded_by_the_peer_lru():
+    limiter = UdpRateLimiter(1, 3600, clock=Clock(), max_peers=2)
+    for ip in ("a", "b"):
+        limiter.admit(ip)
+        assert limiter.admit(ip)[1] is not None
+    assert limiter.admit("a")[1] is None and limiter.admit("b")[1] is None
+    limiter.admit("c")                                 # evicts a (least recently used)
+    assert len(limiter) == 2
+    limiter.admit("a")                                 # returns with a full bucket, fresh log state
+    assert _text(limiter.admit("a")[1]).startswith("UDP drop: rate limit exceeded for a")
+
+
+def _rate_limit_records(caplog):
+    return [record.getMessage() for record in caplog.records
+            if record.name == "virtual_plc.server" and "rate limit" in record.getMessage()]
+
+
+@pytest.mark.parametrize("verbose", [True, False])
+def test_verbose_flood_logs_first_drop_and_one_summary_not_one_line_per_datagram(caplog, verbose):
+    with Server(listeners=[("udp", 0)], udp_metrics=True, verbose=verbose,
+                udp_rate_limit=(1, 60)) as server:
+        server._udp_rate_limiter._clock = scripted(*([0] * 51), 61)
+        with caplog.at_level(logging.INFO, logger="virtual_plc.server"):
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+                client.settimeout(2)
+                for serial in range(1, 52):          # 1 permitted, 50 dropped
+                    client.sendto(packet("4E", "binary", serial=serial), server.address)
+                client.sendto(packet("4E", "binary", serial=99), server.address)  # refilled
+                assert [serial_of(client.recvfrom(8192)[0]) for _ in range(2)] == [1, 99]
+    expected = [
+        "UDP drop: rate limit exceeded for 127.0.0.1 (further drops from this IP are "
+        f"summarized at most every {DROP_LOG_INTERVAL:g} s)",
+        "UDP drop: rate limit: 49 more datagrams dropped from 127.0.0.1 in the last 61.0 s",
+    ]
+    assert _rate_limit_records(caplog) == (expected if verbose else [])
+    assert server.get_udp_metrics()["rate_limited"] == 50
