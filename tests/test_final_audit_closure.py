@@ -62,9 +62,12 @@ def test_cli_deeply_nested_json_exits_2_with_one_line_hint(tmp_path, capsys, opt
 
 @pytest.mark.parametrize("plan_type", [FaultPlan, UdpFaultPlan])
 def test_parseable_but_deep_plan_raises_value_error(tmp_path, plan_type):
-    depth = 5000  # json parses it; copying the steps would overflow the stack
+    depth = 5000  # copying the steps would overflow the stack
+    nested = []  # built iteratively: json.loads itself overflows at this depth on Python <= 3.13
+    for _ in range(depth):
+        nested = [nested]
     with pytest.raises(ValueError, match="nesting"):
-        plan_type([json.loads("[" * depth + "]" * depth)])
+        plan_type([nested])
     path = tmp_path / "plan.json"
     path.write_text('{"steps": [' + "[" * depth + "]" * depth + "]}", encoding="utf-8")
     with pytest.raises(ValueError, match="nesting"):
