@@ -1,19 +1,23 @@
 # VirtualPLC — Project Handoff
 
 ## Current state
-- Released version: v0.9.1 (2026-11-10); previous v0.9.0 (2026-11-10).
+- Released version: v0.10.0 (2026-11-10); previous v0.9.1 (2026-11-10). Release dates are UTC (GitHub `publishedAt`).
 - Upstream client oracle pin: `pymcprotocol==0.3.0` (`requirements-dev.txt`).
 - Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh required checks before merging (strict=false).
-- Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #13 (narrowed hardware-free scope), #25 (handoff), #78 (keyword-only API, 1.0).
+- Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #13 (narrowed hardware-free scope), #25 (handoff), #78 (keyword-only API, 1.0; design comment posted), #95 (UDP rate-limit/fault-action review follow-ups).
 - Ruleset 26796594 requires 11 checks (build + Ubuntu/Windows 3.10–3.14) since 2026-11-09; `test-macos` is informational.
 - Release gate: tag only a main commit whose `ci.yml` push run succeeded (release.yml enforces it).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
+- Session record (requirements, design, process, scores, results) for 0.8.0–0.10.0: [SESSION_20261110](handoff/SESSION_20261110_MECE_REVIEW_AND_RELEASES.md).
 
-## Unreleased
+## 2026-11-10 release 0.10.0 — release-note source
+
+Two opt-in UDP additions for #13 (default behaviour unchanged) plus a test-reliability fix. Independent review: 42-cell grid + C1–C8.
 
 - #13 (narrowed scope, UDP fault-injection model): `UdpFaultPlan` / `--udp-fault-plan` gain datagram-native post-dispatch actions next to `drop`/`delay`: `duplicate` (same reply datagram sent twice, one execution; `sent` counts both), `truncate` (`n` >= 1, first n bytes) and `corrupt_header` (optional `offset` 0..8, `xor` 1..255; a shorter reply is sent unchanged). Match model unchanged (command, global nth, peer IP); invalid plans raise ValueError before bind (CLI exit 2, `guide faults`). Schema source: `udp_faults.UDP_ACTION_FIELDS`; semantics: [FAULTS.md](https://github.com/greatgc-flow/VirtualPLC/blob/v0.10.0/docs/FAULTS.md#udp-datagram-response-faults-opt-in). Default behaviour unchanged. Remaining #13: UDP reorder (see [DESIGN.md](https://github.com/greatgc-flow/VirtualPLC/blob/v0.10.0/docs/DESIGN.md)).
 - #13 (narrowed scope, point 2): opt-in per-source-IP UDP rate limit `Server(udp_rate_limit=(requests, per_seconds))` / CLI `--udp-rate-limit N/SECONDS` (default off, behaviour unchanged). Token bucket per IP (burst = requests), over-limit datagrams dropped before parse/dispatch/request lock, new `rate_limited` key in the opt-in UDP metrics, at most 1024 tracked IPs (LRU), banner shows `udp_rate_limit=`. Semantics: [BEHAVIOR.md](https://github.com/greatgc-flow/VirtualPLC/blob/v0.10.0/docs/BEHAVIOR.md#udp-rate-limit-opt-in).
 - `virtual-plc guide` overview: `--help`/`--version` rows moved to `guide options` (named in the Options header) and the NUL-fill pitfall dropped (the first recipe, the `--text-pad` row and `guide troubleshoot` cover it), leaving budget headroom.
+- Tests: `test_tcp_terminal_accept_error_logs_one_warning` was flaky (about 1.6%): it checked listener health before the scripted accept worker had fully exited; it now joins the worker first (40/2500 failures before, 0/2000 after).
 
 ## 2026-11-10 release 0.9.1 — release-note source
 

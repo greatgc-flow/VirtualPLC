@@ -140,3 +140,14 @@ def test_unreleased_section_already_satisfies_the_release_note_contract():
     body = rest[:following.start()] if following else rest
     probe = "## 2099-01-01 release 99.0.0 — release-note source\n" + body
     assert _tool().extract("99.0.0", probe).strip()
+
+
+def test_released_version_dates_match_their_release_note_headings():
+    """HANDOFF dates are UTC release dates (GitHub publishedAt); the summary line and headings agree."""
+    line = re.search(r"^- Released version: v(\S+) \((\d{4}-\d{2}-\d{2})\); previous v(\S+) \((\d{4}-\d{2}-\d{2})\)\.",
+                     HANDOFF, re.M)
+    assert line, "HANDOFF current-state 'Released version' line missing or reformatted"
+    headings = dict((v, d) for d, v in re.findall(
+        r"^## (\d{4}-\d{2}-\d{2}) release (\d+\.\d+\.\d+) \S+ release-note source", HANDOFF, re.M))
+    for version, date in ((line.group(1), line.group(2)), (line.group(3), line.group(4))):
+        assert headings.get(version) == date, (version, date, headings.get(version))
