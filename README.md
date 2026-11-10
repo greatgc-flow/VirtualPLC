@@ -121,7 +121,8 @@ rather than pretending its close/RST/partial-send actions work for UDP.
 
 Nonlocal network binds continue to require `--allow-nonlocal` and
 `--idle-timeout`; that timeout does **not** add UDP session semantics.
-There is no authentication or UDP rate limiting. Run on loopback or on
+There is no authentication; UDP rate limiting is off unless `--udp-rate-limit` is set
+(per source IP; flood protection, not access control). Run on loopback or on
 an isolated, trusted **test** network only; never connect to production PLCs.
 
 For local UDP diagnostics and opt-in TCP session counters (`Server(tcp_metrics=True)`), see [UDP observability](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md#udp-observability-opt-in).
@@ -153,7 +154,7 @@ Run `virtual-plc guide options` for the generated flag/default table, or `virtua
 
 Other options (meanings in `virtual-plc guide options`): lock and caps `--password`, `--max-points`;
 ASCII wire `--ascii-dword-order`, `--ascii-numbering`; memory `--limit`, `--latch-range`, `--max-cells` (optional stored-point cap);
-UDP faults `--udp-fault-plan`; 1E `--slmp-1e-run-switch`; `-v`/`--verbose` (stderr request log); `--version`.
+UDP faults `--udp-fault-plan`; UDP flood protection `--udp-rate-limit N/SECONDS` (per source IP; [semantics](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md#udp-rate-limit-opt-in)); 1E `--slmp-1e-run-switch`; `-v`/`--verbose` (stderr request log); `--version`.
 JSON files for `--init`, `--fault-plan`, `--udp-fault-plan` and `--ethernet-config` may start with a UTF-8 BOM.
 The `--dump-on-exit` directory must already exist and be writable, and an existing target file must not be read-only (probed with a temporary file before binding, exit 2). Empty FILE paths exit 2.
 

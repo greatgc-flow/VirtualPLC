@@ -20,7 +20,7 @@ LOG_NAME = "virtual_plc.server"
 EMPTY = {"started": False, "healthy": False, "listeners": []}
 EMPTY_METRICS = {
     "received": 0, "rejected": 0, "sent": 0,
-    "fault_dropped": 0, "send_errors": 0, "receive_resets": 0,
+    "fault_dropped": 0, "send_errors": 0, "receive_resets": 0, "rate_limited": 0,
 }
 
 

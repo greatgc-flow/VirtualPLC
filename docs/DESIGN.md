@@ -259,7 +259,8 @@ stop/close/join all workers on ordinary shutdown.
 UDP is a datagram adapter over the existing MC 3E/4E decoder/dispatcher:
 one exact 8192-byte-maximum frame per packet, no stream reassembly, silent
 discard on malformed/oversized packet, reply to sender address. It does not implement retransmission, client sessions, UDP request
-faults, authentication or rate limiting; the independently opt-in UDP
+faults or authentication (an opt-in per-source-IP rate limit drops floods
+before parsing; see BEHAVIOR.md); the independently opt-in UDP
 **response** datagram fault actions are documented in the next subsection. TCP-specific FaultPlans are rejected for
 mixed/UDP configurations rather than being silently misapplied. Loopback
 guard stays in effect; `--allow-nonlocal --idle-timeout` is required for
@@ -291,8 +292,10 @@ one action applies per response.
 Remaining #13 scope: **reorder** is not implemented. It needs a held reply
 that is released by a later response (or by stop/timeout), i.e. cross-request
 state in the listener worker plus a bounded release rule; it does not fall out
-of the one-response/one-action model. Scheduler and rate limiting also remain
-out of scope.
+of the one-response/one-action model. A scheduler also remains out of scope.
+The opt-in per-source-IP rate limit (`udp_rate_limit`) is a separate
+pre-dispatch drop, not a fault action, so rate-limited datagrams never reach
+the plan or consume its nth/times ([BEHAVIOR.md](BEHAVIOR.md#udp-rate-limit-opt-in)).
 
 ## 1. Verified client facts (pinned pymcprotocol 0.3.0)
 
@@ -451,7 +454,7 @@ never touches SM/SD, apart from the explicit SD203 state mirror on transitions.
 
 ## 8. Open items
 
-Canonical simulator policies and unverified vendor behaviors live in `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`). Remaining open design items: SM/SD per-range read-only enforcement, real-PLC unaligned bit-head word reads, bit-device dword views, and keyword-only `Server` parameters for 1.0 (#78); see [FX5 1E/3E frame distinction and limits](research/FX5_SLMP_FRAME_SCOPE_20261031.md) and [BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in). Resolved: #79 optional stored-cell cap (`Memory(max_cells=N)` / `--max-cells N`; opt-in, only new points count, whole-request check, C056; see [BEHAVIOR.md](BEHAVIOR.md#public-api)).
+Canonical simulator policies and unverified vendor behaviors live in `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`). Remaining open design items: SM/SD per-range read-only enforcement, real-PLC unaligned bit-head word reads, bit-device dword views, and keyword-only `Server` parameters for 1.0 (#78); see [FX5 1E/3E frame distinction and limits](research/FX5_SLMP_FRAME_SCOPE_20261031.md) and [BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in). Resolved: #13 narrowed scope point 2, opt-in per-source-IP UDP token bucket (`Server(udp_rate_limit=(requests, per_seconds))` / `--udp-rate-limit N/SECONDS`; dropped before parse and the request lock, `rate_limited` metric, 1024-peer LRU cap; see [BEHAVIOR.md](BEHAVIOR.md#udp-rate-limit-opt-in)); #79 optional stored-cell cap (`Memory(max_cells=N)` / `--max-cells N`; opt-in, only new points count, whole-request check, C056; see [BEHAVIOR.md](BEHAVIOR.md#public-api)).
 
 
 ## 9. Server lifecycle and CLI

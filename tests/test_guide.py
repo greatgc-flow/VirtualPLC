@@ -64,6 +64,17 @@ def test_overview_lists_every_user_option(parser):
             assert action.option_strings[-1] in text
 
 
+def test_overview_rows_match_options_topic_except_meta_flags(parser):
+    overview = guide.render(parser).splitlines()
+    options = guide.render(parser, "options").splitlines()
+    for row in guide.data(parser, "options")["options"]:
+        line = next(line for line in options if line.lstrip().startswith(", ".join(row["flags"])))
+        assert (line in overview) == (row["name"] not in ("--help", "--version")), row["name"]
+    header = next(line for line in overview if line.startswith("Options ("))
+    assert "--help" in header and "--version" in header and "guide options" in header
+    assert '  from pymcprotocol import Type3E' in overview  # one statement per line
+
+
 def test_no_stale_option_names_in_any_text(parser):
     valid = {flag for action in parser._actions for flag in action.option_strings} | {"--json"}
     for topic, text in every_text(parser).items():

@@ -107,3 +107,9 @@ def test_behavior_export_sentence_matches_package_all():
     names = [f"`{name}`" for name in virtual_plc.__all__]
     sentence = "The package exports " + ", ".join(names[:-1]) + " and " + names[-1] + "."
     assert sentence in " ".join(text.split())
+
+
+def test_readme_does_not_deny_the_opt_in_udp_rate_limit():
+    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text(encoding="utf-8")
+    assert "--udp-rate-limit" in readme
+    assert "no authentication or UDP rate limiting" not in readme
