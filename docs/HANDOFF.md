@@ -8,7 +8,7 @@
 - Ruleset 26796594 requires 11 checks (build + Ubuntu/Windows 3.10–3.14) since 2026-11-09; `test-macos` is informational.
 - Release gate: tag only a main commit whose `ci.yml` push run succeeded (release.yml enforces it).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
-- Session record (requirements, design, process, scores, results) for 0.8.0–0.10.0: [SESSION_20261110](handoff/SESSION_20261110_MECE_REVIEW_AND_RELEASES.md).
+- Session record (requirements, design, process, scores, results) for 0.8.0–0.11.0: [SESSION_20261110](handoff/SESSION_20261110_MECE_REVIEW_AND_RELEASES.md).
 
 ## 2026-11-10 release 0.11.0 — release-note source
 

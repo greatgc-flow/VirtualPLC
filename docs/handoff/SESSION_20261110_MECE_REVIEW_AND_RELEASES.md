@@ -1,4 +1,4 @@
-# Session record 2026-11-10/11: MECE completeness review, releases 0.8.0 → 0.10.0
+# Session record 2026-11-10/11: MECE completeness review, releases 0.8.0 → 0.11.0
 
 Purpose: a single, collaboration-ready record of what was asked, how it was
 analysed and designed, how the work was run across peers, and what resulted.
@@ -17,7 +17,7 @@ this file explains *why* and *how*.
 | R6 | File lessons learned as issues in the owner's repositories | §5.3 |
 | R7 | Audit and slim peer instructions that burn quota quickly; move workspace-only rules out of global locations | §6 (in progress) |
 | R8 | Document requirements, analysis/design, process and results for collaboration | this file |
-| R9 | Owner decisions 2026-11-11: P1 new `--stream` per task and no pasted guide/diag output; L1 quota check right before delegating; #78 keep `host, port, profile` / `profile` positional, include `Memory`, `DeprecationWarning` in 0.11.0 | §5.1, issue #78 |
+| R9 | Owner decisions 2026-11-11: P1 new `--stream` per task and no pasted guide/diag output; L1 quota check right before delegating; #78 keep `host, port, profile` / `profile` positional, include `Memory`, `DeprecationWarning` in 0.11.0 | §6, issue #78 |
 
 ## 2. Analysis and design
 
@@ -124,7 +124,7 @@ Dates are UTC release dates (GitHub `publishedAt`); the session ran into 2026-11
 
 ### 5.2 Pull requests
 
-#86 (0.8.0), #87, #89, #90 (0.9.0), #91 (0.9.1), #92, #93, #94, and the 0.10.0 release PR.
+#86 (0.8.0), #87, #89, #90 (0.9.0), #91 (0.9.1), #92, #93, #94, #96 (0.10.0), #97 (session record), #98, #99 (0.11.0).
 
 ### 5.3 Issues filed (lessons learned / follow-ups)
 
@@ -156,9 +156,10 @@ rules (including rules that contradict this workspace's peer usage).
 | ag | global `~/.gemini/GEMINI.md` is workspace-neutral; workspace rules live in the workspace's own GEMINI.md | conflicting rules no longer reach this workspace's asks |
 | lead memory | always-loaded index trimmed; overlapping quota notes merged; stale handoff memory replaced by a short state note | index 991 B → 724 B |
 
-Not changed (need the owner's wording decision): starting a new `--stream`
-per independent task instead of reusing long sessions, and not pasting whole
-`peerhub guide` / `diag` outputs into prompts (session reuse made cc asks
-re-read ~0.7M input tokens at the median); and the cadence of quota checks.
+Owner decisions applied afterwards (2026-11-11): a new `--stream` per
+independent task with reuse only for true follow-ups, and only the needed lines
+of `peerhub guide` / `diag` output in prompts (session reuse had made cc asks
+re-read ~0.7M input tokens at the median); quota checks run right before each
+delegation instead of every turn.
 Kept on purpose: safety rules, agy permission rules, the AGENTS.md
 auto-injection (~0.8K once per session) and the VirtualPLC AGENTS.md.
