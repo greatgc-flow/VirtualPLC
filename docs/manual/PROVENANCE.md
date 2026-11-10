@@ -19,18 +19,18 @@ Extraction: `markitdown-gc[pdf]` (manual.md) and `pdftotext -layout` (m.txt). Th
 ## Second source: MELSEC iQ-R Ethernet User's Manual (Application), SH-081257ENG rev AD
 URL: https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh081257eng/sh081257engad.pdf (fetched 2026-10-30)
 SHA-256: 21039bce5832a420a138da52ffab1c8b7e5f19ee7d67e9c1033f3b0fbc6a7dbc
-Section: 3.5 List of Error Codes (p.458+). Extraction: `pdftotext -layout` (columns interleave; read rows carefully).
+Section: 3.5 List of Error Codes (p.447+; C050H-C05DH on p.453, C2xxH on pp.458-459). Extraction: `pdftotext -layout` (columns interleave; read rows carefully).
 
 | Code | Manual meaning | Simulator today |
 |---|---|---|
-| C050H | ASCII data that cannot be converted to binary | not used |
-| C051H | word read/write points out of range | `POINTS_OUT_OF_RANGE` (`0xC051`); see `virtual_plc/commands.py` (`EndCode`) and [BEHAVIOR.md](../BEHAVIOR.md#public-api) |
+| C050H | ASCII data that cannot be converted to binary | not used; non-hex ASCII fields return C05C (documented divergence, issue #2) |
+| C051H | word read/write points out of range; long-counter write points not in two-word units | `POINTS_OUT_OF_RANGE` (`0xC051`), including odd-word batch writes to LCN; see `virtual_plc/commands.py` (`EndCode`) and [BEHAVIOR.md](../BEHAVIOR.md#public-api) |
 | C052H / C053H / C054H | bit points / random bit points / random word-dword points out of range | `BIT_POINTS_OUT_OF_RANGE` (`0xC052`), `RANDOM_BIT_POINTS_OUT_OF_RANGE` (`0xC053`), `RANDOM_POINTS_OUT_OF_RANGE` (`0xC054`); see `virtual_plc/commands.py` (`EndCode`) and [BEHAVIOR.md](../BEHAVIOR.md#public-api) |
 | C056H | read/write exceeds largest address | ADDRESS_OUT_OF_RANGE (ok) |
 | C057H | request data length does not match number of data in text | applied: DATA_LENGTH_MISMATCH (0xC057) |
 | C058H | request data length after ASCII/binary conversion mismatch | not used |
 | C059H | command/subcommand incorrect or unsupported | UNSUPPORTED_COMMAND (ok) |
-| C05AH / C05BH | cannot read/write the specified device | not used in 3E/4E (`0xC05B` used in 1E `virtual_plc/one_e.py`) |
+| C05AH / C05BH | cannot read/write the specified device | not used in 3E/4E: unknown device codes return C05C (documented divergence, issue #2; manual does not choose C05A vs C05B); `0xC05B` used in 1E `virtual_plc/one_e.py` |
 | C05CH | request data incorrect | REQUEST_DATA_ERROR (ok) |
 | C061H | request message with no-response command sent to another network | applied: remapped data-length mismatch to C057 |
 | C202H | remote password could not be unlocked on another station | simulator uses C202 as INVALID_STATE (not supported by manual SH-081257 3.5; remap tracked in issue #5) |
@@ -38,4 +38,4 @@ Section: 3.5 List of Error Codes (p.458+). Extraction: `pdftotext -layout` (colu
 | C204H | lock request from a different device than the unlock requester | documented remote-password lock code (remap tracked in issue #5) |
 | C200H / C201H | listed with SLMPSND dedicated-instruction failure (layout ambiguous) | simulator: LOCKED / WRONG_PASSWORD (not supported by manual SH-081257 3.5; C203/C204 are the documented remote-password codes; remap tracked in issue #5) |
 
-Note (review 2026-10-30): `source: manual` for `C051..C054` in `virtual_plc/commands.py` means the code list is from SH-081257; the path-to-code assignment and non-Q/iQ-R profile inheritance remain design policy (unverified, issue #2).
+Note (review 2026-10-30, extended 2026-11-10 to C056/C057/C059/C05C, all on printed p.453): `source: manual` for `C051..C054`, `C056`, `C057`, `C059` and `C05C` in `virtual_plc/commands.py` means the code list is from SH-081257; the path-to-code assignment and non-Q/iQ-R profile inheritance remain design policy (unverified, issue #2).

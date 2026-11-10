@@ -2,13 +2,13 @@
 
 This module is deliberately an *orchestrator*, not a second vendor fact
 table. All documented port/slot and timer validation is delegated to the
-independent source-scoped inspectors in ethernet.py. The returned checks are
+independent source-scoped inspectors in ethernet_reference.py. The returned checks are
 neither a GX Works3 native-project parser nor physical hardware evidence.
 """
 
 import re
 
-from .ethernet import (
+from .ethernet_reference import (
     inspect_reference_rncpu_data_timers,
     inspect_reference_rncpu_external_device_batch,
     inspect_reference_rncpu_remote_opening,

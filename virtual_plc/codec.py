@@ -7,6 +7,10 @@ Command handlers operate on canonical binary payloads for every transport.
 from dataclasses import dataclass, replace
 import struct
 
+from .profiles import WIRE_CLASSES
+
+# Dispatch only accepts the profile's own bit subcommand, so the union is exact.
+BIT_SUBCOMMANDS = frozenset(wire.bit_subcommand for wire in WIRE_CLASSES.values())
 HEADER_SIZE = 9  # subheader 2 + route 5 + length 2
 MIN_BODY = 6  # timer 2 + command 2 + subcommand 2 (binary bytes)
 FRAMES = ("3E", "4E")
@@ -196,7 +200,7 @@ def normalize_request(request, profile, *, ascii_dword_order="swapped", text_pad
         size = reader.number(2)
         data += size.to_bytes(2, "little") + reader.take(size)
     if reader.offset != len(reader.data):
-        raise ValueError("payload length mismatch or overwidth address")
+        raise LengthError("payload length mismatch or overwidth address")
     return replace(request, data=bytes(data))
 
 
@@ -212,7 +216,7 @@ def _ascii_response_data(request, data, ascii_dword_order):
         return reader.take(16) + layout.number(reader.number(2), 2)
     if request.command == 0x0619:
         return layout.number(reader.number(2), 2) + data[2:]
-    if request.command == 0x0401 and request.subcommand in (1, 3):
+    if request.command == 0x0401 and request.subcommand in BIT_SUBCOMMANDS:
         points = Reader(request.data, "ascii", len(request.data) - 4).number(2)
         return bytes(48 + bit for bit in unpack_bits(data, points))
     counts = ((len(data) // 2, 2),)

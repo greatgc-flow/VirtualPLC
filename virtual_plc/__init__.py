@@ -1,11 +1,11 @@
 """Local MC protocol simulator with optional response faults."""
 
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import PackageNotFoundError as _PackageNotFoundError, version as _version
 
 try:
-    __version__ = version("virtual_plc")
-except PackageNotFoundError:
-    __version__ = "0.7.0"  # Source-tree use without an installed distribution.
+    __version__ = _version("virtual_plc")
+except _PackageNotFoundError:
+    __version__ = "0.8.0"  # Source-tree use without an installed distribution.
 
 from .ethernet import EthernetSettings
 from .faults import FaultPlan

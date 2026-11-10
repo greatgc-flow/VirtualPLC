@@ -7,7 +7,7 @@ updates:
     labels: [dependencies]
     groups:
       dev-dependencies:
-        patterns: [pytest, pymcprotocol, setuptools]
+        patterns: [pytest, pymcprotocol, setuptools, build, twine]
   - package-ecosystem: github-actions
     directory: /
     schedule:

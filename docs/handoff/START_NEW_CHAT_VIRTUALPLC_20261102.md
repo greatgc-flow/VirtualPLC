@@ -51,7 +51,6 @@ or production/factory networks, or claim official Mitsubishi parity.
   `/rulesets` returned []; branch protection detail GET 403
   (integration cannot access that endpoint). No available
   connected GitHub admin *write* action to activate rulesets.
-- Latest release v0.6.0 (2026-11-08).
 
 ## Implementation chain, proof and limitations
 

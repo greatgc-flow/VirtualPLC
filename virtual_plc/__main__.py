@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import signal
+import stat
 import sys
 import threading
 import tempfile
@@ -16,7 +17,7 @@ from .ethernet import EthernetSettings, model_catalog
 from .server import Server, is_loopback_host
 from .faults import FaultPlan
 from .udp_faults import UdpFaultPlan
-from .memory import Memory
+from .memory import Memory, OutOfRange
 from .profiles import PROFILES
 
 
@@ -58,6 +59,11 @@ def local_host(host):
     return is_loopback_host(host)
 
 
+def endpoint(host, port):
+    """Banner HOST:PORT; IPv6 literals are bracketed ([::1]:5000)."""
+    return f"[{host}]:{port}" if ":" in host else f"{host}:{port}"
+
+
 class GuideParser(argparse.ArgumentParser):
     def error(self, message, topic=None):
         if topic is None:
@@ -69,7 +75,7 @@ class GuideParser(argparse.ArgumentParser):
 
 def build_parser():
     parser = GuideParser(prog="virtual-plc", description="Virtual Mitsubishi MC protocol PLC (not for industrial use)",
-                         allow_abbrev=False)
+                         allow_abbrev=False, epilog="Usage guide: virtual-plc guide [TOPIC] [--json]")
     parser.add_argument("--version", action="version", version=__version__, help="show installed version")
     parser.add_argument("--host", default="127.0.0.1", help="bind address (loopback by default)")
     parser.add_argument("--allow-nonlocal", action="store_true", help="explicitly permit non-loopback binding (unsafe; requires --idle-timeout)")
@@ -122,6 +128,28 @@ def write_snapshot_atomic(path, snapshot):
         Path(temporary).unlink(missing_ok=True)
 
 
+def dump_target_writable(path):
+    """Preflight --dump-on-exit: probe the directory with a real temp file.
+
+    os.access() is not enough: Windows reports True for deny-write ACL dirs.
+    An existing target must also be writable (Windows refuses to replace a
+    read-only file; POSIX would replace it, but it is rejected portably).
+    """
+    target = Path(path)
+    if target.is_dir() or not target.parent.is_dir():
+        return False
+    if target.exists() and (not os.access(target, os.W_OK)
+                            or not target.stat().st_mode & stat.S_IWRITE):
+        return False
+    try:
+        fd, probe = tempfile.mkstemp(prefix=f".{target.name}.", suffix=".probe", dir=target.parent)
+    except OSError:
+        return False
+    os.close(fd)
+    Path(probe).unlink(missing_ok=True)
+    return True
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     parser = build_parser()
@@ -130,11 +158,14 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.listen and any(argument == "--port" or argument.startswith("--port=") for argument in argv):
         parser.error("--port cannot be combined with --listen")
-    if (args.ethernet_config or args.show_effective_ethernet) and not args.ethernet_model:
+    for flag in ("--init", "--dump-on-exit", "--fault-plan", "--udp-fault-plan", "--ethernet-config"):
+        if getattr(args, flag[2:].replace("-", "_")) == "":
+            parser.error(f"{flag} requires a nonempty file path")
+    if (args.ethernet_config is not None or args.show_effective_ethernet) and not args.ethernet_model:
         parser.error("--ethernet-model is required for ethernet configuration/inspection", "ethernet")
     if args.slmp_1e_run_switch is not None and not args.slmp_1e:
         parser.error("--slmp-1e-run-switch requires --slmp-1e")
-    if args.slmp_1e and (args.profile != "Q" or args.ethernet_model or args.fault_plan):
+    if args.slmp_1e and (args.profile != "Q" or args.ethernet_model or args.fault_plan is not None):
         parser.error("--slmp-1e requires the synthetic Q profile, no --ethernet-model or --fault-plan")
     if args.ethernet_model:
         required_profile = EthernetSettings(args.ethernet_model).profile
@@ -143,13 +174,18 @@ def main(argv=None):
             parser.error("--profile conflicts with the selected ethernet hardware model", "ethernet")
         if not specified_profile:
             args.profile = required_profile
+    if args.dump_on_exit is not None and not dump_target_writable(args.dump_on_exit):
+        # Fail before binding: an unwritable target would otherwise lose the session at shutdown.
+        parser.error(f"--dump-on-exit {args.dump_on_exit!r}: need a writable file path in an existing, "
+                     "writable directory", "memory")
     topic = "faults"
     try:
-        plan = FaultPlan.from_file(args.fault_plan) if args.fault_plan else None
-        udp_plan = UdpFaultPlan.from_file(args.udp_fault_plan) if args.udp_fault_plan else None
+        plan = FaultPlan.from_file(args.fault_plan) if args.fault_plan is not None else None
+        udp_plan = UdpFaultPlan.from_file(args.udp_fault_plan) if args.udp_fault_plan is not None else None
         topic = "memory"
-        overrides = json.loads(Path(args.ethernet_config).read_text(encoding="utf-8")) if args.ethernet_config else None
-        if args.ethernet_config and not isinstance(overrides, dict):
+        overrides = (json.loads(Path(args.ethernet_config).read_text(encoding="utf-8-sig"))
+                     if args.ethernet_config is not None else None)
+        if args.ethernet_config is not None and not isinstance(overrides, dict):
             parser.error("ethernet configuration root must be a JSON object", "ethernet")
         options = dict(profile=args.profile, password=args.password, initial_state=args.initial_state,
                        max_points=args.max_points, idle_timeout=args.idle_timeout, fault_plan=plan,
@@ -167,8 +203,11 @@ def main(argv=None):
         if args.ethernet_model:
             options["ethernet_model"] = args.ethernet_model
             options["ethernet_overrides"] = overrides
-        if args.init or args.limit:
+        if args.init is not None or args.limit:
             options["memory"] = Memory(args.profile, dict(args.limit))
+        if args.init is not None:
+            # Load before Server() so its initial_state rewrites any snapshot SD203 mirror.
+            options["memory"].load(json.loads(Path(args.init).read_text(encoding="utf-8-sig")))
         if args.latch_range:
             ranges = {}
             for device, span in args.latch_range:
@@ -180,22 +219,21 @@ def main(argv=None):
         except ValueError as error:
             hint = ("ethernet" if args.ethernet_model and (args.ethernet_config or
                     "ethernet" in str(error) or "profile" in str(error))
-                    else ("memory" if "latch" in str(error) else topic))
+                    # OutOfRange: a --limit excluding a mirror such as SD203.
+                    else ("memory" if isinstance(error, OutOfRange) or "latch" in str(error) else
+                          "faults" if "fault plan" in str(error) else topic))
             parser.error(str(error), hint)
         if args.show_effective_ethernet:
             print(json.dumps(server.ethernet.report(), indent=2))
             return 0
-        topic = "memory"
-        if args.init:
-            options["memory"].load(json.loads(Path(args.init).read_text(encoding="utf-8")))
     except (OSError, ValueError) as error:
         parser.error(str(error), "ethernet" if args.ethernet_config else topic)
     try:
         server.start()
     except (OSError, OverflowError) as error:
         server.stop()
-        destination = (", ".join(f"{protocol}:{args.host}:{port}" for protocol, port in args.listen)
-                       if args.listen else f"{args.host}:{args.port}")
+        destination = (", ".join(f"{protocol}:{endpoint(args.host, port)}" for protocol, port in args.listen)
+                       if args.listen else endpoint(args.host, args.port))
         print(f"cannot listen on {destination}: {error}", file=sys.stderr)
         return 1
     warning = "; WARNING: localhost-only simulator; do not expose to production networks" if not local_host(args.host) else ""
@@ -215,11 +253,13 @@ def main(argv=None):
             if hasattr(signal, name):
                 number = getattr(signal, name)
                 previous[number] = signal.signal(number, terminate)
-        destination = (", ".join(f"{protocol}:{host}:{port}" for protocol, host, port in server.addresses)
-                       if args.listen else f"{server.address[0]}:{server.address[1]}")
-        print("listening on %s (%s, %s) idle_timeout=%s text_pad=0x%02X ascii_dword_order=%s ascii_numbering=%s fault_plan=%s%s" %
+        destination = (", ".join(f"{protocol}:{endpoint(host, port)}" for protocol, host, port in server.addresses)
+                       if args.listen else endpoint(*server.address[:2]))
+        print("listening on %s (%s, %s) idle_timeout=%s text_pad=0x%02X ascii_dword_order=%s ascii_numbering=%s "
+              "fault_plan=%s udp_fault_plan=%s max_clients=%s%s" %
               (destination, args.profile, args.initial_state, args.idle_timeout, args.text_pad,
-               args.ascii_dword_order, args.ascii_numbering, args.fault_plan, warning), file=sys.stderr, flush=True)
+               args.ascii_dword_order, args.ascii_numbering, args.fault_plan, args.udp_fault_plan,
+               args.max_clients, warning), file=sys.stderr, flush=True)
         event = threading.Event()
         while not event.wait(0.5):
             pass
@@ -232,7 +272,7 @@ def main(argv=None):
         if args.verbose:
             logger.removeHandler(handler)
             logger.setLevel(old_level)
-        if args.dump_on_exit:
+        if args.dump_on_exit is not None:
             try:
                 write_snapshot_atomic(args.dump_on_exit, server.memory.dump())
             except OSError as error:

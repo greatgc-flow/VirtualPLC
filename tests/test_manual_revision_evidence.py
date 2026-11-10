@@ -5,6 +5,7 @@ are NOT bundled, downloaded, or assumed equivalent to AD/E.
 """
 import hashlib
 import importlib
+import importlib.util
 import json
 from pathlib import Path
 
@@ -13,8 +14,13 @@ import pytest
 
 @pytest.fixture
 def kit():
-    # Tests-first RED: absent until implementation, no import-time collection error.
-    return importlib.import_module("tools.manual_revision_evidence")
+    # Load the dev-only tool by path: `tools` is not an installed package, and the
+    # sdist CI run uses `python -I`, which keeps the source tree off sys.path.
+    path = Path(__file__).resolve().parents[1] / "tools" / "manual_revision_evidence.py"
+    spec = importlib.util.spec_from_file_location("tools.manual_revision_evidence", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 @pytest.fixture

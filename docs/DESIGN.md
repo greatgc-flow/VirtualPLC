@@ -321,7 +321,7 @@ policy](BEHAVIOR.md#native-dword-stride-policy-unverified).
 | D6 | Milestones below. 4096 is a *client receive limit*, documented separately from server limits; large valid responses tested with a raw-socket client. |
 | D7a | Timers/counters (TS/TC/TN, CS/CC/CN, SS/SC/SN): independent storage, no timer execution. Own milestone step. |
 | D7b | SM/SD writable by default; no read-only ranges are currently enforced. |
-| D7c | Dword on word devices = two consecutive words, low word at lower address. M6 native LTN/LSTN/LCN/LZ store one uint32 per native point; word counts stream low/high halves, random dwords occupy one native point, odd word writes preserve the other half. Native stride is an unverified simulator policy, not proven by client encoding. |
+| D7c | Dword on word devices = two consecutive words, low word at lower address. M6 native LTN/LSTN/LCN/LZ store one uint32 per native point; word counts stream low/high halves, random dwords occupy one native point, odd word writes preserve the other half except odd-count batch writes to LCN, which return C051 (SH-081257 3.5 p.453: long-counter write points must be two-word units). Native stride is an unverified simulator policy, not proven by client encoding. |
 | D7d | M5 agreed: server-wide lock gates run/stop/pause/latchclear/reset only; survives disconnect. Wrong password changes nothing. Reset succeeds only in STOP, normally replies on the same open connection and clears no memory; M7 faults may alter delivery. See BEHAVIOR and FAULTS. |
 | D7e | Error-table rows carry `source: manual|client|design|memory` + `status: verified|unverified`. C200/C201 use memory provenance; their meanings may be swapped and remain unverified. Tests never hard-assert `unverified` rows without the marker; reported separately. |
 
@@ -400,13 +400,16 @@ time); T10 two requests in one segment; T11 EOF mid-frame; T12 atomic failure
 rejected; T18 word-read of `M16` observes M16..M31 (not M256..); T17 golden
 request bytes: client encoder vs hand-authored vectors.
 
-## 7. End-code table (all `unverified` until manual cross-check)
+## 7. End-code table (codes manual-listed; mapping `unverified`)
 
-0x0000 OK; 0xC051 word points out of range; 0xC052 bit points out of range; 0xC053
+0x0000 OK; 0x0055 write denied while CPU RUN (QJ71E71/iQ-R SLMP/MC error lists, not
+SH-081257; see ETHERNET_MODEL_SETTINGS.md); 0xC051 word points out of range; 0xC052 bit points out of range; 0xC053
 random bit points out of range; 0xC054 random word/dword points out of range; 0xC056
 address out of range; 0xC059 unsupported command; 0xC05C request data error; 0xC057 data
-length mismatch. Opposite wire-class subcommands return C059; invalid
-device/access/alignment returns C05C. Some regression scenarios assert only nonzero until
+length mismatch. C051..C054, C056, C057, C059 and C05C are listed in SH-081257 3.5
+(p.453), so `ERROR_CODES` marks them (and 0055) `source: manual`; which request path maps to
+which code remains `status: unverified`. Opposite wire-class subcommands return C059; invalid
+device/access/alignment returns C05C. An odd-word batch write to LCN returns C051 (p.453). Some regression scenarios assert only nonzero until
 vendor verification.
 
 Response bodies: cputype = 16-byte name filled with `text_pad` (default 0x00) + 2-byte
@@ -517,7 +520,9 @@ collapse embedded newlines. Unknown guide topics list available topics, exit 2.
 
 Canonical simulator divergences live in `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`), and manual cross-check provenance is in [docs/manual/PROVENANCE.md](manual/PROVENANCE.md) (remote-password `C200..C202` vs `C203/C204` remap in #5). Additional pinned/manual items awaiting physical PLC verification:
 
-- **0xC057 vs 0xC05C on length mismatch**: which end code a real PLC returns is unverified.
+- **0xC057 vs 0xC05C on length mismatch**: which end code a real PLC returns is unverified. Malformed echo lengths return C057 on both wires (2026-11-10).
+- **C050 / C05A / C05B vs C05C (issue #2)**: SH-081257 3.5 (p.453) lists C050 for non-convertible ASCII data and C05A/C05B (identical text) for unreadable/unwritable devices; 3E/4E keeps C05C for non-hex ASCII fields and unknown device codes until a physical oracle fixes check order and the C05A/C05B choice.
+- **1E error-code width (issue #2)**: JY997D56001-K pp.43-45 examples show a 1-byte error code after `5BH`; pp.137-138 list only 16-bit codes with no 1-byte mapping. The simulator keeps the 16-bit code.
 - **Error information and bad_end_code frame shape**: abnormal responses (and `bad_end_code` with code != 0) append error information per SH-080008 5.2/5.3 (route, command, subcommand; response data dropped; length field = end code + error info; manual-derived). Other-station routing and real-PLC no-error-info cases remain unverified.
 - **Echo (0x0619) payload and Remote STOP (0x1002) mode**: echo accepts 0-9, A-F, a-f (`0xC05C` otherwise, case unverified); STOP accepts mode 1 only (`0xC05C` otherwise); both pinned by `tests/test_pinned_behavior.py`.
 

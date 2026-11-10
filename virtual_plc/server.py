@@ -47,6 +47,20 @@ class NonLoopbackBindError(OSError):
 
 
 class Server:
+    """Local MC-protocol PLC simulator; use as a context manager or start()/stop().
+
+    Keyword groups (all optional; bad values raise ValueError before binding):
+      endpoints: host, port, listeners=[("tcp"|"udp", port), ...], allow_nonlocal,
+        max_clients (concurrent TCP sessions), idle_timeout
+      PLC: profile, memory, initial_state, password, latch_ranges, max_points
+      wire: ascii_dword_order, ascii_numbering, text_pad, slmp_1e, slmp_1e_run_switch,
+        ethernet_model, ethernet_overrides
+      test hooks: fault_plan (TCP), udp_fault_plan, response_hook(bytes) -> bytes,
+        udp_metrics, verbose
+    Hooks must return: stop() joins the workers that run them.
+    Usage and a pytest fixture: `virtual-plc guide embed`.
+    """
+
     def __init__(self, host="127.0.0.1", port=0, profile="Q", memory=None,
                  response_hook=None, max_points=None, idle_timeout=None,
                  initial_state="RUN", latch_ranges=None, password=None, fault_plan=None,
@@ -119,6 +133,8 @@ class Server:
         self.ascii_dword_order = ascii_dword_order
         if ascii_numbering not in ("compat", "manual", "fx5-octal"):
             raise ValueError("ascii_numbering must be compat, manual or fx5-octal")
+        if slmp_1e and ascii_numbering == "fx5-octal":
+            raise ValueError("slmp_1e ASCII uses X,Y HEX numbering; ascii_numbering=fx5-octal is unsupported")
         self.ascii_numbering = ascii_numbering
         if fault_plan is not None and not isinstance(fault_plan, faults.FaultPlan):
             raise ValueError("fault_plan must be a FaultPlan or None")
@@ -128,6 +144,17 @@ class Server:
             raise ValueError("UDP fault plan requires at least one UDP listener")
         if type(udp_metrics) is not bool:
             raise ValueError("udp_metrics must be a boolean")
+        # Type checks first: membership tests below would raise TypeError/AttributeError.
+        if type(profile) is not str:
+            raise ValueError("profile must be a string")
+        if type(initial_state) is not str:
+            raise ValueError("initial_state must be a string")
+        if memory is not None and not isinstance(memory, Memory):
+            raise ValueError("memory must be a Memory or None")
+        if latch_ranges is not None and not isinstance(latch_ranges, dict):
+            raise ValueError("latch_ranges must be a dict of device -> [(lo, hi), ...] or None")
+        if response_hook is not None and not callable(response_hook):
+            raise ValueError("response_hook must be callable or None")
         if udp_metrics and not any(transport == "udp" for transport, _ in listen_specs):
             raise ValueError("udp_metrics requires at least one UDP listener")
         if initial_state not in CPU_STATES:
@@ -175,7 +202,8 @@ class Server:
                               "fault_dropped": 0, "send_errors": 0, "receive_resets": 0}
                              if udp_metrics else None)
         self._udp_metrics_lock = threading.Lock()
-        self._connection_number = 0
+        self._connection_number = 0  # never reset: unique 1E STOP-owner IDs across restarts
+        self._fault_connection = 0   # FaultPlan match.connection: admitted TCP sessions since start()
         self._max_points = max_points
         self._max_clients = max_clients
         self._idle_timeout = idle_timeout
@@ -310,6 +338,7 @@ class Server:
         if self._listener is not None:
             return
         self._stopping.clear()
+        self._fault_connection = 0
         family = socket.AF_INET6 if ":" in self._bind_address[0] else socket.AF_INET
         opened = []
         try:
@@ -546,8 +575,10 @@ class Server:
                 self._connection_number += 1  # unique for STOP owner, including cross-port TCP
                 connection_id = self._connection_number
                 rejected = self._stopping.is_set() or len(self._clients) >= self._max_clients
-                worker = threading.Thread(target=self._serve, args=(connection, connection_id), daemon=True)
                 if not rejected:
+                    self._fault_connection += 1  # refused connections take no fault ordinal
+                    worker = threading.Thread(target=self._serve, daemon=True,
+                                              args=(connection, connection_id, self._fault_connection))
                     self._clients[connection] = worker
             if rejected:
                 connection.close()
@@ -561,10 +592,10 @@ class Server:
                 connection.close()
                 self._log("close: could not start client worker")
 
-    def _serve(self, connection, connection_id):
+    def _serve(self, connection, connection_id, ordinal):
         with connection:
             try:
-                reason = self._serve_frames(connection, connection_id)
+                reason = self._serve_frames(connection, connection_id, ordinal)
             except Exception as error:
                 reason = f"unexpected {type(error).__name__}: {error}"
                 print(f"connection worker: {type(error).__name__}: {error}", file=sys.stderr, flush=True)
@@ -577,7 +608,8 @@ class Server:
                 with self._clients_lock:
                     self._clients.pop(connection, None)
 
-    def _serve_frames(self, connection, connection_id):
+    def _serve_frames(self, connection, connection_id, ordinal):
+        """connection_id: unique 1E STOP-owner ID; ordinal: FaultPlan match.connection."""
         buffer = bytearray()
         nth = 0
         while not self._stopping.is_set():
@@ -633,7 +665,7 @@ class Server:
                     action = None
                     if self._fault_plan is not None:
                         nth += 1
-                        action = self._fault_plan.select(request.command, nth=nth, connection=connection_id)
+                        action = self._fault_plan.select(request.command, nth=nth, connection=ordinal)
                 self._log("%s %s command=%04X sub=%04X end=%04X", request.frame, request.wire,
                           request.command, request.subcommand, end_code)
                 response = encode_response(request, end_code, data, ascii_dword_order=self.ascii_dword_order)

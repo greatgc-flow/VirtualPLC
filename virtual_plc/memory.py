@@ -27,6 +27,13 @@ def _integers(values, maximum, message):
     return [int(value) for value in values]
 
 
+def _store_halves(cells, head, values):
+    """Heads address native 32-bit points; word counts stream low/high halves."""
+    for i, value in enumerate(values):
+        point, shift = head + i // 2, 16 * (i % 2)
+        cells[point] = (cells.get(point, 0) & ~(0xFFFF << shift)) | (value << shift)
+
+
 class Memory:
     """Unsigned point storage per device family; bit devices hold one bit per point."""
 
@@ -58,11 +65,7 @@ class Memory:
         values = _integers(values, 0xFFFF, "word out of range")
         spec = self.check(device, head, len(values), "word")
         if spec.kind == "dword":
-            # Heads address native 32-bit points; word counts stream low/high halves.
-            cells = self._cells[device]
-            for i, value in enumerate(values):
-                point, shift = head + i // 2, 16 * (i % 2)
-                cells[point] = (cells.get(point, 0) & ~(0xFFFF << shift)) | (value << shift)
+            _store_halves(self._cells[device], head, values)
             return
         if spec.kind == "bit":
             values = [value >> i & 1 for value in values for i in range(16)]
@@ -102,10 +105,7 @@ class Memory:
                     values = [value >> i & 1 for value in values for i in range(16)]
                 cells.update(enumerate(values, head))
             elif spec.kind == "dword":
-                for i, value in enumerate(values):
-                    point, shift = head + i // 2, 16 * (i % 2)
-                    cells[point] = ((cells.get(point, 0) & ~(0xFFFF << shift))
-                                    | (value << shift))
+                _store_halves(cells, head, values)
             else:
                 cells.update(enumerate(values, head))
         # Single commit point under request lock; failures above leave state as-is.
@@ -113,6 +113,8 @@ class Memory:
 
     def check(self, device, head, count, unit):
         """Validate one access; `count` is in `unit`s. Returns the device spec."""
+        if type(head) is not int or type(count) is not int:
+            raise ValueError("memory head and count must be int (not bool/float)")
         spec = self.profile.devices.get(device)
         if spec is None or count <= 0:
             raise ValueError(f"invalid access to {device} x{count}")

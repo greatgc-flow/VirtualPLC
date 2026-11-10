@@ -283,7 +283,8 @@ def write_report_atomic(output, payload, overwrite=False):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Offline Mitsubishi manual PDF evidence; always NOT_VERIFIED."
+        description="Offline Mitsubishi manual PDF evidence; always NOT_VERIFIED.",
+        allow_abbrev=False,
     )
     for option in ("ethernet-ad", "ethernet-ag", "cpu-e", "cpu-i"):
         parser.add_argument("--" + option, metavar="PDF")

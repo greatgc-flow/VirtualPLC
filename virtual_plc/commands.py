@@ -29,9 +29,14 @@ class EndCode(IntEnum):
     INVALID_STATE = 0xC202
 
 
-# DESIGN §7 rows: no manual cross-check yet.
+# DESIGN §7 rows: "manual" means the code is listed in a vendor error list: C051..C05C in SH-081257 3.5
+# (p.453), 0055 in the QJ71E71/iQ-R SLMP/MC lists (ETHERNET_MODEL_SETTINGS.md); path-to-code mapping is unverified.
+MANUAL_LISTED = (EndCode.RUN_WRITE_DISABLED, EndCode.POINTS_OUT_OF_RANGE, EndCode.BIT_POINTS_OUT_OF_RANGE,
+                 EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE, EndCode.RANDOM_POINTS_OUT_OF_RANGE,
+                 EndCode.ADDRESS_OUT_OF_RANGE, EndCode.DATA_LENGTH_MISMATCH, EndCode.UNSUPPORTED_COMMAND,
+                 EndCode.REQUEST_DATA_ERROR)
 ERROR_CODES = {
-    code.value: {"name": code.name, "source": "manual" if code in (EndCode.RUN_WRITE_DISABLED, EndCode.POINTS_OUT_OF_RANGE, EndCode.BIT_POINTS_OUT_OF_RANGE, EndCode.RANDOM_BIT_POINTS_OUT_OF_RANGE, EndCode.RANDOM_POINTS_OUT_OF_RANGE) else ("memory" if code in (EndCode.LOCKED, EndCode.WRONG_PASSWORD) else "design"),
+    code.value: {"name": code.name, "source": "manual" if code in MANUAL_LISTED else ("memory" if code in (EndCode.LOCKED, EndCode.WRONG_PASSWORD) else "design"),
                  "status": "unverified"} for code in EndCode
 }
 
@@ -88,6 +93,9 @@ def batch(request, memory, max_points, control=None):
     points = reader.number(2)
     payload = request.data[reader.offset:]
     bit, write = request.subcommand == wire.bit_subcommand, request.command == 0x1401
+    if write and not bit and device.name == "LCN" and points % 2:
+        # SH-081257 3.5 (p.453) C051H: long-counter write points not in two-word units.
+        raise CommandError(EndCode.POINTS_OUT_OF_RANGE)
     try:
         if write:
             values = unpack_bits(payload, points) if bit else unpack_words(payload)
@@ -259,7 +267,8 @@ def dispatch(request, memory, max_points, control=None):
     except CommandError as error:
         return error.args[0], b""
     except LengthError:
-        code = EndCode.DATA_LENGTH_MISMATCH if handler in (control_request, batch, random_access) else EndCode.REQUEST_DATA_ERROR
+        code = (EndCode.DATA_LENGTH_MISMATCH if handler in (control_request, batch, random_access, echo)
+                else EndCode.REQUEST_DATA_ERROR)
         return code, b""
     except ValueError:
         return EndCode.REQUEST_DATA_ERROR, b""

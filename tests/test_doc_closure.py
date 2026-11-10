@@ -101,3 +101,9 @@ def test_guide_divergences_1e_points_to_behavior_without_command_enumeration():
     ]
     assert not leaked, f"guide.DIVERGENCES enumerates 1E command bytes: {leaked}"
 
+
+def test_behavior_export_sentence_matches_package_all():
+    text = (ROOT / "docs/BEHAVIOR.md").read_text(encoding="utf-8")
+    names = [f"`{name}`" for name in virtual_plc.__all__]
+    sentence = "The package exports " + ", ".join(names[:-1]) + " and " + names[-1] + "."
+    assert sentence in " ".join(text.split())

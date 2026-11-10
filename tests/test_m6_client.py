@@ -66,11 +66,13 @@ def test_profile_command_device_matrix(endpoints, profile, frame, wire, command,
             return name + (format(head, "x") if device.base == 16 else str(head))
         if command.name.startswith("batch_"):
             values = [1, 0, 1] if command.unit == "bit" else [-1, -32768, 0x1234]
+            if device.name == "LCN":
+                values.append(0x55)  # SH-081257 3.5 p.453: C051 unless LCN writes are two-word units
             if command.name.startswith("batch_write"):
                 getattr(client, f"batchwrite_{command.unit}units")(address(32), values)
             else:
                 getattr(memory, f"write_{command.unit}s")(device.name, 32, [v & 0xFFFF for v in values])
-            assert getattr(client, f"batchread_{command.unit}units")(address(32), 3) == values
+            assert getattr(client, f"batchread_{command.unit}units")(address(32), len(values)) == values
         elif command.name in {"random_read", "random_write"}:
             words = [0x1234, 0x5678] if wire == "ascii" else [0x5678, 0x1234]
             if command.name == "random_write":

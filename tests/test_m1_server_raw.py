@@ -55,9 +55,9 @@ def test_error_table_has_provenance():
     expected = {
         0x0000: ("OK", "design"), 0xC051: ("POINTS_OUT_OF_RANGE", "manual"),
         0xC052: ("BIT_POINTS_OUT_OF_RANGE", "manual"),
-        0xC056: ("ADDRESS_OUT_OF_RANGE", "design"),
-        0xC059: ("UNSUPPORTED_COMMAND", "design"), 0xC05C: ("REQUEST_DATA_ERROR", "design"),
-        0xC057: ("DATA_LENGTH_MISMATCH", "design"),
+        0xC056: ("ADDRESS_OUT_OF_RANGE", "manual"),  # listed in SH-081257 3.5 p.453
+        0xC059: ("UNSUPPORTED_COMMAND", "manual"), 0xC05C: ("REQUEST_DATA_ERROR", "manual"),
+        0xC057: ("DATA_LENGTH_MISMATCH", "manual"),
     }
     for code, (name, source) in expected.items():
         assert ERROR_CODES[code] == {"name": name, "source": source, "status": "unverified"}

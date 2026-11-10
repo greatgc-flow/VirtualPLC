@@ -36,6 +36,17 @@ python -m virtual_plc.oracle template > oracle-captures\observations.json
 python -m virtual_plc.oracle compare oracle-captures\observations.json --report oracle-reports\comparison.json
 ~~~
 
+Observation files may be UTF-8 (with or without a BOM) or UTF-16 with a BOM,
+which is what Windows PowerShell 5.1 `>` writes.
+
+POSIX shell equivalents of the PowerShell commands above:
+
+~~~sh
+mkdir -p oracle-captures oracle-reports
+python -m virtual_plc.oracle template > oracle-captures/observations.json
+python -m virtual_plc.oracle compare oracle-captures/observations.json --report oracle-reports/comparison.json
+~~~
+
 The comparison's stdout is byte-for-byte identical to the atomically
 written report file. Existing reports are preserved if input is invalid;
 the observation input cannot be overwritten by its report.

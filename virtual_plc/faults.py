@@ -34,6 +34,14 @@ ACTION_FIELDS = {
 }
 
 
+def _load_steps(path, message):
+    """Steps array of a {"steps": [...]} file; utf-8-sig accepts a PowerShell 5.1 BOM."""
+    document = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    if not isinstance(document, dict) or set(document) != {"steps"}:
+        raise ValueError(message)
+    return document["steps"]
+
+
 def _validate(step):
     if not isinstance(step, dict) or set(step) - {"match", "times", "action"} or "action" not in step:
         raise ValueError("a fault step requires action and optional match/times")
@@ -85,10 +93,7 @@ class FaultPlan:
 
     @classmethod
     def from_file(cls, path):
-        document = json.loads(Path(path).read_text(encoding="utf-8"))
-        if not isinstance(document, dict) or set(document) != {"steps"}:
-            raise ValueError("fault file must contain only a steps array")
-        return cls(document["steps"])
+        return cls(_load_steps(path, "fault file must contain only a steps array"))
 
     def select(self, command, *, nth, connection):
         context = {"command": command, "nth": nth, "connection": connection}

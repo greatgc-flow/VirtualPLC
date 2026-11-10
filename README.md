@@ -9,6 +9,8 @@ AI agents: run `virtual-plc guide` for a compact usage guide; use `--json` for d
 
 ## 30-second quickstart
 
+<!-- Tests execute every python block below; mark a non-self-contained block with a "test:skip REASON" HTML comment on the line directly above its fence. -->
+
 Install with `pip install virtual-plc`, then choose a recipe:
 
 <!-- guide:run -->
@@ -25,7 +27,7 @@ entry point. For more startup details, run `virtual-plc guide run`.
 
 Install the tested upstream client with `pip install pymcprotocol==0.3.0`.
 This exact version is the repository's compatibility oracle; the separate
-[client compatibility matrix](docs/CLIENT_COMPATIBILITY.md) distinguishes it
+[client compatibility matrix](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/CLIENT_COMPATIBILITY.md) distinguishes it
 from our unreleased `greatgc-flow/pymcprotocol` fork and unverified real-PLC
 behavior:
 
@@ -54,6 +56,8 @@ finally:
     client.close()
 ```
 
+## Safety
+
 Local-only binding is enforced by default in the CLI **and Python API**.
 Passwords simulate PLC locking; there is no network authentication. Never
 connect to real equipment or production networks. If an isolated test network
@@ -69,6 +73,14 @@ closed without allocating workers. Embedded servers use
 `Server(host="0.0.0.0", allow_nonlocal=True, idle_timeout=30, max_clients=16)`.
 A non-loopback host without explicit permission (or without an idle timeout
 when permitted) raises a configuration error before listening.
+
+## Sample project: learn by running
+
+New here? The [bottling-line sample](https://github.com/greatgc-flow/VirtualPLC/tree/main/examples/bottling_line)
+walks through five runnable steps with `pymcprotocol` and VirtualPLC: a hello
+round trip, a whole line with a simulated ladder program, fault injection, the
+CLI as a separate process, and pytest fixtures for your own client. It needs no
+hardware and ships with expected output.
 
 ## Multiple TCP/UDP listeners
 
@@ -121,7 +133,7 @@ UDP listeners support the independent drop/delay plan; see [FAULTS](https://gith
 ## Standalone UDP client example (source checkout)
 
 The pinned `pymcprotocol==0.3.0` client uses TCP. For UDP, use the
-stdlib-only, **loopback-only** (127.0.0.1 or `--host ::1`) [3E binary D0 reader](examples/udp_read_d0.py).
+stdlib-only, **loopback-only** (127.0.0.1 or `--host ::1`) [3E binary D0 reader](https://github.com/greatgc-flow/VirtualPLC/blob/main/examples/udp_read_d0.py).
 It sends exactly one complete request datagram and validates the sender,
 frame header, length, status and word size; malformed replies fail closed.
 No retry, authentication, physical PLC compatibility or nonlocal target.
@@ -132,12 +144,18 @@ python examples/udp_read_d0.py 5000
 ```
 
 Seed D0 via an `--init` JSON file if you want a nonzero response.
-See [client compatibility](docs/CLIENT_COMPATIBILITY.md) for the distinction
+See [client compatibility](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/CLIENT_COMPATIBILITY.md) for the distinction
 between this raw UDP example and the tested TCP-only pinned client.
 
 ## CLI reference
 
 Run `virtual-plc guide options` for the generated flag/default table, or `virtual-plc --help`; see `virtual-plc guide run` for quick-start flags. Long options must be spelled in full; abbreviations exit 2.
+
+Other options (meanings in `virtual-plc guide options`): lock and caps `--password`, `--max-points`;
+ASCII wire `--ascii-dword-order`, `--ascii-numbering`; memory `--limit`, `--latch-range`;
+UDP faults `--udp-fault-plan`; 1E `--slmp-1e-run-switch`; `-v`/`--verbose` (stderr request log); `--version`.
+JSON files for `--init`, `--fault-plan`, `--udp-fault-plan` and `--ethernet-config` may start with a UTF-8 BOM.
+The `--dump-on-exit` directory must already exist and be writable, and an existing target file must not be read-only (probed with a temporary file before binding, exit 2). Empty FILE paths exit 2.
 
 | Guide topic | Contents |
 |---|---|
@@ -163,23 +181,39 @@ Enable with `--slmp-1e`; this selects a separate 1E-only parser on synthetic Q m
 For separately and manually captured read-only 1E 15H model and 16H loopback
 responses, use `python -m virtual_plc.oracle plan`, `template`, and
 `compare FILE --report REPORT.json`. This offline utility **never contacts
-a PLC** and never certifies real hardware. See [offline oracle procedure](docs/PHYSICAL_ORACLE.md).
+a PLC** and never certifies real hardware. See [offline oracle procedure](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/PHYSICAL_ORACLE.md).
 
 ## FX5 vendor SLMP port preflight (offline reference)
 
-Offline helper `inspect_reference_slmp_port(model, port)` checks vendor recommended and reserved port ranges; see `virtual-plc guide ethernet --json` and [FX5 port scope](docs/research/FX5_SLMP_PORT_SCOPE_20261031.md).
+Offline helper `virtual_plc.ethernet.inspect_reference_slmp_port(model, port)` checks vendor recommended and reserved port ranges; see `virtual-plc guide ethernet --json` and [FX5 port scope](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/research/FX5_SLMP_PORT_SCOPE_20261031.md).
 
 ## RnCPU built-in service connection settings (offline reference)
 
-Service-specific connection rules for RnCPU built-in Ethernet (auto-open UDP vs per-GOT TCP); see `virtual-plc guide ethernet --json` and [RnCPU service connection scope](docs/research/RNCPU_BUILTIN_SERVICE_CONNECTIONS_20261101.md).
+Service-specific connection rules for RnCPU built-in Ethernet (auto-open UDP vs per-GOT TCP); see `virtual-plc guide ethernet --json` and [RnCPU service connection scope](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/research/RNCPU_BUILTIN_SERVICE_CONNECTIONS_20261101.md).
 
 ## FX5 CPU firmware compatibility (offline reference)
 
-Offline helper `inspect_reference_fx5_simple_cpu_communication(model, firmware)` checks model/firmware support gates; see `virtual-plc guide ethernet --json` and [FX5 firmware matrix](docs/research/FX5_CPU_FIRMWARE_SIMPLE_COMM_20261101.md).
+Offline helper `virtual_plc.ethernet.inspect_reference_fx5_simple_cpu_communication(model, firmware_version=None)` checks model/firmware support gates; see `virtual-plc guide ethernet --json` and [FX5 firmware matrix](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/research/FX5_CPU_FIRMWARE_SIMPLE_COMM_20261101.md).
 
 ## FX5-ENET existence-check settings (offline reference)
 
-Offline helper `inspect_reference_fx5_enet_alive_timers()` validates module alive-check timer ranges; see `virtual-plc guide ethernet --json` and [FX5-ENET source matrix](docs/research/FX5_ENET_ALIVE_REFERENCE_20261101.md).
+Offline helper `virtual_plc.ethernet.inspect_reference_fx5_enet_alive_timers()` validates module alive-check timer ranges; see `virtual-plc guide ethernet --json` and [FX5-ENET source matrix](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/research/FX5_ENET_ALIVE_REFERENCE_20261101.md).
+
+## RnCPU built-in Ethernet remote RUN/STOP setting check (offline reference)
+
+Offline helper `virtual_plc.ethernet.inspect_reference_rncpu_remote_opening()` checks vendor opening settings; see `virtual-plc guide ethernet --json` and [RnCPU opening guide](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/research/RNCPU_REMOTE_OPENING_SAFETY_20261101.md).
+
+## R04CPU built-in Ethernet A038H offline timer preflight
+
+Offline helper `virtual_plc.ethernet.inspect_reference_rncpu_data_timers()` validates R04CPU timer references; see `virtual-plc guide ethernet --json` and [R04CPU timer guide](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/research/RNCPU_R04CPU_A038H_DATA_TIMER_REFERENCE_20261101.md).
+
+## R04CPU built-in Ethernet external-device settings (offline)
+
+Offline helper `virtual_plc.ethernet.inspect_reference_rncpu_external_device()` checks user slot and port ranges; see `virtual-plc guide ethernet --json` and [R04CPU port matrix](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/research/RNCPU_R04CPU_EXTERNAL_DEVICE_PORTS_20261101.md).
+
+## R04CPU external-device multi-entry offline review
+
+Offline helper `virtual_plc.ethernet.inspect_reference_rncpu_external_device_batch()` lints multiple configuration rows; see `virtual-plc guide ethernet --json` and [R04CPU batch lint guide](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/research/RNCPU_R04CPU_BATCH_LINT_20261101.md).
 
 ## GX Works2/3 model-specific Ethernet settings (opt-in)
 
@@ -187,10 +221,10 @@ GX Works2/3 is an editor, **not** the hardware identity. This source checkout
 supports `qj71e71` (Q / GX Works2), `lj71e71` (L / GX Works2),
 and `rj71en71` (iQ-R / GX Works3).
 Factory defaults, validated JSON overrides and a nonbinding effective-settings
-inspection are in the [Ethernet settings guide](docs/ETHERNET_MODEL_SETTINGS.md).
-The [official-manual research matrix](docs/research/GXWORKS_ETHERNET_PARAMETERS_20261031.md)
+inspection are in the [Ethernet settings guide](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/ETHERNET_MODEL_SETTINGS.md).
+The [official-manual research matrix](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/research/GXWORKS_ETHERNET_PARAMETERS_20261031.md)
 documents model boundaries and unresolved physical fidelity.
-See the [RnCPU/FX5 hardware gap matrix](docs/research/ETHERNET_HARDWARE_NEXT_20261031.md)
+See the [RnCPU/FX5 hardware gap matrix](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/research/ETHERNET_HARDWARE_NEXT_20261031.md)
 before using an unsupported model's defaults. The existing
 `guide ethernet --json` exposes FX5 built-in, FX5-ENET and RnCPU built-in as
 **reference-only, not runnable** hardware; unknown timer defaults remain unknown.
@@ -276,8 +310,9 @@ snapshot = memory.dump()
 ```
 
 Seed before start/context entry; dump after stop. Direct Memory calls are not
-synchronized with requests. Use clients for live writes. Server construction
-initializes SD203; CLI seeding runs afterward. Writing SD203 changes the word
+synchronized with requests. Use clients for live writes. CLI `--init` seeding
+runs before server construction, so `--initial-state` sets SD203 (a snapshot's
+SD203 is overwritten). Writing SD203 changes the word
 without changing CPU state. For a pytest fixture, run `virtual-plc guide embed`.
 
 ## Response faults
@@ -316,9 +351,9 @@ More fixes: `virtual-plc guide troubleshoot`. Protocol details:
 ## Repository safeguards and verified handoff
 
 For the repository, use the
-[branch/release gate checklist](docs/governance/BRANCH_RELEASE_GATES_20261102.md)
+[branch/release gate checklist](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/governance/BRANCH_RELEASE_GATES_20261102.md)
 before configuring `main` protection or creating a `v*` tag.
-The [handoff log](docs/HANDOFF.md) records current state and CI evidence
+The [handoff log](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/HANDOFF.md) records current state and CI evidence
 (older prompts under `docs/handoff/` are historical); fetch remote main first.
 An active GitHub ruleset cannot be inferred from a successful CI run.
 
@@ -341,7 +376,7 @@ coverage guard still run. Oracle watch installs the latest client and changes
 only that run's local version expectation, without committing the change.
 
 ```text
-python -m pip install build twine
+python -m pip install -r requirements-release.txt
 python -m build
 python -m twine check dist/*
 ```
@@ -354,19 +389,3 @@ the PyPI publisher and GitHub environment pypi to be configured.
 
 See [DESIGN](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/DESIGN.md), [BEHAVIOR](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md) and [FAULTS](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/FAULTS.md).
 Licensed under [MIT](https://github.com/greatgc-flow/VirtualPLC/blob/main/LICENSE).
-
-### RnCPU built-in Ethernet remote RUN/STOP setting check (offline reference)
-
-Offline helper `inspect_reference_rncpu_remote_opening()` checks vendor opening settings; see `virtual-plc guide ethernet --json` and [RnCPU opening guide](docs/research/RNCPU_REMOTE_OPENING_SAFETY_20261101.md).
-
-### R04CPU built-in Ethernet A038H offline timer preflight
-
-Offline helper `inspect_reference_rncpu_data_timers()` validates R04CPU timer references; see `virtual-plc guide ethernet --json` and [R04CPU timer guide](docs/research/RNCPU_R04CPU_A038H_DATA_TIMER_REFERENCE_20261101.md).
-
-### R04CPU built-in Ethernet external-device settings (offline)
-
-Offline helper `inspect_reference_rncpu_external_device()` checks user slot and port ranges; see `virtual-plc guide ethernet --json` and [R04CPU port matrix](docs/research/RNCPU_R04CPU_EXTERNAL_DEVICE_PORTS_20261101.md).
-
-### R04CPU external-device multi-entry offline review
-
-Offline helper `inspect_reference_rncpu_external_device_batch()` lints multiple configuration rows; see `virtual-plc guide ethernet --json` and [R04CPU batch lint guide](docs/research/RNCPU_R04CPU_BATCH_LINT_20261101.md).

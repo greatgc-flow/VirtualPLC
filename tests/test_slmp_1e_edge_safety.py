@@ -169,10 +169,10 @@ def test_1e_ascii_invalid_last_record_never_commits_earlier_records():
     bad = bad[:-1] + b"Z"  # malformed *last* encoded data nibble
     with Server(slmp_1e=True, memory=mem, listeners=[("udp", 0)]) as plc:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as c:
-            c.settimeout(0.1)
+            c.settimeout(2)
             c.sendto(bad, plc.address)
-            with pytest.raises(socket.timeout):
-                c.recvfrom(1024)
+            # Correctly sized frame, non-hex value: C05C reply (BEHAVIOR.md 1E policy).
+            assert c.recvfrom(1024)[0] == b"855BC05C"
     assert mem.read_words("D", 100, 2) == [0xDEAD, 0]
 
 
