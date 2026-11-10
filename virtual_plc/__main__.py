@@ -101,7 +101,7 @@ def build_parser():
                         help="ASCII addresses: decimal compat, hex manual, or FX5 X/Y octal (others use device base)")
     parser.add_argument("--text-pad", type=text_pad, default=0x00, help="CPU name fill byte 0..255; 0x20 = space")
     parser.add_argument("--fault-plan", metavar="FILE", help="TCP response fault JSON")
-    parser.add_argument("--udp-fault-plan", metavar="FILE", help="UDP drop/delay fault JSON")
+    parser.add_argument("--udp-fault-plan", metavar="FILE", help="UDP datagram fault JSON")
     parser.add_argument("--init", metavar="FILE", help="load memory JSON before listening")
     parser.add_argument("--dump-on-exit", metavar="FILE", help="save memory JSON after shutdown")
     parser.add_argument("--latch-range", action="append", type=device_range, default=[], metavar="DEV:LO-HI",

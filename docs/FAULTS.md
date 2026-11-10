@@ -182,12 +182,40 @@ atomically. Malformed/oversized/empty UDP packets do not count.
 Counters and reservations persist across stop/start with the same plan.
 Plan configuration is deep copied; all unknown fields are rejected.
 
-Actions: drop = discard the full UDP response datagram; delay = wait
-finite nonnegative seconds before sending one complete response.
-Server.stop() cancels pending delays. Both actions occur AFTER the
-original dispatch and after response_hook; a write may have committed
-even when the response is lost. Delay holds just that UDP listener
-worker (outside the PLC request lock), not TCP or other UDP listeners.
-No retransmission, streaming, malformed frame injection, duplicate,
-corruption, reorder, authentication or timing guarantee is implied.
-No actual PLC or production network should be used.
+UDP actions (unknown types, missing or extra parameters raise ValueError
+before binding; the CLI exits 2):
+
+| Type | Parameters | Effect |
+|---|---|---|
+| `drop` | None | Discard the full UDP response datagram |
+| `delay` | `seconds` | Wait, then send one complete response datagram |
+| `duplicate` | None | Send the same response datagram twice; the request ran once |
+| `truncate` | `n` >= 1 | Send one datagram holding only the first n bytes; lengths are not fixed |
+| `corrupt_header` | Optional `offset` (0..8, default 0), `xor` (1..255, default 1) | Flip selected bits in one byte of the response datagram |
+
+Every action occurs AFTER the original dispatch and after response_hook,
+and operates on the hook's returned bytes; a write may have committed even
+when the response is lost or damaged. Exactly one action applies per
+response; actions do not combine. Server.stop() cancels pending delays, and
+a stop between the two `duplicate` sends suppresses the second. Delay holds
+just that UDP listener worker (outside the PLC request lock), not TCP or
+other UDP listeners.
+
+- `duplicate` re-sends identical bytes back to back from the same listener.
+  The command, `response_hook` and the plan's `nth` each advance once. With
+  `udp_metrics=True`, `sent` (or `send_errors`) counts each datagram, so one
+  duplicated response adds 2.
+- `truncate` with n at or past the response length sends the response
+  unchanged. n=0 is rejected (use `drop`): truncate itself never produces an empty
+  datagram. (A `response_hook` that returns `b""` is still sent as an empty
+  datagram, twice under `duplicate`.)
+- `corrupt_header` mirrors the TCP bounds (offsets shared by every 3E/4E
+  response header). A datagram shorter than offset+1 bytes (for example a
+  2-byte binary 1E reply, or a short hook result) is sent unchanged; the use
+  is still consumed.
+
+No retransmission, streaming, request-side fault, reorder, authentication
+or timing guarantee is implied. Whether the two `duplicate` datagrams, or any
+datagram, arrive and in which order is up to the network; loopback tests
+only observe the send order. Reorder remains open #13 scope (see
+[DESIGN](DESIGN.md)). No actual PLC or production network should be used.
