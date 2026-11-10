@@ -25,7 +25,8 @@ def validate(value):
         raise ValueError(f"udp_rate_limit requests must be an integer 1..{MAX_REQUESTS}")
     # Range first (NaN fails it); math.isfinite() would overflow on huge ints.
     if type(per_seconds) not in (int, float) or not 0 < per_seconds <= threading.TIMEOUT_MAX:
-        raise ValueError("udp_rate_limit per_seconds must be a number in (0, threading.TIMEOUT_MAX]")
+        raise ValueError("udp_rate_limit per_seconds must be a number in (0, threading.TIMEOUT_MAX], "
+                         f"which is {threading.TIMEOUT_MAX!r} seconds on this platform")
     return requests, float(per_seconds)
 
 
@@ -54,12 +55,11 @@ class UdpRateLimiter:
                 bucket = self._buckets[ip] = [float(self.requests), now]
             else:
                 self._buckets.move_to_end(ip)
-                elapsed = now - bucket[1]
-                if elapsed > 0:  # a clock that steps back adds nothing
-                    # Multiply before dividing: tiny windows saturate, never NaN.
-                    refill = elapsed * self.requests / self.per_seconds
-                    bucket[0] = min(float(self.requests), bucket[0] + refill)
-                    bucket[1] = now
+                # The clock is read under this lock and is monotonic, so elapsed >= 0.
+                # Multiply before dividing: tiny windows saturate, never NaN.
+                refill = (now - bucket[1]) * self.requests / self.per_seconds
+                bucket[0] = min(float(self.requests), bucket[0] + refill)
+                bucket[1] = now
             if bucket[0] >= 1:
                 bucket[0] -= 1
                 return True

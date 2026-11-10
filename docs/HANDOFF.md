@@ -12,6 +12,7 @@
 ## Unreleased
 
 - #13 (narrowed scope, point 2): opt-in per-source-IP UDP rate limit `Server(udp_rate_limit=(requests, per_seconds))` / CLI `--udp-rate-limit N/SECONDS` (default off, behaviour unchanged). Token bucket per IP (burst = requests), over-limit datagrams dropped before parse/dispatch/request lock, new `rate_limited` key in the opt-in UDP metrics, at most 1024 tracked IPs (LRU), banner shows `udp_rate_limit=`. Semantics: [BEHAVIOR.md](BEHAVIOR.md#udp-rate-limit-opt-in).
+- `virtual-plc guide` overview: `--help`/`--version` rows moved to `guide options` (named in the Options header) and the NUL-fill pitfall dropped (the first recipe, the `--text-pad` row and `guide troubleshoot` cover it), leaving budget headroom.
 
 ## 2026-11-10 release 0.9.0 — release-note source
 

@@ -46,15 +46,16 @@ def listener_spec(value):
 
 
 def udp_rate_limit(value):
-    """CLI rate syntax: REQUESTS/SECONDS, e.g. 100/1 (integer burst, positive window)."""
-    requests, separator, seconds = value.partition("/")
+    """CLI rate syntax: REQUESTS/SECONDS, e.g. 100/1 or 5/0.5 (plain decimal digits only)."""
+    match = re.fullmatch(r"([0-9]+)/([0-9]+(?:\.[0-9]+)?)", value)
     try:
-        if separator and requests.isascii() and requests.isdecimal():
-            return validate_udp_rate_limit((int(requests, 10), float(seconds)))
+        if match:
+            return validate_udp_rate_limit((int(match[1], 10), float(match[2])))
     except ValueError:
         pass
-    raise argparse.ArgumentTypeError("rate must be REQUESTS/SECONDS, e.g. 100/1 "
-                                     "(requests 1..1000000000, seconds > 0)")
+    raise argparse.ArgumentTypeError("rate must be REQUESTS/SECONDS, e.g. 100/1 or 5/0.5 "
+                                     "(requests 1..1000000000, seconds > 0 and <= threading.TIMEOUT_MAX, "
+                                     f"{threading.TIMEOUT_MAX!r} here)")
 
 
 def device_range(value):
@@ -274,7 +275,7 @@ def main(argv=None):
                 previous[number] = signal.signal(number, terminate)
         destination = (", ".join(f"{protocol}:{endpoint(host, port)}" for protocol, host, port in server.addresses)
                        if args.listen else endpoint(*server.address[:2]))
-        rate = ("%d/%g" % args.udp_rate_limit) if args.udp_rate_limit is not None else None
+        rate = ("%d/%r" % args.udp_rate_limit) if args.udp_rate_limit is not None else None
         print("listening on %s (%s, %s) idle_timeout=%s text_pad=0x%02X ascii_dword_order=%s ascii_numbering=%s "
               "fault_plan=%s udp_fault_plan=%s udp_rate_limit=%s max_clients=%s%s" %
               (destination, args.profile, args.initial_state, args.idle_timeout, args.text_pad,

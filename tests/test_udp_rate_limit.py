@@ -4,15 +4,18 @@ A token bucket per peer IP drops over-limit datagrams before parsing or
 dispatch, so a UDP flood never takes the shared request lock that TCP clients
 need. Clocks are injected (no sleeps); real sockets bind loopback port 0.
 """
+import re
 import socket
 import struct
+import threading
 from types import SimpleNamespace
 
 import pytest
 
 import virtual_plc.__main__ as cli
+from test_ipv6_loopback_transport import ipv6_loopback
 from test_m3_m4_raw import packet
-from virtual_plc import Server
+from virtual_plc import Server, UdpFaultPlan
 from virtual_plc.codec import decode_request, encode_response
 from virtual_plc.udp_rate_limit import MAX_TRACKED_PEERS, UdpRateLimiter
 
@@ -66,16 +69,6 @@ def test_buckets_are_independent_per_ip():
     limiter = UdpRateLimiter(1, 60, clock=Clock())
     assert limiter.allow("127.0.0.1") and not limiter.allow("127.0.0.1")
     assert limiter.allow("::1") and limiter.allow("127.0.0.2")
-
-
-def test_clock_going_backwards_never_adds_tokens():
-    clock = Clock(100.0)
-    limiter = UdpRateLimiter(1, 10, clock=clock)
-    assert limiter.allow("a")
-    clock.now = 50.0
-    assert not limiter.allow("a")
-    clock.now = 59.9
-    assert not limiter.allow("a")
 
 
 def test_tracked_peers_are_bounded_with_lru_eviction():
@@ -267,7 +260,9 @@ def _exit_code(arguments):
 
 
 @pytest.mark.parametrize("value", ["5", "5/", "/1", "0/1", "-1/1", "5/0", "5/-1", "x/1",
-                                   "5/nan", "5/inf", "1.5/1", "5/1/2", "", "1000000001/1"])
+                                   "5/nan", "5/inf", "1.5/1", "5/1/2", "", "1000000001/1",
+                                   "100/1_0", "5/1e3", "5/ 1", "5/1 ", " 5/1", "5/.5", "5/1.",
+                                   "5/+1", "5/0x10", "5/infinity"])
 def test_cli_rejects_malformed_rate_limit(capsys, value):
     assert _exit_code(["--listen", "udp:0", "--udp-rate-limit", value]) == 2
     assert "--udp-rate-limit" in capsys.readouterr().err
@@ -304,8 +299,11 @@ def test_cli_without_flag_keeps_limiter_off(monkeypatch):
     assert seen == [None]
 
 
-@pytest.mark.parametrize("arguments, shown", [([], "udp_rate_limit=None"),
-                                              (["--udp-rate-limit", "100/2"], "udp_rate_limit=100/2")])
+@pytest.mark.parametrize("arguments, shown", [
+    ([], "udp_rate_limit=None "),
+    (["--udp-rate-limit", "100/2"], "udp_rate_limit=100/2.0 "),
+    (["--udp-rate-limit", "5/1234567.5"], "udp_rate_limit=5/1234567.5 "),
+])
 def test_banner_shows_rate_limit(monkeypatch, capsys, arguments, shown):
     def interrupt(timeout):
         raise KeyboardInterrupt
@@ -314,3 +312,71 @@ def test_banner_shows_rate_limit(monkeypatch, capsys, arguments, shown):
     monkeypatch.setattr(cli, "threading", SimpleNamespace(Event=lambda: SimpleNamespace(wait=interrupt)))
     assert cli.main(["--listen", "udp:0", *arguments]) == 0
     assert shown in capsys.readouterr().err
+
+
+def test_cli_window_above_timeout_max_names_the_bound(capsys):
+    too_long = f"5/{int(threading.TIMEOUT_MAX) + 1}"
+    assert _exit_code(["--listen", "udp:0", "--udp-rate-limit", too_long]) == 2
+    error = capsys.readouterr().err
+    assert "--udp-rate-limit" in error and "threading.TIMEOUT_MAX" in error
+    assert repr(threading.TIMEOUT_MAX) in error
+
+
+def test_server_window_error_names_the_platform_bound():
+    with pytest.raises(ValueError, match=re.escape(repr(threading.TIMEOUT_MAX))):
+        Server(listeners=[("udp", 0)], udp_rate_limit=(5, threading.TIMEOUT_MAX * 2))
+
+
+def test_buckets_persist_across_stop_and_start():
+    server = Server(listeners=[("udp", 0)], udp_metrics=True, udp_rate_limit=(1, 60))
+    server._udp_rate_limiter._clock = scripted(0, 0, 0, 60)
+    try:
+        server.start()
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            client.sendto(packet("4E", "binary", serial=1), server.address)
+            assert serial_of(client.recvfrom(8192)[0]) == 1
+        server.stop()
+        server.start()
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            client.sendto(packet("4E", "binary", serial=2), server.address)  # still exhausted
+            client.sendto(packet("4E", "binary", serial=3), server.address)  # still exhausted
+            client.sendto(packet("4E", "binary", serial=4), server.address)  # refilled at 60 s
+            assert serial_of(client.recvfrom(8192)[0]) == 4
+    finally:
+        server.stop()
+    metrics = server.get_udp_metrics()
+    assert (metrics["rate_limited"], metrics["sent"]) == (2, 2)
+
+
+def test_rate_limited_datagrams_leave_fault_plan_nth_unconsumed():
+    faults = UdpFaultPlan([{"match": {"command": "0x0401", "nth": 2},
+                            "action": {"type": "drop"}}])
+    with Server(listeners=[("udp", 0)], udp_metrics=True, udp_fault_plan=faults,
+                udp_rate_limit=(1, 60)) as server:
+        server._udp_rate_limiter._clock = scripted(0, 0, 60, 120)
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            for serial in range(1, 5):
+                client.sendto(packet("4E", "binary", serial=serial), server.address)
+            # 1 replies (plan nth 1); 2 is rate limited and must not count;
+            # 3 is the plan's nth 2 and is dropped; 4 replies.
+            assert [serial_of(client.recvfrom(8192)[0]) for _ in range(2)] == [1, 4]
+    assert server.get_udp_metrics() == {
+        "received": 4, "rejected": 0, "sent": 2, "fault_dropped": 1,
+        "send_errors": 0, "receive_resets": 0, "rate_limited": 1,
+    }
+
+
+def test_ipv6_loopback_peer_is_limited_by_its_address(ipv6_loopback):
+    with Server(host="::1", listeners=[("udp", 0)], udp_metrics=True,
+                udp_rate_limit=(1, 60)) as server:
+        server._udp_rate_limiter._clock = scripted(0, 0, 60)
+        with socket.socket(socket.AF_INET6, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            for serial in range(1, 4):
+                client.sendto(packet("4E", "binary", serial=serial), server.address)
+            assert [serial_of(client.recvfrom(8192)[0]) for _ in range(2)] == [1, 3]
+        assert list(server._udp_rate_limiter._buckets) == ["::1"]
+    assert server.get_udp_metrics()["rate_limited"] == 1

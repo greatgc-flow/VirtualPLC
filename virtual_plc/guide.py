@@ -139,18 +139,23 @@ PROSE = {"run": RUN, "client": CLIENT, "troubleshoot": TROUBLESHOOT, "divergence
 
 CONNECT = """
 Connect (python -m pip install pymcprotocol):
-  from pymcprotocol import Type3E; c = Type3E(plctype="Q"); c.connect("127.0.0.1", 5000)
+  from pymcprotocol import Type3E
+  c = Type3E(plctype="Q"); c.connect("127.0.0.1", 5000)
   c.batchwrite_wordunits("D0", [123, -45]); print(c.batchread_wordunits("D0", 2)); c.close()
 """.strip("\n")
 
+# NUL CPU-name fill is not repeated here: the first recipe and the --text-pad row
+# already show the fix, and guide troubleshoot explains it.
 PITFALLS = """
-Pitfalls (fix):
+Pitfalls (fix; more: virtual-plc guide troubleshoot):
   1. "cannot listen" (exit 1): port busy -> choose another --port, or --port 0 and read the stderr banner.
   2. iQ-R errors: the client plctype and --profile must both be iQ-R (Q-class names share one wire format).
-  3. CPU name contains NUL bytes: the default fill is 0x00 -> start with --text-pad 0x20.
-  4. Big reads fail in pymcprotocol (one recv of 4096 bytes) -> keep batches under ~1000 words.
-  5. Reset or latch clear returns an error: both need STOP -> start with --initial-state STOP.
+  3. Big reads fail in pymcprotocol (one recv of 4096 bytes) -> keep batches under ~1000 words.
+  4. Reset or latch clear returns an error: both need STOP -> start with --initial-state STOP.
 """.strip("\n")
+
+# Meta flags (help/version) live in guide options; the overview lists server options only.
+META_OPTIONS = ("--help", "--version")
 
 OPTIONS_HEAD = "Options: flag, default ('-' = none), meaning. Bad values exit 2 with an error that ends in 'see: virtual-plc guide TOPIC'."
 OPTIONS_TAIL = ("DEV:LO-HI repeats (--limit D:0-99 --limit M:0-15); its endpoints and --text-pad accept 0x notation.\n"
@@ -241,8 +246,8 @@ def _overview(parser):
         f"virtual-plc: local Mitsubishi MC-protocol PLC simulator (3E/4E, binary/ASCII; profiles {', '.join(PROFILES)})"
         " for client tests. Localhost only.",
         "Run:", RECIPE_LINES,
-        "Options (flag | default | meaning; details: virtual-plc guide options):",
-        *map(_option_line, _option_rows(parser)), CONNECT,
+        "Options (flag | default | meaning; details, --help and --version: virtual-plc guide options):",
+        *(_option_line(row) for row in _option_rows(parser) if row["name"] not in META_OPTIONS), CONNECT,
         f"Topics (virtual-plc guide TOPIC [--json]): {' '.join(TOPICS)}", PITFALLS,
     ])
 
