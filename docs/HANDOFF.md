@@ -1,13 +1,21 @@
 # VirtualPLC — Project Handoff
 
 ## Current state
-- Released version: v0.9.0 (2026-11-10); previous v0.8.0 (2026-11-10).
+- Released version: v0.9.1 (2026-11-10); previous v0.9.0 (2026-11-10).
 - Upstream client oracle pin: `pymcprotocol==0.3.0` (`requirements-dev.txt`).
 - Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh required checks before merging (strict=false).
 - Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #13 (narrowed hardware-free scope), #25 (handoff), #78 (keyword-only API, 1.0).
 - Ruleset 26796594 requires 11 checks (build + Ubuntu/Windows 3.10–3.14) since 2026-11-09; `test-macos` is informational.
 - Release gate: tag only a main commit whose `ci.yml` push run succeeded (release.yml enforces it).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
+
+## 2026-11-10 release 0.9.1 — release-note source
+
+Patch release from an independent closure review of 0.9.0 (Fable, 42 cells + 8 closure checks). No API changes.
+- Performance fix: 3E/4E random writes (1402) no longer copy the whole device family per request. 0.9.0 routed them through `Memory.write_atomic`, which staged a full dict copy, so with many stored points (default, uncapped) each random write held the request lock in proportion to stored points (about 80 ms at 4M points). Writes are now staged in a per-request overlay and committed in place (about 0.15 ms at 1M points); atomicity and `max_cells` accounting are unchanged.
+- `max_cells` + SD203: when the server's SD203 CPU-state mirror needs the last free cell, `Server(...)` (and CLI `--init` + `--max-cells`) now fail with a `CellCapExceeded` message that names SD203; guide and BEHAVIOR state "snapshot points plus SD203".
+- Tests: TCP counters are pinned for fault-closed sessions (rst, close before/after response, silent_hold + stop), rejection while stopping, sockets failing setup before admission, and client-worker start failure; the `--max-cells` validation test can no longer hang if validation regresses.
+- Release process: GitHub release bodies now start with this HANDOFF section (`tools/release_notes.py`, run in release.yml before publishing; a missing section fails the release before PyPI). The v0.8.0 and v0.9.0 release pages were updated the same way.
 
 ## 2026-11-10 release 0.9.0 — release-note source
 
