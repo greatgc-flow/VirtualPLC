@@ -1,7 +1,7 @@
 # VirtualPLC — Project Handoff
 
 ## Current state
-- Released version: v0.10.0 (2026-11-10); previous v0.9.1 (2026-11-10). Release dates are UTC (GitHub `publishedAt`).
+- Released version: v0.11.0 (2026-11-10); previous v0.10.0 (2026-11-10). Release dates are UTC (GitHub `publishedAt`).
 - Upstream client oracle pin: `pymcprotocol==0.3.0` (`requirements-dev.txt`).
 - Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh required checks before merging (strict=false).
 - Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #13 (narrowed hardware-free scope), #25 (handoff), #78 (keyword-only API, 1.0; design comment posted), #95 (UDP rate-limit/fault-action review follow-ups).
@@ -10,9 +10,11 @@
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
 - Session record (requirements, design, process, scores, results) for 0.8.0–0.10.0: [SESSION_20261110](handoff/SESSION_20261110_MECE_REVIEW_AND_RELEASES.md).
 
-## Unreleased
+## 2026-11-10 release 0.11.0 — release-note source
 
-- Deprecated (#78, keyword-only API): passing a `Server` parameter after `profile`, or a `Memory` parameter after `profile`, positionally now emits a `DeprecationWarning` that names the parameters and points at the calling line; 1.0 makes them keyword-only (positional use will raise `TypeError`). `Server(host, port, profile)` and `Memory(profile)` stay positional and warning-free, keyword calls never warn, and behaviour is otherwise unchanged (including the `TypeError` for duplicate, surplus or unknown arguments; `inspect.signature` and `help()` are unchanged, while raw `Server.__init__.__defaults__` now belongs to a thin wrapper whose original is `__wrapped__`). Use keywords, e.g. `Server(port=0, memory=m)` or `Memory("Q", limits=..., max_cells=...)`. Plan: [DESIGN.md](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/DESIGN.md#keyword-only-api-78-0110-deprecation-10-enforcement); details: [BEHAVIOR.md](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md#public-api).
+Deprecation step for #78 (owner decisions on the issue). No behaviour change for keyword calls.
+
+- Deprecated (#78, keyword-only API): passing a `Server` parameter after `profile`, or a `Memory` parameter after `profile`, positionally now emits a `DeprecationWarning` that names the parameters and points at the calling line; 1.0 makes them keyword-only (positional use will raise `TypeError`). `Server(host, port, profile)` and `Memory(profile)` stay positional and warning-free, keyword calls never warn, and behaviour is otherwise unchanged (including the `TypeError` for duplicate, surplus or unknown arguments; `inspect.signature` and `help()` are unchanged, while raw `Server.__init__.__defaults__` now belongs to a thin wrapper whose original is `__wrapped__`). Use keywords, e.g. `Server(port=0, memory=m)` or `Memory("Q", limits=..., max_cells=...)`. Plan: [DESIGN.md](https://github.com/greatgc-flow/VirtualPLC/blob/v0.11.0/docs/DESIGN.md#keyword-only-api-78-0110-deprecation-10-enforcement); details: [BEHAVIOR.md](https://github.com/greatgc-flow/VirtualPLC/blob/v0.11.0/docs/BEHAVIOR.md#public-api).
 - Internal positional `Memory(...)` calls (`Memory.load`, CLI `--init/--limit/--max-cells`) now use keywords, so the package itself emits no warning. The repository test suite runs with `DeprecationWarning`/`PendingDeprecationWarning` as errors (pytest `filterwarnings`), a static guard rejects positional extras in code and documented snippets, and the bottling_line demos run with `-W error::DeprecationWarning`.
 
 ## 2026-11-10 release 0.10.0 — release-note source

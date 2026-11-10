@@ -17,6 +17,7 @@ this file explains *why* and *how*.
 | R6 | File lessons learned as issues in the owner's repositories | §5.3 |
 | R7 | Audit and slim peer instructions that burn quota quickly; move workspace-only rules out of global locations | §6 (in progress) |
 | R8 | Document requirements, analysis/design, process and results for collaboration | this file |
+| R9 | Owner decisions 2026-11-11: P1 new `--stream` per task and no pasted guide/diag output; L1 quota check right before delegating; #78 keep `host, port, profile` / `profile` positional, include `Memory`, `DeprecationWarning` in 0.11.0 | §5.1, issue #78 |
 
 ## 2. Analysis and design
 
@@ -104,7 +105,8 @@ ag A-7D, later ag G-7D) were rested.
 | sample | `examples/bottling_line` (ag) | 82 → 100 |
 | r6 | 0.9.0 as released | 36 cells 100; P2/P3/P5/P7 96–99 |
 | r7–r10 | 0.9.1 RC | 99.86 → 99.79 → 99.67 → (redesign) 99.81 → 99.93 → **100.00**; ag cross-check 100 |
-| r11 | 0.10.0 candidate | 99.5 (two doc findings) → fixed with regression tests → final verification on the release PR |
+| r11 | 0.10.0 candidate | 99.5 (two doc findings) → 99.9 (date finding) → re-score of the released commit: **100** |
+| r12 | 0.11.0 candidate (#98) | 99.6 (shim warned on invalid calls) → fixed with a `bind()` oracle test → **100** |
 
 ## 5. Results
 
@@ -118,6 +120,7 @@ Dates are UTC release dates (GitHub `publishedAt`); the session ran into 2026-11
 | 0.9.0 | 2026-11-10 | `Memory(max_cells=N)` / `--max-cells`, opt-in TCP metrics |
 | 0.9.1 | 2026-11-10 | Random-write overlay (perf), SD203 cap message, release-notes gate |
 | 0.10.0 | 2026-11-10 | UDP fault actions, per-IP UDP rate limit, flaky-test fix |
+| 0.11.0 | 2026-11-10 | `DeprecationWarning` for positional `Server`/`Memory` parameters after `profile` (#78 step 1; 1.0 enforces) |
 
 ### 5.2 Pull requests
 
@@ -134,7 +137,7 @@ Dates are UTC release dates (GitHub `publishedAt`); the session ran into 2026-11
 ### 5.4 Open items
 
 - #13 remaining: UDP reorder action.
-- #78: owner decisions on the keyword-only API path.
+- #78: 1.0 enforcement (add `*`, remove the shim).
 - #95: non-deduction recommendations from r11.
 - §6 peer-instruction diet (R7).
 
