@@ -145,13 +145,15 @@ def random_access(request, memory, max_points, control=None):
                     else:
                         values = unpack_words(payload)
                 entries.append((device.name, head, width, values))
-        # Nothing above mutates storage. Overlaps are applied in wire order.
+        # Nothing above mutates storage. Overlaps are applied in wire order; one atomic
+        # commit keeps the optional max_cells check whole-request (#79).
+        if write:
+            memory.write_atomic([(device, head, "bit" if bit else "word", values)
+                                 for device, head, width, values in entries])
+            return b""
         result = bytearray()
         for device, head, width, values in entries:
-            if write:
-                (memory.write_bits if bit else memory.write_words)(device, head, values)
-            else:
-                result += pack_words(memory.read_words(device, head, width // 2))
+            result += pack_words(memory.read_words(device, head, width // 2))
         return bytes(result)
     except OutOfRange:
         raise CommandError(EndCode.ADDRESS_OUT_OF_RANGE)

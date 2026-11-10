@@ -5,7 +5,7 @@ data-length header: the first command byte determines a bounded request size.
 This module does not alter the existing 3E/4E codec or PLC memory ownership.
 """
 
-from .memory import OutOfRange
+from .memory import CellCapExceeded, OutOfRange
 
 # Deliberately narrow, manual-described FX5 CPU device subset. Other devices
 # are refused, rather than inheriting the synthetic Q CPU's entire catalog.
@@ -381,6 +381,8 @@ def dispatch_1e(frame, memory, max_points=None, control=None, requester=None):
                 bits = [bit for word in words for bit in _word_to_bits(word)]
                 memory.write_bits(name, head, bits)
             payload = b""
+    except CellCapExceeded:  # opt-in Memory(max_cells) guard (#79), same code as range errors
+        return _response(command, wire, ERROR["address"])
     except (OutOfRange, ValueError):
         return _response(command, wire, ERROR["request"])
     return _response(command, wire, payload=payload)

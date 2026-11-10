@@ -9,6 +9,10 @@ class OutOfRange(ValueError):
     """Access outside the configured device range."""
 
 
+class CellCapExceeded(OutOfRange):
+    """A write would store more distinct points than Memory(max_cells=N) allows."""
+
+
 def valid_span(device, span):
     return (
         device is not None
@@ -37,7 +41,10 @@ def _store_halves(cells, head, values):
 class Memory:
     """Unsigned point storage per device family; bit devices hold one bit per point."""
 
-    def __init__(self, profile="Q", limits=None):
+    def __init__(self, profile="Q", limits=None, max_cells=None):
+        if max_cells is not None and (type(max_cells) is not int or max_cells <= 0):
+            raise ValueError("max_cells must be a positive int or None")
+        self.max_cells = max_cells  # opt-in safety cap on distinct stored points (#79)
         self.profile = PROFILES[profile]
         self._limits = {name: (spec.minimum, spec.maximum) for name, spec in self.profile.devices.items()}
         for name, span in (limits or {}).items():
@@ -65,6 +72,7 @@ class Memory:
         values = _integers(values, 0xFFFF, "word out of range")
         spec = self.check(device, head, len(values), "word")
         if spec.kind == "dword":
+            self._reserve(device, head, (len(values) + 1) // 2)
             _store_halves(self._cells[device], head, values)
             return
         if spec.kind == "bit":
@@ -108,6 +116,9 @@ class Memory:
                 _store_halves(cells, head, values)
             else:
                 cells.update(enumerate(values, head))
+        if self.max_cells is not None and sum(
+                len(staged.get(name, cells)) for name, cells in self._cells.items()) > self.max_cells:
+            raise CellCapExceeded(f"stored-cell cap {self.max_cells} exceeded")
         # Single commit point under request lock; failures above leave state as-is.
         self._cells.update(staged)
 
@@ -136,7 +147,22 @@ class Memory:
         cells = self._cells[device]
         return [cells.get(head + i, 0) for i in range(count)]
 
+    @property
+    def stored_cells(self):
+        """Distinct stored points (the unit max_cells counts), including SD203."""
+        return sum(len(cells) for cells in self._cells.values())
+
+    def _reserve(self, device, head, points):
+        """Reject before mutating when new keys would exceed max_cells; overwrites are free."""
+        if self.max_cells is None:
+            return
+        cells = self._cells[device]
+        new = sum(1 for point in range(head, head + points) if point not in cells)
+        if new and self.stored_cells + new > self.max_cells:
+            raise CellCapExceeded(f"stored-cell cap {self.max_cells} exceeded")
+
     def _store(self, device, head, values):
+        self._reserve(device, head, len(values))
         self._cells[device].update(enumerate(values, head))
 
     def clear(self, latch_ranges, mode):
@@ -179,7 +205,7 @@ class Memory:
         """
         if not isinstance(data, dict):
             raise ValueError("memory snapshot must be an object")
-        staged = Memory(self.profile.name, self._limits)
+        staged = Memory(self.profile.name, self._limits, self.max_cells)
         staged._cells = deepcopy(self._cells)
         for name, runs in data.items():
             spec = self.profile.devices.get(name)

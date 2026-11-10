@@ -152,7 +152,7 @@ between this raw UDP example and the tested TCP-only pinned client.
 Run `virtual-plc guide options` for the generated flag/default table, or `virtual-plc --help`; see `virtual-plc guide run` for quick-start flags. Long options must be spelled in full; abbreviations exit 2.
 
 Other options (meanings in `virtual-plc guide options`): lock and caps `--password`, `--max-points`;
-ASCII wire `--ascii-dword-order`, `--ascii-numbering`; memory `--limit`, `--latch-range`;
+ASCII wire `--ascii-dword-order`, `--ascii-numbering`; memory `--limit`, `--latch-range`, `--max-cells` (optional stored-point cap);
 UDP faults `--udp-fault-plan`; 1E `--slmp-1e-run-switch`; `-v`/`--verbose` (stderr request log); `--version`.
 JSON files for `--init`, `--fault-plan`, `--udp-fault-plan` and `--ethernet-config` may start with a UTF-8 BOM.
 The `--dump-on-exit` directory must already exist and be writable, and an existing target file must not be read-only (probed with a temporary file before binding, exit 2). Empty FILE paths exit 2.
