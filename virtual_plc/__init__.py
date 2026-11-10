@@ -5,7 +5,7 @@ from importlib.metadata import PackageNotFoundError as _PackageNotFoundError, ve
 try:
     __version__ = _version("virtual_plc")
 except _PackageNotFoundError:
-    __version__ = "0.8.0"  # Source-tree use without an installed distribution.
+    __version__ = "0.9.0"  # Source-tree use without an installed distribution.
 
 from .ethernet import EthernetSettings
 from .faults import FaultPlan
