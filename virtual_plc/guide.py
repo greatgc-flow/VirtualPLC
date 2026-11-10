@@ -139,8 +139,7 @@ PROSE = {"run": RUN, "client": CLIENT, "troubleshoot": TROUBLESHOOT, "divergence
 
 CONNECT = """
 Connect (python -m pip install pymcprotocol):
-  from pymcprotocol import Type3E
-  c = Type3E(plctype="Q"); c.connect("127.0.0.1", 5000)
+  from pymcprotocol import Type3E; c = Type3E(plctype="Q"); c.connect("127.0.0.1", 5000)
   c.batchwrite_wordunits("D0", [123, -45]); print(c.batchread_wordunits("D0", 2)); c.close()
 """.strip("\n")
 
@@ -298,6 +297,7 @@ Live state: server.state ("RUN"/"STOP"/"PAUSE"), server.set_state(s), server.res
 Memory calls are not synchronized with wire requests: never load, mutate or dump while serving; use a client.
 FaultPlan(steps) or FaultPlan.from_file(path) -> Server(fault_plan=...); schema: virtual-plc guide faults.
 UdpFaultPlan(steps) -> Server(listeners=[('udp', 0)], udp_fault_plan=...); drop/delay only.
+udp_rate_limit=(requests, per_seconds) drops over-limit datagrams per source IP before dispatch.
 Observability: server.get_listener_health(), server.get_udp_metrics() (udp_metrics=True),
   server.get_tcp_metrics() (tcp_metrics=True); see docs/BEHAVIOR.md#udp-observability-opt-in.
 response_hook(bytes) -> bytes transforms every complete reply before it is sent; hooks must return

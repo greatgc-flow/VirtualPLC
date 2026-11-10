@@ -13,6 +13,7 @@ from .ethernet import EthernetSettings
 from .memory import Memory, valid_span
 from .one_e import frame_size_1e, dispatch_1e, _command_and_wire
 from .udp_faults import UdpFaultPlan
+from .udp_rate_limit import UdpRateLimiter, validate as _validate_udp_rate_limit
 from .profiles import PROFILES
 
 LOG = logging.getLogger(__name__)
@@ -58,6 +59,7 @@ class Server:
         ethernet_model, ethernet_overrides
       test hooks: fault_plan (TCP), udp_fault_plan, response_hook(bytes) -> bytes,
         udp_metrics, tcp_metrics, verbose
+      protection: udp_rate_limit=(requests, per_seconds) per source IP
     Hooks must return: stop() joins the workers that run them.
     Usage and a pytest fixture: `virtual-plc guide embed`.
     """
@@ -69,7 +71,7 @@ class Server:
                  allow_nonlocal=False, max_clients=64, listeners=None,
                  ethernet_model=None, ethernet_overrides=None, slmp_1e=False,
                  slmp_1e_run_switch="RUN", udp_fault_plan=None, udp_metrics=False,
-                 tcp_metrics=False):
+                 tcp_metrics=False, udp_rate_limit=None):
         if type(port) is not int or not 0 <= port <= 65535:
             raise ValueError("port must be an integer 0..65535")
         if max_points is not None and (type(max_points) is not int or max_points < 1):
@@ -159,6 +161,10 @@ class Server:
             raise ValueError("latch_ranges must be a dict of device -> [(lo, hi), ...] or None")
         if response_hook is not None and not callable(response_hook):
             raise ValueError("response_hook must be callable or None")
+        if udp_rate_limit is not None:
+            udp_rate_limit = _validate_udp_rate_limit(udp_rate_limit)
+            if not any(transport == "udp" for transport, _ in listen_specs):
+                raise ValueError("udp_rate_limit requires at least one UDP listener")
         if udp_metrics and not any(transport == "udp" for transport, _ in listen_specs):
             raise ValueError("udp_metrics requires at least one UDP listener")
         if tcp_metrics and not any(transport == "tcp" for transport, _ in listen_specs):
@@ -205,9 +211,13 @@ class Server:
         self._fault_plan = fault_plan
         self._udp_fault_plan = udp_fault_plan
         self._udp_metrics = ({"received": 0, "rejected": 0, "sent": 0,
-                              "fault_dropped": 0, "send_errors": 0, "receive_resets": 0}
+                              "fault_dropped": 0, "send_errors": 0, "receive_resets": 0,
+                              "rate_limited": 0}
                              if udp_metrics else None)
         self._udp_metrics_lock = threading.Lock()
+        # Per-instance buckets shared by all UDP listeners, kept across stop/start.
+        self._udp_rate_limiter = (UdpRateLimiter(*udp_rate_limit)
+                                  if udp_rate_limit is not None else None)
         # Guarded by _clients_lock, the lock that already admits/removes sessions.
         self._tcp_metrics = ({"accepted": 0, "rejected": 0, "idle_closed": 0, "closed": 0}
                              if tcp_metrics else None)
@@ -529,6 +539,11 @@ class Server:
             # Do not dispatch even a fully valid late datagram.
             if self._stopping.is_set():
                 return
+            # Before any size check or parse: a flood never takes the request lock.
+            if self._udp_rate_limiter is not None and not self._udp_rate_limiter.allow(peer[0]):
+                self._count_udp("rate_limited")
+                self._log("UDP drop: rate limit exceeded for %s", peer[0])
+                continue
             if not packet or len(packet) > MAX_UDP_DATAGRAM:
                 self._count_udp("rejected")
                 self._log("UDP drop: empty or oversized datagram")

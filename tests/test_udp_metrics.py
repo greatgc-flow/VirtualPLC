@@ -22,6 +22,7 @@ EMPTY = {
     "fault_dropped": 0,
     "send_errors": 0,
     "receive_resets": 0,
+    "rate_limited": 0,
 }
 STOPPED = {"started": False, "healthy": False, "listeners": []}
 

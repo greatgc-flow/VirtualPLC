@@ -274,7 +274,7 @@ lock; see [BEHAVIOR.md](BEHAVIOR.md#tcp-session-counters-opt-in).
 
 ### UDP datagram response faults (PR #52)
 
-Separate `UdpFaultPlan` (`virtual_plc/udp_faults.py`) reserves post-dispatch UDP `drop`/`delay` atomically under its own plan lock and waits outside the shared PLC request lock; full schema and matching semantics are owned by [FAULTS.md](FAULTS.md#udp-datagram-response-faults-opt-in). Duplicate, corruption, reorder, scheduler and rate limiting are held for separate #13 slices.
+Separate `UdpFaultPlan` (`virtual_plc/udp_faults.py`) reserves post-dispatch UDP `drop`/`delay` atomically under its own plan lock and waits outside the shared PLC request lock; full schema and matching semantics are owned by [FAULTS.md](FAULTS.md#udp-datagram-response-faults-opt-in). Duplicate, corruption, reorder and scheduler are held for separate #13 slices; the opt-in per-source-IP rate limit (`udp_rate_limit`) is a separate pre-dispatch drop, not a fault action ([BEHAVIOR.md](BEHAVIOR.md#udp-rate-limit-opt-in)).
 
 ## 1. Verified client facts (pinned pymcprotocol 0.3.0)
 
@@ -433,7 +433,7 @@ never touches SM/SD, apart from the explicit SD203 state mirror on transitions.
 
 ## 8. Open items
 
-Canonical simulator policies and unverified vendor behaviors live in `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`). Remaining open design items: SM/SD per-range read-only enforcement, real-PLC unaligned bit-head word reads, bit-device dword views, and keyword-only `Server` parameters for 1.0 (#78); see [FX5 1E/3E frame distinction and limits](research/FX5_SLMP_FRAME_SCOPE_20261031.md) and [BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in). Resolved: #79 optional stored-cell cap (`Memory(max_cells=N)` / `--max-cells N`; opt-in, only new points count, whole-request check, C056; see [BEHAVIOR.md](BEHAVIOR.md#public-api)).
+Canonical simulator policies and unverified vendor behaviors live in `virtual-plc guide divergences` (`DIVERGENCES` in `virtual_plc/guide.py`). Remaining open design items: SM/SD per-range read-only enforcement, real-PLC unaligned bit-head word reads, bit-device dword views, and keyword-only `Server` parameters for 1.0 (#78); see [FX5 1E/3E frame distinction and limits](research/FX5_SLMP_FRAME_SCOPE_20261031.md) and [BEHAVIOR.md](BEHAVIOR.md#slmp-1e-transport-opt-in). Resolved: #13 narrowed scope point 2, opt-in per-source-IP UDP token bucket (`Server(udp_rate_limit=(requests, per_seconds))` / `--udp-rate-limit N/SECONDS`; dropped before parse and the request lock, `rate_limited` metric, 1024-peer LRU cap; see [BEHAVIOR.md](BEHAVIOR.md#udp-rate-limit-opt-in)); #79 optional stored-cell cap (`Memory(max_cells=N)` / `--max-cells N`; opt-in, only new points count, whole-request check, C056; see [BEHAVIOR.md](BEHAVIOR.md#public-api)).
 
 
 ## 9. Server lifecycle and CLI

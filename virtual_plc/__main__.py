@@ -17,6 +17,7 @@ from .ethernet import EthernetSettings, model_catalog
 from .server import Server, is_loopback_host
 from .faults import FaultPlan
 from .udp_faults import UdpFaultPlan
+from .udp_rate_limit import validate as validate_udp_rate_limit
 from .memory import Memory, OutOfRange
 from .profiles import PROFILES
 
@@ -42,6 +43,18 @@ def listener_spec(value):
     except (TypeError, ValueError):
         pass
     raise argparse.ArgumentTypeError("listener must be tcp:PORT or udp:PORT with port 0..65535")
+
+
+def udp_rate_limit(value):
+    """CLI rate syntax: REQUESTS/SECONDS, e.g. 100/1 (integer burst, positive window)."""
+    requests, separator, seconds = value.partition("/")
+    try:
+        if separator and requests.isascii() and requests.isdecimal():
+            return validate_udp_rate_limit((int(requests, 10), float(seconds)))
+    except ValueError:
+        pass
+    raise argparse.ArgumentTypeError("rate must be REQUESTS/SECONDS, e.g. 100/1 "
+                                     "(requests 1..1000000000, seconds > 0)")
 
 
 def device_range(value):
@@ -102,6 +115,8 @@ def build_parser():
     parser.add_argument("--text-pad", type=text_pad, default=0x00, help="CPU name fill byte 0..255; 0x20 = space")
     parser.add_argument("--fault-plan", metavar="FILE", help="TCP response fault JSON")
     parser.add_argument("--udp-fault-plan", metavar="FILE", help="UDP drop/delay fault JSON")
+    parser.add_argument("--udp-rate-limit", type=udp_rate_limit, default=None, metavar="N/SECONDS",
+                        help="optional per-source-IP UDP token bucket; over-limit datagrams are dropped unparsed; default: off")
     parser.add_argument("--init", metavar="FILE", help="load memory JSON before listening")
     parser.add_argument("--dump-on-exit", metavar="FILE", help="save memory JSON after shutdown")
     parser.add_argument("--latch-range", action="append", type=device_range, default=[], metavar="DEV:LO-HI",
@@ -202,6 +217,8 @@ def main(argv=None):
             options["listeners"] = args.listen
         if udp_plan is not None:
             options["udp_fault_plan"] = udp_plan
+        if args.udp_rate_limit is not None:
+            options["udp_rate_limit"] = args.udp_rate_limit
         if args.ethernet_model:
             options["ethernet_model"] = args.ethernet_model
             options["ethernet_overrides"] = overrides
@@ -257,11 +274,12 @@ def main(argv=None):
                 previous[number] = signal.signal(number, terminate)
         destination = (", ".join(f"{protocol}:{endpoint(host, port)}" for protocol, host, port in server.addresses)
                        if args.listen else endpoint(*server.address[:2]))
+        rate = ("%d/%g" % args.udp_rate_limit) if args.udp_rate_limit is not None else None
         print("listening on %s (%s, %s) idle_timeout=%s text_pad=0x%02X ascii_dword_order=%s ascii_numbering=%s "
-              "fault_plan=%s udp_fault_plan=%s max_clients=%s%s" %
+              "fault_plan=%s udp_fault_plan=%s udp_rate_limit=%s max_clients=%s%s" %
               (destination, args.profile, args.initial_state, args.idle_timeout, args.text_pad,
                args.ascii_dword_order, args.ascii_numbering, args.fault_plan, args.udp_fault_plan,
-               args.max_clients, warning), file=sys.stderr, flush=True)
+               rate, args.max_clients, warning), file=sys.stderr, flush=True)
         event = threading.Event()
         while not event.wait(0.5):
             pass
