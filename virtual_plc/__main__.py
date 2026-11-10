@@ -168,6 +168,14 @@ def dump_target_writable(path):
     return True
 
 
+def read_json(path, flag):
+    """JSON input file; utf-8-sig accepts a BOM and absurd nesting is a ValueError (exit 2)."""
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    except RecursionError:
+        raise ValueError(f"{flag} JSON nesting too deep") from None
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     parser = build_parser()
@@ -201,7 +209,7 @@ def main(argv=None):
         plan = FaultPlan.from_file(args.fault_plan) if args.fault_plan is not None else None
         udp_plan = UdpFaultPlan.from_file(args.udp_fault_plan) if args.udp_fault_plan is not None else None
         topic = "memory"
-        overrides = (json.loads(Path(args.ethernet_config).read_text(encoding="utf-8-sig"))
+        overrides = (read_json(args.ethernet_config, "--ethernet-config")
                      if args.ethernet_config is not None else None)
         if args.ethernet_config is not None and not isinstance(overrides, dict):
             parser.error("ethernet configuration root must be a JSON object", "ethernet")
@@ -227,7 +235,7 @@ def main(argv=None):
             options["memory"] = Memory(args.profile, limits=dict(args.limit), max_cells=args.max_cells)
         if args.init is not None:
             # Load before Server() so its initial_state rewrites any snapshot SD203 mirror.
-            options["memory"].load(json.loads(Path(args.init).read_text(encoding="utf-8-sig")))
+            options["memory"].load(read_json(args.init, "--init"))
         if args.latch_range:
             ranges = {}
             for device, span in args.latch_range:

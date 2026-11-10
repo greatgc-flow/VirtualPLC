@@ -96,6 +96,8 @@ Symptom -> cause -> fix
 UDP timeout: each datagram must contain exactly one full frame (max 8192 bytes); invalid requests get no response.
   --udp-rate-limit drops are silent too: see rate_limited (udp_metrics) or -v.
 1E: --slmp-1e supports batch 00..03, random 04/05, TCP owner-bound RUN/STOP 13/14, type 15 and loopback 16; not mixed with 3E/4E.
+  1E RUN/STOP refused after the STOP owner disconnected: that orphaned owner stays; in CLI mode only
+  restarting the process clears it (Python: server.reset_1e_remote_control()).
 Exit 2 and "see: virtual-plc guide TOPIC": bad option, JSON file or plan -> read that topic; nothing was bound.
 Client times out: wrong host/port, a fault plan that holds or drops replies, or --idle-timeout closed the socket
   (reconnect). A silent_hold fault ends only when the server stops.
@@ -304,7 +306,7 @@ Memory API: read_words/write_words/read_bits/write_bits(device, head, ...), load
 Live state: server.state ("RUN"/"STOP"/"PAUSE"), server.set_state(s), server.reset_count, server.locked.
 Memory calls are not synchronized with wire requests: never load, mutate or dump while serving; use a client.
 FaultPlan(steps) or FaultPlan.from_file(path) -> Server(fault_plan=...); schema: virtual-plc guide faults.
-UdpFaultPlan(steps) -> Server(listeners=[('udp', 0)], udp_fault_plan=...); datagram actions: guide faults.
+UdpFaultPlan(steps) or UdpFaultPlan.from_file(path) -> Server(listeners=[('udp', 0)], udp_fault_plan=...).
 udp_rate_limit=(requests, per_seconds) drops over-limit datagrams per source IP before dispatch.
 Observability: server.get_listener_health(), server.get_udp_metrics() (udp_metrics=True),
   server.get_tcp_metrics() (tcp_metrics=True); see docs/BEHAVIOR.md#udp-observability-opt-in.

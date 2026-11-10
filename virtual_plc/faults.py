@@ -36,10 +36,21 @@ ACTION_FIELDS = {
 
 def _load_steps(path, message):
     """Steps array of a {"steps": [...]} file; utf-8-sig accepts a PowerShell 5.1 BOM."""
-    document = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    try:
+        document = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    except RecursionError:
+        raise ValueError("fault plan JSON nesting too deep") from None
     if not isinstance(document, dict) or set(document) != {"steps"}:
         raise ValueError(message)
     return document["steps"]
+
+
+def _copy_steps(steps):
+    """Private copy; absurd nesting is invalid input, not a RecursionError."""
+    try:
+        return deepcopy(steps)
+    except RecursionError:
+        raise ValueError("fault plan nesting too deep") from None
 
 
 def _validate(step):
@@ -86,7 +97,7 @@ class FaultPlan:
     def __init__(self, steps):
         if not isinstance(steps, list):
             raise ValueError("steps must be a list")
-        self._steps = deepcopy(steps)
+        self._steps = _copy_steps(steps)
         for step in self._steps:
             _validate(step)
         self._lock = threading.Lock()
@@ -127,9 +138,10 @@ def send_fault(connection, response, request, action, stopping):
             response = encode_response(request, action["code"])
 
     elif kind == "corrupt_header":
-        changed = bytearray(response)
-        changed[action["offset"]] ^= action["xor"]
-        response = bytes(changed)
+        if action["offset"] < len(response):  # a shorter (hook) reply is sent unchanged
+            changed = bytearray(response)
+            changed[action["offset"]] ^= action["xor"]
+            response = bytes(changed)
     elif kind == "partial_send":
         offset = 0
         for size in action["chunks"] + [len(response)]:

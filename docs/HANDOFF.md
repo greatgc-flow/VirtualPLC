@@ -10,6 +10,16 @@
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
 - Session record (requirements, design, process, scores, results) from 0.8.0 onward: [SESSION_20261110](handoff/SESSION_20261110_MECE_REVIEW_AND_RELEASES.md).
 
+## Unreleased
+
+Fixes from an independent whole-product audit of v0.11.1 (six minor findings).
+
+- Fixed: `python -m virtual_plc.oracle` writes UTF-8 bytes with LF newlines, so stdout is byte-for-byte identical to the `--report` file on Windows too (previously CRLF on the console).
+- Fixed: absurdly nested JSON given to `--init`, `--fault-plan`, `--udp-fault-plan`, `--ethernet-config` or `oracle compare` is invalid input (exit 2 with a one-line hint) instead of an uncaught RecursionError traceback; `FaultPlan`/`UdpFaultPlan` raise ValueError for such steps.
+- Fixed: `Memory("bogus")`, `Memory(limits="D")` and `Server().set_state("run")` raise ValueError ("unknown profile", "limits must be a dict", "state must be RUN, STOP or PAUSE") instead of KeyError/AttributeError, as `guide embed` documents.
+- Fixed: a TCP `corrupt_header` fault whose offset lies beyond a short (for example `response_hook`-shortened) reply sends the reply unchanged and keeps the connection, matching UDP, instead of closing it with an IndexError.
+- Docs: `UdpFaultPlan.from_file(path)` is documented in FAULTS.md and `guide embed`; `guide troubleshoot` notes that an orphaned 1E STOP owner is cleared only by restarting the CLI process; DESIGN.md open items describe #68 and #69; the session record marks #78 as implemented in 0.11.0.
+
 ## 2026-11-10 release 0.11.1 — release-note source
 
 Review follow-ups for the UDP rate limit and UDP fault actions ([#95](https://github.com/greatgc-flow/VirtualPLC/issues/95)).
