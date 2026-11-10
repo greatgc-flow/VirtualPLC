@@ -62,6 +62,10 @@ def test_body_runs_to_the_next_level_two_heading_and_normalises_crlf():
     HEAD + "see [B][b]\n\n[b]: BEHAVIOR.md\n",                    # reference-style link
     HEAD + "see <http://example.com>\n",                          # non-https autolink
     HEAD + 'see <a href="BEHAVIOR.md">B</a>\n',                   # raw HTML link
+    HEAD + "see <https://example.com>\n",                         # https autolink is <...> too
+    HEAD + "see [b]\n\n[b]: rel.md\n",                            # reference definition alone
+    HEAD + "see [B][b]\n",                                        # full reference alone
+    HEAD + "x ``` [l](rel.md) `\n",                               # unequal backtick runs
 ])
 def test_contract_violations_fail_closed(text):
     with pytest.raises(LookupError):

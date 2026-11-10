@@ -21,8 +21,7 @@ from pathlib import Path
 HEADING = r"^## [^\n]*\brelease {version} \S+ release-note source[ \t]*$"
 FENCE = re.compile(r"^\s*(```|~~~)", re.M)
 NON_HTTPS_LINK = re.compile(r"\]\((?!https://)")
-OTHER_LINK = re.compile(r"^ {0,3}\[[^\]]+\]:|\]\[|<(?!https://)[A-Za-z/!]", re.M)
-CODE_SPAN = re.compile(r"`[^`\n]*`")
+OTHER_LINK = re.compile(r"^ {0,3}\[[^\]]+\]:|\]\[|<[A-Za-z/!]", re.M)
 
 
 def extract(version, handoff_text):
@@ -38,8 +37,7 @@ def extract(version, handoff_text):
         raise LookupError("release %s note section is empty" % version)
     if FENCE.search(body):
         raise LookupError("release %s notes must not contain code fences" % version)
-    prose = CODE_SPAN.sub("", body)  # inline code may show any syntax literally
-    if NON_HTTPS_LINK.search(prose) or OTHER_LINK.search(prose):
+    if NON_HTTPS_LINK.search(body) or OTHER_LINK.search(body):
         raise LookupError("release %s notes may only use inline [text](https://...) links" % version)
     return body + "\n"
 
