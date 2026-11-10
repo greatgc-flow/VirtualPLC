@@ -25,7 +25,7 @@ _MODELS = {
         "profile": "Q",
         "editor": "GX Works2",
         "manual": "SH-080009ENG",
-        "url": "https://www.mitsubishielectric.com/dl/fa/document/manual/plc/sh080009/sh080009x.pdf",
+        "url": "https://dl.mitsubishielectric.com/dl/fa/document/manual/plc/sh080009/sh080009x.pdf",
         "timer_pages": "38-39",
         "policy_pages": "39",
         "ports": {"auto_open_udp": 5000},

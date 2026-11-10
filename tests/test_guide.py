@@ -200,6 +200,8 @@ def test_each_topic_through_cli(topic, parser, capsys):
     (["--ascii-numbering", "broken"], "options"),
     (["--limit", "NOPE:0-1"], "memory"),
     (["--latch-range", "NOPE:0-1"], "memory"),
+    # A --limit that excludes the SD203 state mirror is a memory-limit error.
+    (["--limit", "SD:0-100"], "memory"),
 ])
 def test_invalid_options_end_with_guide_hint(capsys, arguments, topic):
     with pytest.raises(SystemExit) as error:
@@ -219,6 +221,8 @@ def test_invalid_options_end_with_guide_hint(capsys, arguments, topic):
     (None, "--fault-plan", "faults"),
     ('[]', "--init", "memory"),
     ('{"Z": {"0": [1]}}', "--init", "memory"),
+    # Server(...) ValueErrors about fault plans point to faults, not options.
+    ('{"steps": []}', "--udp-fault-plan", "faults"),
     ('{"steps": [null]}', "--fault-plan", "faults"),
 ])
 def test_bad_files_end_with_guide_hint(tmp_path, capsys, content, option, topic):

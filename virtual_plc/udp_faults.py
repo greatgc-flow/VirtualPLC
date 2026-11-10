@@ -5,11 +5,9 @@ The command has run before the reply is dropped or delayed.
 """
 from copy import deepcopy
 import ipaddress
-import json
-from pathlib import Path
 import threading
 
-from .faults import _integer, _seconds
+from .faults import _integer, _load_steps, _seconds
 
 
 def _validate(step):
@@ -59,10 +57,7 @@ class UdpFaultPlan:
 
     @classmethod
     def from_file(cls, path):
-        document = json.loads(Path(path).read_text(encoding="utf-8"))
-        if not isinstance(document, dict) or set(document) != {"steps"}:
-            raise ValueError("UDP fault file must contain only a steps array")
-        return cls(document["steps"])
+        return cls(_load_steps(path, "UDP fault file must contain only a steps array"))
 
     def select(self, command, *, peer):
         """Atomically reserve at most one action per completed UDP response."""

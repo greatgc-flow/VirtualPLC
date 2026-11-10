@@ -177,7 +177,13 @@ def _read_json(path):
                 raise ValueError("invalid observations: duplicate JSON key")
             result[name] = value
         return result
-    return json.loads(content.decode("utf-8"), object_pairs_hook=no_duplicate_keys)
+    # Windows PowerShell 5.1 `>` writes UTF-16 with a BOM; other editors may add a UTF-8 BOM.
+    encoding = "utf-16" if content[:2] in (b"\xff\xfe", b"\xfe\xff") else "utf-8-sig"
+    try:
+        text = content.decode(encoding)
+    except UnicodeDecodeError as error:
+        raise ValueError("invalid observations: not UTF-8/UTF-16 text") from error
+    return json.loads(text, object_pairs_hook=no_duplicate_keys)
 
 
 def _render(value):
@@ -204,11 +210,15 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="python -m virtual_plc.oracle",
         description="OFFLINE read-only 1E manual-vector comparison; never contacts PLC hardware",
+        allow_abbrev=False,
     )
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("plan", help="print read-only manufacturer-derived vectors")
-    commands.add_parser("template", help="print deliberately incomplete capture template")
-    compare = commands.add_parser("compare", help="compare manually collected observations offline")
+    commands.add_parser("plan", help="print read-only manufacturer-derived vectors",
+                        allow_abbrev=False)
+    commands.add_parser("template", help="print deliberately incomplete capture template",
+                        allow_abbrev=False)
+    compare = commands.add_parser("compare", help="compare manually collected observations offline",
+                                  allow_abbrev=False)
     compare.add_argument("observations", help="local JSON observations (no network collection)")
     compare.add_argument("--report", metavar="FILE",
                          help="atomically save the exact JSON printed to stdout")

@@ -240,7 +240,7 @@ def test_tcp_accept_recovers_from_connection_option_failure_without_leak(failure
             server._stopping.set()
             raise OSError("end scripted listener")
 
-    def serve_one(connection, connection_id):
+    def serve_one(connection, connection_id, ordinal):
         # Signal after removal to make the client-capacity assertion ordered.
         with server._clients_lock:
             server._clients.pop(connection, None)

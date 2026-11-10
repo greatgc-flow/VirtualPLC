@@ -1,13 +1,30 @@
 # VirtualPLC — Project Handoff
 
 ## Current state
-- Released version: v0.7.0 (2026-11-09); previous v0.6.0 (2026-11-08).
+- Released version: v0.8.0 (2026-11-10); previous v0.7.0 (2026-11-09).
 - Upstream client oracle pin: `pymcprotocol==0.3.0` (`requirements-dev.txt`).
 - Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh required checks before merging (strict=false).
 - Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #13 (narrowed hardware-free scope), #25 (handoff), #78 (keyword-only API, 1.0), #79 (memory cell cap). Open PRs: none.
 - Ruleset 26796594 requires 11 checks (build + Ubuntu/Windows 3.10–3.14) since 2026-11-09; `test-macos` is informational.
 - Release gate: tag only a main commit whose `ci.yml` push run succeeded (release.yml enforces it).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
+
+## 2026-11-10 release 0.8.0 — release-note source
+
+MECE completeness review (7 product areas x 6 quality dimensions + 8 cross-closure checks), two rounds of independent scoring with fixes in between, plus a newcomer sample project. Behaviour changes to list first in release notes:
+- Echo (0619) length errors return C057 on ASCII as on binary (was C05C on ASCII).
+- An odd-word batch write to LCN returns C051 before anything is written (SH-081257 3.5, p.453); other dword devices keep the half-word policy.
+- 1E: a binary/ASCII device code with a byte >= 80H, or a leading-space/byte-swapped name, returns C05B (was a closed connection or a silent match). Once the frame size is valid, non-hex 1E device codes, heads and data return C05C and write nothing; header/framing fields still close.
+- `Server(slmp_1e=True, ascii_numbering="fx5-octal")` raises ValueError (1E ASCII uses X,Y HEX numbering). Wrong-typed `profile`, `initial_state`, `memory`, `latch_ranges` or `response_hook` raise ValueError before binding.
+- `Memory` heads and counts must be `int` (bools/floats raise ValueError).
+- CLI `--init` loads before the server is built, so `--initial-state` sets SD203 (a snapshot's SD203 is overwritten), and `--show-effective-ethernet` now also validates `--init` and `--dump-on-exit` (exit 2).
+- CLI `--dump-on-exit` is checked for writability before binding (exit 2); empty path arguments exit 2; JSON inputs (`--init`, fault plans, `--ethernet-config`, oracle observations) accept a UTF-8 BOM, and oracle observations also UTF-16.
+- Fault-plan `match.connection` counts only admitted TCP sessions and restarts at 1 on each `start()`.
+- `guide` and the offline oracle/manual-evidence CLIs reject abbreviated options; `--help` names `virtual-plc guide`; the startup banner shows `udp_fault_plan` and `max_clients` and brackets IPv6 hosts.
+Minor: the private `virtual_plc.version` / `PackageNotFoundError` re-exports were removed; Server fault-plan errors hint `guide faults`; the qj71e71 manual URL uses dl.mitsubishielectric.com.
+Additions: `examples/bottling_line` sample project (5 runnable steps, CI-tested); `Server` docstring; README Safety and "Other options" sections; documented manual divergences (1E two-byte error code, C05C vs C050/C05A/C05B, 1E indirect device paths).
+Docs/tests: README links absolute (PyPI-safe) with link/anchor closure over every Markdown file; README python blocks executed in CI; SH-081257 citations corrected to printed p.453; ERROR_CODES sources C056/C057/C059/C05C marked manual.
+Delivery: release tooling pinned in `requirements-release.txt`; the CI sdist run uses `python -I` so it tests the installed package; GitHub `pypi` environment restricted to `v*` tags.
 
 ## 2026-11-09 session close
 

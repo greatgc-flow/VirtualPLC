@@ -41,7 +41,7 @@ fidelity.
 | ASCII request, same words | `01FF00004420000000640300` | p.124 |
 | ASCII response | `8100123400056789` | p.124 |
 | Header | 1-byte binary / 2-character ASCII command subheader, PC=FF, timer=0, per-command device/count/fixed0 | pp.42,122,125 |
-| Response | 1-byte status; errors `5B` plus 16-bit additional code | pp.44,47,137–138 |
+| Response | 1-byte status; errors `5B` plus 16-bit additional code (manual examples pp.43–45 show a 1-byte code such as `10H`; documented divergence, issue #2) | pp.43–47,137–138 |
 | Count caps | 00=256 bits (count 00 =>256), 01=64 D words/32×16-bit groups, 02=160 bits, 03=64 D words/10×16-bit groups | pp.119,122,125 |
 | First supported devices | M 0..7679, X/Y 0..255, D 0..7999; other devices deliberately rejected | p.121 |
 | TCP/UDP | 1E TCP fragmentation/coalescing, UDP one exact frame, shared PLC state; bad header closes TCP/drops UDP | Simulator policy, no physical-equivalence claim |
@@ -53,7 +53,9 @@ fidelity.
 
 A response `5BH` with source code `C051`, `C052`, `C056`, etc.,
 is a **simulated mapping from the official error-code table**, not a
-measured FX5 device response. Fixed fields and unsupported/ambiguous
+measured FX5 device response. The manual's examples show a one-byte
+error code after `5BH`, but its error table defines only 16-bit codes and
+no one-byte mapping, so the simulator keeps the 16-bit width. Fixed fields and unsupported/ambiguous
 1E commands fail closed instead of guessing a packet length.
 
 ## 2. 1E command inventory — official manual p.119 (reference, NOT implementation)

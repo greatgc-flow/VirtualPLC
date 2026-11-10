@@ -52,7 +52,7 @@ def test_tcp_request_waiting_on_lock_is_not_dispatched_after_stop(slmp_1e):
     gate = SignallingLock(server._request_lock)
     server._request_lock = gate
     gate.inner.acquire()  # another connection is mid-dispatch
-    worker = threading.Thread(target=server._serve_frames, args=(OneShot(frame), 7))
+    worker = threading.Thread(target=server._serve_frames, args=(OneShot(frame), 7, 1))
     try:
         worker.start()
         assert gate.waiting.wait(3), "write must reach the request lock"

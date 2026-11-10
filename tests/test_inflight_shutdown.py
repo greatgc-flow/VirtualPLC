@@ -64,7 +64,7 @@ def test_stop_discards_queued_tcp_write_after_inflight_read(monkeypatch):
 
     def serve():
         try:
-            server._serve_frames(connection, 17)
+            server._serve_frames(connection, 17, 1)
         except BaseException as error:
             errors.append(error)
         finally:

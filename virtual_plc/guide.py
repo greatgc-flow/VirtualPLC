@@ -53,9 +53,11 @@ Start the simulator (Python 3.10+, stdlib only). The banner and -v logs go to st
   python -m pip install virtual-plc        (from a checkout: python -m pip install -e .)
 {RECIPE_LINES}
 Same program: python -m virtual_plc ...   Every option: virtual-plc guide options.
-Banner: "listening on HOST:PORT (...)". With --port 0 parse the real port from it.
+Banner: "listening on HOST:PORT (...)"; with --listen "PROTO:HOST:PORT, ..."; IPv6 as [::1]:5000.
+With --port 0 parse the real port from it.
 Stop: Ctrl+C or SIGTERM exits 0 and writes --dump-on-exit; Windows SIGBREAK needs a shared console.
-Exit codes: 0 clean stop, 1 cannot bind, 2 bad configuration (message ends "see: virtual-plc guide TOPIC").
+Exit codes: 0 clean stop, 1 cannot bind or cannot write --dump-on-exit,
+  2 bad configuration (message ends "see: virtual-plc guide TOPIC").
 Default 127.0.0.1 TCP. Nonlocal bind needs --allow-nonlocal --idle-timeout N; no authentication.
 Optional model: --ethernet-model qj71e71 | --profile iQ-R --ethernet-model rj71en71.
 Set --ethernet-config FILE for overrides; --show-effective-ethernet prints JSON without listening.
@@ -120,12 +122,15 @@ This is a simulator, not a PLC. These behaviors are synthetic or unverified; do 
 - The lock is server-wide, survives disconnects and gates only run/stop/pause/latch clear/reset. It is
   not authentication.
 - iQ-R native dword devices (LTN LSTN LCN LZ) use one 32-bit point per address; word access streams the
-  low/high halves. The stride is unverified.
+  low/high halves. The stride is unverified. An odd-word batch write to LCN returns C051
+  (SH-081257 3.5 p.453); other odd writes keep the untouched half.
 - Timers and counters hold plain values; no PLC logic executes. The monitoring timer is parsed and ignored.
 - Optional --slmp-1e / --slmp-1e-run-switch uses synthetic Q memory and simulator-only
   TCP STOP ownership (not FX5 hardware parity); see docs/BEHAVIOR.md#slmp-1e-transport-opt-in.
 - Every network/PC/station route aliases one memory.
 - Error codes are design values. Z devices are unsupported.
+- 3E/4E return C05C where SH-081257 lists C050 (non-hex ASCII) or C05A/C05B (device); the 1E error
+  code stays two bytes wide although the manual examples show one byte.
 - Faults act after execution: a faulted write or reset has already happened.
 """.strip("\n")
 
@@ -155,12 +160,13 @@ FAULTS_HEAD = """
 Faults change TCP replies AFTER the command ran; writes are never rolled back. TCP fault plans with
 UDP are rejected (RST/stream-close/partial-send do not apply). UDP uses separate
 --udp-fault-plan FILE or Server(udp_fault_plan=UdpFaultPlan(steps)) for drop/delay
-AFTER dispatch. UDP match: command, global nth, peer IP. No plan = inert.
+AFTER dispatch. UDP match: command (1E byte with --slmp-1e), global nth, peer IP. No plan = inert.
 For TCP, opt in with --fault-plan FILE or
 Server(fault_plan=FaultPlan(steps)); without a plan nothing is matched or delayed.
 Schema: {"steps": [STEP, ...]} in a file (no other root keys); Python takes the list. A bad plan exits 2 before bind.
 STEP = {"match": {...}, "times": N, "action": {"type": T, ...}}; match and times are optional (times defaults to 1).
-match keys, ANDed: command (int or "0x0619"), connection (1 = first accepted), nth (1 = first request on it).
+match keys, ANDed: command (int or "0x0619"), connection (1 = first admitted TCP session; refused by
+--max-clients does not count; restarts at 1 on each start()), nth (1 = first request on it).
 The first step that matches and has uses left wins; one step applies per request.
 Actions (parameters; [optional]):
 """.strip("\n")
@@ -290,7 +296,8 @@ Memory calls are not synchronized with wire requests: never load, mutate or dump
 FaultPlan(steps) or FaultPlan.from_file(path) -> Server(fault_plan=...); schema: virtual-plc guide faults.
 UdpFaultPlan(steps) -> Server(listeners=[('udp', 0)], udp_fault_plan=...); drop/delay only.
 Observability: server.get_listener_health(), server.get_udp_metrics() (udp_metrics=True); see docs/BEHAVIOR.md#udp-observability-opt-in.
-response_hook(bytes) -> bytes transforms every complete reply before it is sent.
+response_hook(bytes) -> bytes transforms every complete reply before it is sent; hooks must return
+  (stop() joins the workers that run them).
 pytest fixture:
   import pytest
   from pymcprotocol import Type3E
@@ -350,7 +357,7 @@ def _ethernet(parser):
     ]
     for model, spec in model_catalog().items():
         lines.append(f"{model} ({spec['editor']}, profile {spec['profile']}, {spec['source']['manual']}):")
-        timers = [f"{k}={f['default']}{f['unit']}" for k, f in spec["parameters"].items()
+        timers = [f"{k}={f['default']}{'' if f['unit'] == 'ms' else ' '}{f['unit']}" for k, f in spec["parameters"].items()
                   if f["effect"] == "reference_only"]
         lines.append("  reference factory timers: " + ", ".join(timers))
         lines.append("  simulated controls: code={communication_data_code}, "
@@ -385,7 +392,8 @@ def data(parser, topic=None):
 
 def main(argv, parser):
     """Print one guide topic and return the exit status (2 for an unknown topic)."""
-    arguments = argparse.ArgumentParser(prog="virtual-plc guide", description="Usage guide for humans and AI agents.")
+    arguments = argparse.ArgumentParser(prog="virtual-plc guide", description="Usage guide for humans and AI agents.",
+                                        allow_abbrev=False)
     arguments.add_argument("topic", nargs="?", help="one of: " + " ".join(TOPICS))
     arguments.add_argument("--json", action="store_true", help="print JSON instead of text")
     args = arguments.parse_args(argv)

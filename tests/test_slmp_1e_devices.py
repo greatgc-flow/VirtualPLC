@@ -16,7 +16,8 @@ from virtual_plc.memory import Memory
 
 def req(command, *, wire="binary", device="D", head=0, count=1,
         payload=b"", pc=0xFF, timer=0, reserved=0):
-    name = device.encode("ascii").ljust(2, b" ")
+    # bytes = raw logical 2-byte device code (binary wire sends it reversed)
+    name = device if isinstance(device, bytes) else device.encode("ascii").ljust(2, b" ")
     if wire == "ascii":
         return (f"{command:02X}{pc:02X}{timer:04X}".encode()
                 + name.hex().upper().encode() + f"{head:08X}{count:02X}{reserved:02X}".encode()
@@ -121,7 +122,47 @@ REFUSED_DEVICES = [
     ("S", 0), ("L", 1), ("F", 0), ("B", 1), ("W", 1),
     ("TC", 0), ("CC", 0), ("SS", 0), ("SC", 0), ("SN", 1),
     ("LS", 0), ("LN", 1), ("SM", 0), ("SD", 1), ("Z", 1),
+    # Non-ASCII codes (binary wire 00 A8 / FF FF; ASCII "A800" / "FFFF").
+    (b"\xa8\x00", 0), (b"\xa8\x00", 1), (b"\xff\xff", 0), (b"\xff\xff", 1),
 ]
+HIGH_BYTE_CODES = [b"\xa8\x00", b"\xff\xff"]
+
+
+def random_req(command, *, wire, device):
+    """One-record 04H/05H random write naming a raw logical device code."""
+    width = 1 if command == 4 else 2
+    if wire == "ascii":
+        return (f"{command:02X}FF00000100".encode()
+                + device.hex().upper().encode() + b"00000000" + b"0" * (2 * width))
+    return (bytes((command, 0xFF, 0, 0, 1, 0)) + (0).to_bytes(4, "little")
+            + device[::-1] + bytes(width))
+
+
+@pytest.mark.parametrize("device", HIGH_BYTE_CODES)
+@pytest.mark.parametrize("command", [2, 3])
+@pytest.mark.parametrize("wire", ["binary", "ascii"])
+def test_1e_high_byte_device_codes_refused_on_batch_write(device, command, wire):
+    payload = (b"0" if command == 2 else b"0000") if wire == "ascii" else (b"\x00" if command == 2 else b"\x00\x00")
+    with Server(slmp_1e=True) as plc:
+        with socket.create_connection(plc.address, timeout=2) as client:
+            client.settimeout(2)
+            client.sendall(req(command, wire=wire, device=device, payload=payload))
+            exp = (f"{command | 0x80:02X}5BC05B".encode() if wire == "ascii"
+                   else bytes([command | 0x80, 0x5B, 0x5B, 0xC0]))
+            assert receive_exact(client, len(exp)) == exp
+
+
+@pytest.mark.parametrize("device", HIGH_BYTE_CODES)
+@pytest.mark.parametrize("command", [4, 5])
+@pytest.mark.parametrize("wire", ["binary", "ascii"])
+def test_1e_high_byte_device_codes_refused_on_random_write(device, command, wire):
+    with Server(slmp_1e=True) as plc:
+        with socket.create_connection(plc.address, timeout=2) as client:
+            client.settimeout(2)
+            client.sendall(random_req(command, wire=wire, device=device))
+            exp = (f"{command | 0x80:02X}5BC05B".encode() if wire == "ascii"
+                   else bytes([command | 0x80, 0x5B, 0x5B, 0xC0]))
+            assert receive_exact(client, len(exp)) == exp
 
 
 @pytest.mark.parametrize("device,cmd", REFUSED_DEVICES)

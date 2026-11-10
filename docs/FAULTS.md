@@ -1,7 +1,9 @@
 # Declarative response faults
 
 `Server(fault_plan=None)` keeps the ordinary response path: no matching,
-fault waits, alternate sender, or connection/request counting. Opt in with
+fault waits, alternate sender, or per-connection request (`nth`) counting. The
+server always counts admitted TCP sessions, but that ordinal only matters to a plan.
+Opt in with
 `virtual_plc.faults.FaultPlan(steps)` or `FaultPlan.from_file(path)`.
 See [behavior](BEHAVIOR.md) for the normal server API.
 
@@ -51,7 +53,10 @@ No locks remain held during fault waits or network transmission.
 - `match.command` is a uint16 integer or numeric string (`"0x0619"` is convenient
   in JSON). It matches the original MC command, including commands that return
   a normal error response.
-- `match.connection` is the 1-based accept ordinal for this Server.
+- `match.connection` is the 1-based ordinal of TCP sessions this Server admitted
+  (across all TCP listeners). Connections closed by the `max_clients` limit or
+  during shutdown take no ordinal, and the ordinal restarts at 1 on each
+  `start()` (internal 1E STOP-owner IDs stay unique across restarts).
 - `match.nth` is the 1-based ordinal of all decoded requests on that connection,
   not the nth occurrence of a command. Mixed frame/encoding requests count in
   the same sequence. Malformed frames which cannot be decoded do not count.
@@ -69,7 +74,10 @@ All faults are **post-dispatch**. A write or reset has already committed before
 the delivery fault executes. Even `close_before_response` does not mean before
 command execution. The pipeline is dispatch/reserve, encode, existing
 `response_hook`, then fault action. A hook is still called when the fault will
-drop or close; transformations operate on its returned response bytes.
+drop or close. `truncate`, `corrupt_header`, `partial_send`, `delay` and
+`close_after_response` operate on the hook's returned bytes, as does
+`bad_end_code` with code 0. Exception: `bad_end_code` with code != 0 rebuilds the
+abnormal response from the decoded request and discards the hook's bytes.
 
 | Type | Parameters | Effect |
 |---|---|---|
@@ -165,6 +173,10 @@ Each step has required action and optional match/times (default times=1).
 Allowed match fields: command (uint16 number or 0x-prefixed string),
 nth (positive ordinal of eligible UDP responses, global across the plan,
 not per peer/port), peer (numeric IPv4 or IPv6 source address, no port).
+Under `--slmp-1e` (`slmp_1e=True`), `match.command` is the 1E command byte
+(for example `0x03` for a 1E word batch write), not a 3E/4E command code.
+A file may start with a UTF-8 BOM (Windows PowerShell 5.1 writes one); so may
+`--fault-plan`, `--init` and `--ethernet-config` files.
 All match fields must match; first eligible step wins, counts reserved
 atomically. Malformed/oversized/empty UDP packets do not count.
 Counters and reservations persist across stop/start with the same plan.

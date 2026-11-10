@@ -53,6 +53,30 @@ def _hex_number(raw):
     return int(raw, 16)
 
 
+class _FieldError(ValueError):
+    """Non-hex ASCII field inside a correctly sized frame: C05C reply, no write."""
+
+
+def _hex_field(raw):
+    try:
+        return _hex_number(raw)
+    except ValueError:
+        raise _FieldError("invalid 1E hexadecimal field") from None
+
+
+def _device_name(code):
+    """Exact 2-byte device code: only trailing space padding (manual M = 4D20H).
+
+    latin-1 keeps unknown codes >= 80H decodable so they reach C05B.
+    """
+    return code.decode("latin-1").rstrip(" ")
+
+
+def _ascii_device_name(raw):
+    _hex_field(raw)  # bytes.fromhex alone would accept embedded whitespace
+    return _device_name(bytes.fromhex(raw.decode("ascii")))
+
+
 def frame_size_1e(buffer):
     """Size one bounded 1E batch request, or None if its fixed header is partial.
 
@@ -121,16 +145,18 @@ def _parse(buffer):
     if wire == "ascii":
         if buffer[2:4].upper() != b"FF" or _hex_number(buffer[4:8]) != 0:
             raise ValueError("1E PC number or monitoring timer invalid")
-        name = bytes.fromhex(buffer[8:12].decode("ascii")).decode("ascii").strip()
-        head = _hex_number(buffer[12:20])
-        count = _hex_number(buffer[20:22])
         if buffer[22:24] != b"00":
             raise ValueError("1E fixed field must be zero")
+        count = _hex_number(buffer[20:22])  # already validated by frame_size_1e
+        name = _ascii_device_name(buffer[8:12])
+        head = _hex_field(buffer[12:20])
         data = buffer[24:]
+        if command == 3 and data:
+            _hex_field(data)  # non-hex word data precedes device/range checks
     else:
         if buffer[1] != 0xff or buffer[2:4] != b"\x00\x00":
             raise ValueError("1E PC number or monitoring timer invalid")
-        name = buffer[8:10][::-1].decode("ascii").strip()
+        name = _device_name(buffer[8:10][::-1])
         head = int.from_bytes(buffer[4:8], "little")
         count = buffer[10]
         if buffer[11] != 0:
@@ -165,13 +191,13 @@ def _parse_random(frame, wire, command):
     records = []
     for _ in range(count):
         if wire == "ascii":
-            name = bytes.fromhex(frame[offset:offset + 4].decode("ascii")).decode("ascii").strip()
-            head = _hex_number(frame[offset + 4:offset + 12])
-            value = _hex_number(frame[offset + 12:offset + (14 if command == 4 else 16)])
+            name = _ascii_device_name(frame[offset:offset + 4])
+            head = _hex_field(frame[offset + 4:offset + 12])
+            value = _hex_field(frame[offset + 12:offset + (14 if command == 4 else 16)])
             offset += 14 if command == 4 else 16
         else:
             head = int.from_bytes(frame[offset:offset + 4], "little")
-            name = frame[offset + 4:offset + 6][::-1].decode("ascii").strip()
+            name = _device_name(frame[offset + 4:offset + 6][::-1])
             value = int.from_bytes(frame[offset + 6:offset + (7 if command == 4 else 8)], "little")
             offset += 7 if command == 4 else 8
         records.append((name, head, value))
@@ -180,7 +206,10 @@ def _parse_random(frame, wire, command):
 
 def _random_write(frame, command, wire, memory, max_points):
     """Validate all records then commit atomically; same shared Memory."""
-    records = _parse_random(frame, wire, command)
+    try:
+        records = _parse_random(frame, wire, command)
+    except _FieldError:
+        return _response(command, wire, ERROR["request"])
     cap = 80 if command == 4 else 10
     limit_code = ERROR["random_bit_points" if command == 4 else "random_word_points"]
     if not 1 <= len(records) <= cap:
@@ -293,7 +322,10 @@ def dispatch_1e(frame, memory, max_points=None, control=None, requester=None):
         if command == 0x15:
             return b"\xF3"  # manual p.134: binary model code only, no 1E prefix
         return frame[4:]  # exact 1-byte length and the transmitted bytes
-    command, wire, name, head, points, data = _parse(frame)
+    try:
+        command, wire, name, head, points, data = _parse(frame)
+    except _FieldError:
+        return _response(command, wire, ERROR["request"])
     device = DEVICES.get(name)
     if device is None:
         return _response(command, wire, ERROR["device"])
@@ -326,14 +358,12 @@ def dispatch_1e(frame, memory, max_points=None, control=None, requester=None):
                          for i in range(0, count, 16)]
             payload = (b"".join(f"{word:04X}".encode() for word in words)
                        if wire == "ascii" else b"".join(word.to_bytes(2, "little") for word in words))
-        elif command == 2:  # bit write
+        elif command == 2:  # bit write; _parse already enforced data width
             if wire == "ascii":
-                if len(data) != points or any(c not in b"01" for c in data):
+                if any(c not in b"01" for c in data):
                     return _response(command, wire, ERROR["bit_data"])
                 bits = [c - 48 for c in data]
             else:
-                if len(data) != (points + 1) // 2:
-                    return _response(command, wire, ERROR["bit_data"])
                 bits = [n for byte in data for n in (byte >> 4, byte & 0x0f)]
                 if any(n not in (0, 1) for n in bits[:points]) or any(bits[points:]):
                     return _response(command, wire, ERROR["bit_data"])
@@ -341,13 +371,9 @@ def dispatch_1e(frame, memory, max_points=None, control=None, requester=None):
             memory.write_bits(name, head, bits)
             payload = b""
         else:  # command 03: 16-bit words (or aligned groups of 16 bits)
-            if wire == "ascii":
-                if len(data) != points * 4:
-                    return _response(command, wire, ERROR["request"])
-                words = [_hex_number(data[i:i + 4]) for i in range(0, len(data), 4)]
+            if wire == "ascii":  # hex already validated by _parse (non-hex -> C05C there)
+                words = [int(data[i:i + 4], 16) for i in range(0, len(data), 4)]
             else:
-                if len(data) != points * 2:
-                    return _response(command, wire, ERROR["request"])
                 words = [int.from_bytes(data[i:i + 2], "little") for i in range(0, len(data), 2)]
             if kind == "word":
                 memory.write_words(name, head, words)

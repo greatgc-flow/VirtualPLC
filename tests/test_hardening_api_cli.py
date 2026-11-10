@@ -124,8 +124,11 @@ def test_text_pad_converter_has_clear_error(capsys):
 
 
 def run_cli(*arguments):
+    # Explicit decoding: under `python -I` the parent ignores PYTHONUTF8 while the child
+    # honours it, so locale-default decoding of OS error text could fail on Windows.
     return subprocess.run([sys.executable, "-m", "virtual_plc", *arguments], cwd=ROOT,
-                          capture_output=True, text=True, timeout=10)
+                          capture_output=True, text=True, encoding="utf-8", errors="replace",
+                          timeout=10)
 
 
 def test_subprocess_help_version_and_port_in_use():

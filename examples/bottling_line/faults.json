@@ -1,0 +1,6 @@
+{
+  "steps": [
+    {"match": {"command": "0x0401"}, "times": 1, "action": {"type": "drop"}},
+    {"match": {"command": "0x0401"}, "times": 1, "action": {"type": "bad_end_code", "code": 49241}}
+  ]
+}

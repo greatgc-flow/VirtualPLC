@@ -118,7 +118,6 @@ def test_1e_random_udp_and_tcp_pipelined_compatibility():
 
 @pytest.mark.parametrize("packet", [
     b"04FF00000201" + BIT_ASCII[12:],  # reserved not zero
-    b"05FF00000200" + WORD_ASCII[12:-4] + b"ZZZZ",  # word nonhex
     bytes.fromhex("04 00 00 00 02 00") + BIT_BINARY[6:],
 ])
 def test_1e_random_invalid_udp_drop_no_mutation(packet):
@@ -130,4 +129,15 @@ def test_1e_random_invalid_udp_drop_no_mutation(packet):
             with pytest.raises(socket.timeout):
                 udp.recvfrom(1024)
     assert memory.read_bits("Y", 37, 1) == [0]
+    assert memory.read_words("D", 26, 1) == [0]
+
+
+def test_1e_random_nonhex_value_udp_replies_c05c_no_mutation():
+    """Correctly sized frame with a non-hex value: C05C reply (not a drop)."""
+    memory = Memory("Q")
+    with Server(memory=memory, slmp_1e=True, listeners=[("udp", 0)]) as plc:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp:
+            udp.settimeout(2)
+            udp.sendto(b"05FF00000200" + WORD_ASCII[12:-4] + b"ZZZZ", plc.address)
+            assert udp.recvfrom(1024)[0] == b"855BC05C"
     assert memory.read_words("D", 26, 1) == [0]

@@ -4,7 +4,7 @@
 
 - Branch ruleset **26796594** `main-ci-pr-gate`: enforcement **active**, target
   `~DEFAULT_BRANCH`, `bypass_actors: []` (none). Emergency path: disable the
-  ruleset and log it in #54. Rules:
+  ruleset and record it in a new governance issue. Rules:
   - `deletion`, `non_fast_forward`: main cannot be deleted or force-pushed.
   - `pull_request`: **0 required approvals** (solo owner; required external
     review is an independent policy choice, not a project gate).
@@ -20,7 +20,7 @@
   `non_fast_forward`, `pull_request`, `required_status_checks`.
 - Because `strict=false`, rebase each PR onto current main and get a fresh
   11/11 before merging (peer-agreed).
-- Repository is **public**. Latest release **v0.7.0** (2026-11-09).
+- Repository is **public**. Latest release **v0.8.0** (2026-11-10).
 - Release workflow triggers on **push of `v*` tag**: version/tag assertion,
   full test, wheel build, PyPI publish via trusted identity, GitHub release
   assets. Its first step fails closed unless a `ci.yml` **push** run on
@@ -34,7 +34,13 @@ https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-
 
 - **Do not create or push a `v*` tag without explicit user release
   authorization.** Doing so triggers `.github/workflows/release.yml`
-  and can publish to PyPI when the `pypi` environment permits it.
+  and publishes to PyPI via trusted publishing. Since 2026-11-10 the GitHub
+  `pypi` environment accepts deployments **only from tags matching `v*`**
+  (custom deployment policy, verified via the environments API); there is no
+  required reviewer. Together with the tag ruleset (no update/delete) and the
+  workflow's fail-closed main-CI check, these are the publication gates.
+- Release tooling is pinned in `requirements-release.txt` (build, twine) and
+  used by both `ci.yml` and `release.yml`; Dependabot updates it.
 - Confirm source commit is approved/merged on main, separate main CI
   is completed success (all required checks) at the exact candidate SHA, and
   `pyproject.toml` project.version equals the prospective tag.

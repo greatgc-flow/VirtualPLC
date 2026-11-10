@@ -29,10 +29,32 @@ Supported 1E devices are M (0..7679), X/Y (0..377 octal (0..255 decimal)), D (0.
 monitoring timers, reserved fields, framing and data widths do not
 mutate memory. A normal 3E/4E reply uses end code `0x0000` (1E uses status `00H`). A 1E error reply uses end code `5BH` plus a 16-bit
 code from `virtual_plc/one_e.py` (`0xC051` bit points, `0xC052` word points, `0xC053` random bit points, `0xC054` random word points, `0xC056` address out of range, `0xC05B` unsupported 1E device, `0xC05C` request/alignment/frame-data error, `0xC05F` remote control denied, `0xC060` invalid bit-write data); simulator error mapping and physical
-PLC equivalence remain unverified. TCP fragmented and coalesced frames
+PLC equivalence remain unverified. **Documented divergence (error width):**
+the JY997D56001-K 1E examples (3.2 1E Frame, pp.43-45) show a 1-byte error
+code after `5BH` (binary `81H 5BH 10H`, ASCII `815B10`), while its
+troubleshooting table (pp.137-138) lists only 16-bit `Cxxx` codes and defines
+no 1-byte mapping; the simulator keeps the 16-bit code (binary little-endian,
+ASCII four hex characters) until a physical oracle settles it (issue #2).
+1E ASCII is the manual's **ASCII code (X,Y HEX)** variant (p.121): X/Y heads
+are hexadecimal like binary; the ASCII code (X,Y OCT) variant is not
+implemented and `Server(slmp_1e=True, ascii_numbering="fx5-octal")` is rejected.
+**Non-goal:** the manual's indirect device paths (p.121: CS200-CS255 /
+CN200-CN255 to LCS/LCN0-55, M8000-M8511 / D8000-D8511 to SM/SD) are not
+implemented; CS/CN200-255 are plain CS/CN storage and M/D8000+ are out of range. TCP fragmented and coalesced frames
 are handled by **command-specific bounded lengths**, while UDP accepts
 exactly one complete frame/datagram. No legacy 3E-style length/route
 field is parsed. Unknown 1E commands fail closed without guessing their packet lengths.
+
+**1E malformed-field policy (simulator policy):** fields that frame or
+address the request (subheader, PC number, monitoring timer, fixed/reserved
+byte, point/record count, 16H loopback length and payload) close the TCP
+connection (UDP: drop) when invalid or non-hexadecimal. Once those make a
+correctly sized frame, any non-hexadecimal ASCII numeric field (device code,
+head address, 03H word data, 04H/05H record code/head/value) returns the 1E
+error reply `C05C` before device/range checks and writes nothing; 02H bit data
+other than `0`/`1` returns `C060`. Device codes match exactly: only trailing
+space padding is accepted (M is `4D20H`; binary `4D 20` or ASCII `204D` is
+`C05B`), and unknown codes including bytes `>= 80H` return `C05B`.
 
 Random 04/05 validate all device names, addresses, values, point counts,
 storage ranges and alignment before one atomic commit. Duplicate destinations
@@ -262,7 +284,7 @@ The existing server lock covers the whole request, including reads. Writes
 then apply in wire order (word section first), so later duplicate or overlapping
 entries overwrite earlier ones.
 
-Random-access point limits and `0xC053` / `0xC054` error codes follow `WIRE_CLASSES` in `virtual_plc/profiles.py` and the shared checks in `virtual_plc/commands.py` (see [Public API](#public-api) above). Check order for both binary and ASCII batch/random requests: complete count fields, zero total count, over-limit count, exact wire payload length (`C057`), then device/value/access/alignment (`C05C`) or device range (`C056`) checks (awaiting manual verification). Zero and over-limit counts take precedence even with short/extra payloads or bad devices: batch word/bit returns `C051`/`C052`, random word/bit returns `C054`/`C053`; the one exception is a zero random count followed by any data, which returns `C057` (the established binary rule, now on both wires). Incomplete fixed batch headers retain `C05C`; incomplete random count headers return `C057`. Malformed ASCII numeric fields (including non-hex values in an otherwise correctly sized request) retain `C05C`, rather than being blanket-remapped to `C057`. CPU type read (`0101`) requires an empty payload; any non-empty payload returns `C057` on 3E/4E binary and ASCII. These are simulator policies, not verified physical PLC behavior. Dwords over bit devices span 32 packed points with 16-point head alignment. The client rejects 256 before
+Random-access point limits and `0xC053` / `0xC054` error codes follow `WIRE_CLASSES` in `virtual_plc/profiles.py` and the shared checks in `virtual_plc/commands.py` (see [Public API](#public-api) above). Check order for both binary and ASCII batch/random requests: complete count fields, zero total count, over-limit count, exact wire payload length (`C057`), then device/value/access/alignment (`C05C`) or device range (`C056`) checks (awaiting manual verification). Zero and over-limit counts take precedence even with short/extra payloads or bad devices: batch word/bit returns `C051`/`C052`, random word/bit returns `C054`/`C053`; the one exception is a zero random count followed by any data, which returns `C057` (the established binary rule, now on both wires). Incomplete fixed batch headers retain `C05C`; incomplete random count headers return `C057`. Malformed ASCII numeric fields (including non-hex values in an otherwise correctly sized request) retain `C05C`, rather than being blanket-remapped to `C057`. **Documented manual divergences (issue #2 physical oracle):** SH-081257 3.5 (p.453) lists `C050` for ASCII data that cannot be converted to binary and `C05A`/`C05B` (identical wording) for a device the module cannot read/write; the simulator returns `C05C` for non-hex ASCII fields and for unknown/wrong-wire-class 3E/4E device codes because the manual does not fix check order or choose between `C05A`/`C05B` (1E keeps `C05B`). CPU type read (`0101`) requires an empty payload; any non-empty payload returns `C057` on 3E/4E binary and ASCII. These are simulator policies, not verified physical PLC behavior. Dwords over bit devices span 32 packed points with 16-point head alignment. The client rejects 256 before
 sending because a count field is only one byte. A valid raw count of 256 does
 not exist. Tests send over-limit and 256-entry frames and require rejection with
 no mutation.
@@ -396,7 +418,7 @@ Echo text and request passwords are length-delimited, with no unused trailing
 text area. Echo replies contain exactly the declared text; lock/unlock replies
 have empty data. Their request content is not trimmed: trailing pad-valued
 password characters remain significant, and echo validation remains
-hexadecimal (0-9, A-F, a-f, unverified (case)). Numeric zero fill, reserved zeros, and bit-nibble padding are
+hexadecimal (0-9, A-F, a-f, unverified (case)). A truncated echo length field, or a declared echo length that does not match the text (short or trailing data), returns `C057` on both binary and ASCII. Numeric zero fill, reserved zeros, and bit-nibble padding are
 protocol fields and are not controlled by `text_pad`.
 
 ### Configurable ASCII dword word order
@@ -503,6 +525,9 @@ rules.
 State initialization and each accepted run/stop/pause/reset mirror SD203:
 STOP=0, RUN=1, PAUSE=2. This is an **unverified synthetic encoding**, not a
 manual-derived PLC register layout. A supplied Memory must permit SD203 access.
+`Memory.dump()` includes SD203. The CLI loads `--init` before constructing the
+server, so `--initial-state` (default RUN) always rewrites a snapshot's SD203:
+a RUN dump reloaded with `--initial-state STOP` reports SD203=0.
 SD remains writable; the mirror is refreshed when those commands execute,
 including idempotent commands. Latchclear and authentication do not transition
 the CPU or refresh the mirror.
@@ -677,8 +702,12 @@ with native dword storage as follows:
   is independent. On ordinary word devices, a dword still occupies n and n+1.
 - Word access starts at the low half of native point n. A batch of k words
   streams low(n), high(n), low(n+1), high(n+1), and so on. Count remains a
-  count of 16-bit words, as the client expects. An odd final write preserves
-  the untouched high half; a single random word updates only the low half.
+  count of 16-bit words, as the client expects. An odd final write to
+  LTN/LSTN/LZ preserves the untouched high half; a single random word updates
+  only the low half. A batch word write (`1401`) to **LCN** with an odd word
+  count returns `C051` on binary and ASCII, 3E and 4E, before any mutation
+  (SH-081257 3.5 List of Error Codes, p.453: long-counter write points not in
+  two-word units). Random word entries and the direct `Memory` API are unchanged.
 - Range validation uses ceil(k/2) native points and completes before mutation.
   Bit access is invalid. Sparse clearing and latch overrides address whole
   native points. Duplicate/overlapping random writes retain wire-order semantics.
@@ -697,11 +726,18 @@ Canonical simulator policies and unverified vendor behaviors are owned by `virtu
 
 ## Lifecycle, snapshots, timers and routes
 
-The package exports `Server`, `FaultPlan`, `UdpFaultPlan`, `Memory`, `EthernetSettings` and `__version__`. A context starts
-on entry and stops/joins on exit. Use one lifecycle per instance. Ctrl+C uses
+The package exports `Server`, `FaultPlan`, `UdpFaultPlan`, `Memory`, `OutOfRange`, `EthernetSettings` and `__version__`. A context starts
+on entry and stops/joins on exit. start()/stop() may repeat on one instance:
+port 0 rebinds to a new free port, TCP fault-plan connection ordinals restart
+at 1, and memory, UDP metrics and fault-plan counters persist. Hooks must
+return; stop() joins workers, so a `response_hook` that blocks also blocks
+stop(). Ctrl+C uses
 bounded waits on Windows; SIGTERM/SIGBREAK follow graceful cleanup. Forced
-Windows TerminateProcess bypasses handlers. Bind errors exit 1 without a
-traceback; invalid configuration exits 2. Verbose logging reports one-line
+Windows TerminateProcess bypasses handlers. Bind errors and `--dump-on-exit`
+write failures exit 1 without a traceback; invalid configuration (including a
+`--dump-on-exit` path whose directory is missing or not writable, probed by
+creating and removing a temporary file, or an existing read-only target file,
+checked before binding; or an empty file path for any FILE option) exits 2. Verbose logging reports one-line
 command/frame/wire/end-code summaries and close reasons, excluding payloads.
 It is off by default; unexpected worker errors still report to stderr.
 
@@ -709,6 +745,8 @@ Memory.load(data) validates complete JSON before overlaying native points; addre
 Memory.dump() groups contiguous stored points using the same schema; explicit
 zeros are retained. Values are unsigned bits/words/native dwords. See
 [seeding examples](../README.md#memory-seeding-snapshots-and-embedding).
+Direct memory heads and counts must be plain `int` (not `bool`/`float`); other
+types raise `ValueError` before any mutation.
 Direct memory range violations raise `OutOfRange`, a `ValueError`; wire access
 maps invalid ranges to protocol errors as described in the [1E contract](#slmp-1e-transport-opt-in)
 and command-specific sections above.
