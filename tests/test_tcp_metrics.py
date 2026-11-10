@@ -175,6 +175,15 @@ def test_tcp_metrics_silent_hold_session_is_closed_by_stop():
     assert server.get_tcp_metrics() == dict(EMPTY, accepted=1, closed=1)
 
 
+def _tcp_pair():
+    """A connected loopback TCP pair (socket.socketpair() is AF_UNIX on POSIX, where
+    TCP_NODELAY setup fails and would turn the scenario into a setup failure)."""
+    with socket.create_server(("127.0.0.1", 0)) as listener:
+        client = socket.create_connection(listener.getsockname(), timeout=5)
+        accepted, _ = listener.accept()
+    return accepted, client
+
+
 def _scripted(server, make_connection):
     """Run the real accept loop over a fake listener that yields one connection."""
     original = server._accept_loop
@@ -204,7 +213,7 @@ def test_tcp_metrics_counts_rejection_while_stopping():
     peers = []
 
     def connection_seen_while_stopping():
-        left, right = socket.socketpair()
+        left, right = _tcp_pair()
         peers.append(right)
         server._stopping.set()  # the stop flag is raised between accept() and admission
         return left
@@ -245,7 +254,7 @@ def test_tcp_metrics_worker_start_failure_keeps_accepted_equal_closed(monkeypatc
 
     def connection():
         assert gate.wait(5)
-        left, right = socket.socketpair()
+        left, right = _tcp_pair()
         peers.append(right)
         return left
 
