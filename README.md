@@ -128,7 +128,7 @@ For local UDP diagnostics and opt-in TCP session counters (`Server(tcp_metrics=T
 
 ## UDP response faults (optional)
 
-UDP listeners support the independent drop/delay plan; see [FAULTS](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/FAULTS.md#udp-datagram-response-faults-opt-in).
+UDP listeners support the independent datagram plan (drop, delay, duplicate, truncate, corrupt_header); see [FAULTS](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/FAULTS.md#udp-datagram-response-faults-opt-in).
 
 ## Standalone UDP client example (source checkout)
 

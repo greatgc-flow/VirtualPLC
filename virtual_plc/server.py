@@ -10,9 +10,9 @@ from . import faults
 from .codec import decode_request, encode_response, frame_size
 from .commands import CPU_STATES, dispatch
 from .ethernet import EthernetSettings
-from .memory import Memory, valid_span
+from .memory import CellCapExceeded, Memory, valid_span
 from .one_e import frame_size_1e, dispatch_1e, _command_and_wire
-from .udp_faults import UdpFaultPlan
+from .udp_faults import UdpFaultPlan, datagrams
 from .udp_rate_limit import UdpRateLimiter, validate as _validate_udp_rate_limit
 from .profiles import PROFILES
 
@@ -202,7 +202,11 @@ class Server:
         self.password = password
         self.locked = False
         self.reset_count = 0
-        self.set_state(initial_state)
+        try:
+            self.set_state(initial_state)
+        except CellCapExceeded as error:
+            raise CellCapExceeded(
+                "%s: the server's SD203 CPU-state mirror needs one stored cell" % error) from error
         self._bind_address = (host, port)
         self._listen_specs = tuple(listen_specs)
         self.addresses = [(transport, host, bind_port) for transport, bind_port in self._listen_specs]
@@ -564,6 +568,7 @@ class Server:
                 self._count_udp("rejected")
                 continue
             try:
+                action = None
                 if self._udp_fault_plan is not None:
                     # Datagram faults act after command dispatch and hook.
                     command = (_command_and_wire(packet)[0] if self.slmp_1e
@@ -573,11 +578,14 @@ class Server:
                         if action["type"] == "drop":
                             self._count_udp("fault_dropped")
                             continue
-                        if self._stopping.wait(action["seconds"]):
+                        if action["type"] == "delay" and self._stopping.wait(action["seconds"]):
                             continue  # stop() cancels an outstanding delay
-                if not self._stopping.is_set():
+                # One execution; duplicate sends two datagrams, each counted on its own.
+                for datagram in datagrams(response, action):
+                    if self._stopping.is_set():
+                        break
                     try:
-                        listener.sendto(response, peer)
+                        listener.sendto(datagram, peer)
                     except OSError as error:
                         self._count_udp("send_errors")
                         self._log("UDP drop: %s", error)

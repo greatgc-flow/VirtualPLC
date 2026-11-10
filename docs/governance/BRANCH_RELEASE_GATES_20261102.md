@@ -20,12 +20,17 @@
   `non_fast_forward`, `pull_request`, `required_status_checks`.
 - Because `strict=false`, rebase each PR onto current main and get a fresh
   11/11 before merging (peer-agreed).
-- Repository is **public**. Latest release **v0.9.0** (2026-11-10).
+- Repository is **public**. Latest release **v0.9.1** (2026-11-10).
 - Release workflow triggers on **push of `v*` tag**: version/tag assertion,
   full test, wheel build, PyPI publish via trusted identity, GitHub release
   assets. Its first step fails closed unless a `ci.yml` **push** run on
   `main` completed with `success` for the exact tagged commit, so tag only
   after main CI is green.
+  It also fails closed before building or publishing unless `docs/HANDOFF.md`
+  has a `## <date> release X.Y.Z — release-note source` section that follows the
+  restricted format (plain Markdown, no code fences, links only as inline
+  `[text](https://...)`; `tools/release_notes.py`). That body becomes the top
+  of the GitHub release notes, unchanged.
 
 Ruleset reference:
 https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets

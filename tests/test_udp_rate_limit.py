@@ -380,3 +380,25 @@ def test_ipv6_loopback_peer_is_limited_by_its_address(ipv6_loopback):
             assert [serial_of(client.recvfrom(8192)[0]) for _ in range(2)] == [1, 3]
         assert list(server._udp_rate_limiter._buckets) == ["::1"]
     assert server.get_udp_metrics()["rate_limited"] == 1
+
+
+def test_rate_limited_datagram_leaves_duplicate_step_unconsumed_and_permitted_one_is_duplicated():
+    faults = UdpFaultPlan([{"match": {"command": "0x0401", "nth": 2},
+                            "action": {"type": "duplicate"}}])
+    with Server(listeners=[("udp", 0)], udp_metrics=True, udp_fault_plan=faults,
+                udp_rate_limit=(1, 60)) as server:
+        server._udp_rate_limiter._clock = scripted(0, 0, 60)
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+            client.settimeout(2)
+            for serial in range(1, 4):
+                client.sendto(packet("4E", "binary", serial=serial), server.address)
+            # 1 is the plan's nth 1 (one reply); 2 is rate limited before the plan;
+            # 3 is therefore nth 2 and its single execution is sent twice.
+            replies = [client.recvfrom(8192)[0] for _ in range(3)]
+        assert [serial_of(reply) for reply in replies] == [1, 3, 3]
+        assert replies[1] == replies[2] == encode_response(
+            decode_request(packet("4E", "binary", serial=3)), data=b"\x00\x00")
+    assert server.get_udp_metrics() == {
+        "received": 3, "rejected": 0, "sent": 3, "fault_dropped": 0,
+        "send_errors": 0, "receive_resets": 0, "rate_limited": 1,
+    }

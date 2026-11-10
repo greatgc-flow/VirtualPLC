@@ -1,13 +1,21 @@
 """UDP-only post-dispatch datagram faults for isolated client tests.
 
 Separate from TCP FaultPlan: no close/reset/partial_send/stream semantics.
-The command has run before the reply is dropped or delayed.
+The command has run before the reply is dropped, delayed, duplicated,
+truncated or corrupted; every action affects delivery of one reply only.
 """
 from copy import deepcopy
 import ipaddress
 import threading
 
 from .faults import _integer, _load_steps, _seconds
+
+# Action type -> (required, optional) parameter names; also drives `virtual-plc guide faults`.
+UDP_ACTION_FIELDS = {
+    "drop": (set(), set()), "delay": ({"seconds"}, set()),
+    "duplicate": (set(), set()), "truncate": ({"n"}, set()),
+    "corrupt_header": (set(), {"offset", "xor"}),
+}
 
 
 def _validate(step):
@@ -29,13 +37,34 @@ def _validate(step):
             match[key] = str(ipaddress.ip_address(value))
     _integer(step.setdefault("times", 1), 1, 2**63 - 1)
     action = step["action"]
-    if not isinstance(action, dict) or action.get("type") not in ("drop", "delay"):
-        raise ValueError("UDP action must be drop or delay")
-    kind = action["type"]
-    if set(action) != ({"type", "seconds"} if kind == "delay" else {"type"}):
-        raise ValueError("invalid UDP action fields")
+    kind = action.get("type") if isinstance(action, dict) else None
+    if not isinstance(kind, str) or kind not in UDP_ACTION_FIELDS:
+        raise ValueError("UDP action must be one of: " + ", ".join(UDP_ACTION_FIELDS))
+    required, optional = UDP_ACTION_FIELDS[kind]
+    if not required <= set(action) or set(action) - required - optional - {"type"}:
+        raise ValueError(f"invalid UDP action fields for {kind}")
     if kind == "delay":
         _seconds(action["seconds"])
+    elif kind == "truncate":
+        _integer(action["n"], 1, 2**63 - 1)  # n=0 would be `drop`; no empty datagrams
+    elif kind == "corrupt_header":
+        # Same bounds as the TCP action (offsets shared by every 3E/4E response header).
+        _integer(action.setdefault("offset", 0), 0, 8)
+        _integer(action.setdefault("xor", 1), 1, 255)
+
+
+def datagrams(response, action):
+    """Reply datagrams to send, in order, for one reserved non-drop action (or None)."""
+    kind = action["type"] if action is not None else None
+    if kind == "duplicate":
+        return [response, response]
+    if kind == "truncate":
+        return [response[:action["n"]]]
+    if kind == "corrupt_header" and action["offset"] < len(response):
+        changed = bytearray(response)
+        changed[action["offset"]] ^= action["xor"]
+        return [bytes(changed)]
+    return [response]  # delay, no action, or an offset past a short (e.g. 1E) reply
 
 
 class UdpFaultPlan:

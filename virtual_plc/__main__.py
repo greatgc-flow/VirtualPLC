@@ -115,7 +115,7 @@ def build_parser():
                         help="ASCII addresses: decimal compat, hex manual, or FX5 X/Y octal (others use device base)")
     parser.add_argument("--text-pad", type=text_pad, default=0x00, help="CPU name fill byte 0..255; 0x20 = space")
     parser.add_argument("--fault-plan", metavar="FILE", help="TCP response fault JSON")
-    parser.add_argument("--udp-fault-plan", metavar="FILE", help="UDP drop/delay fault JSON")
+    parser.add_argument("--udp-fault-plan", metavar="FILE", help="UDP datagram fault JSON")
     parser.add_argument("--udp-rate-limit", type=udp_rate_limit, default=None, metavar="N/SECONDS",
                         help="optional per-source-IP UDP token bucket; over-limit datagrams are dropped unparsed; default: off")
     parser.add_argument("--init", metavar="FILE", help="load memory JSON before listening")

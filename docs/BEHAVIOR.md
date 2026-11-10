@@ -187,7 +187,9 @@ See the [canonical CLI reference](../README.md#cli-reference),
   the whole request and answer `C056` (the address/device-capacity code already used for
   range errors; 1E batch writes, whose other storage errors map to C05C, also use C056).
   `Memory.load` / `--init` snapshots that would exceed the cap raise ValueError (exit 2)
-  and leave memory unchanged.
+  and leave memory unchanged. Because the server writes SD203 when it is built, a
+  snapshot (or pre-seeded `Memory`) must leave one free cell for SD203 unless it already
+  contains SD203; otherwise `Server(...)` raises `CellCapExceeded` naming SD203 (CLI exit 2).
 - Profile devices expose `code`, `base`, `kind`, `minimum`, `maximum`; ranges remain
   synthetic.
 - `.read_words(device, head, count)` / `.read_bits(...)` return unsigned lists;
@@ -269,7 +271,7 @@ ValueError.
 
 These are local simulator diagnostics, not physical PLC behavior, and are not exposed in MC/SLMP frames. `Server(udp_metrics=True)` enables counters and requires a UDP listener; the default is `False`. There is no CLI metrics flag.
 
-`get_udp_metrics()` returns `None` when disabled, otherwise a locked copy of cumulative counters aggregated across the server's UDP listeners and retained across stop/start: `received` counts datagrams returned by `recvfrom` (including a late shutdown receive); `rejected` counts datagrams that produced no reply before the fault plan; `sent` counts successful sends; `fault_dropped` counts fault-plan drops; `send_errors` counts send failures; `receive_resets` counts `recvfrom` connection resets (Windows ICMP port unreachable, 10054); and `rate_limited` counts datagrams dropped by `udp_rate_limit` (always 0 without it). Other receive errors are not counted.
+`get_udp_metrics()` returns `None` when disabled, otherwise a locked copy of cumulative counters aggregated across the server's UDP listeners and retained across stop/start: `received` counts datagrams returned by `recvfrom` (including a late shutdown receive); `rejected` counts datagrams that produced no reply before the fault plan; `sent` counts successful sends (a `duplicate` fault sends, and counts, two datagrams); `fault_dropped` counts fault-plan drops; `send_errors` counts send failures; `receive_resets` counts `recvfrom` connection resets (Windows ICMP port unreachable, 10054); and `rate_limited` counts datagrams dropped by `udp_rate_limit` (always 0 without it). Other receive errors are not counted.
 
 `get_listener_health()` returns `started`, `healthy`, and `listeners`; each listener entry has `transport`, `host`, `port`, `socket_open`, `worker_alive`, and `healthy`. Overall health requires a started server and every listener healthy. The snapshot does not restart workers. It attempts the lifecycle lock without waiting; if start or stop holds it, or the server is not started, it returns `started=False`, `healthy=False`, and an empty list.
 

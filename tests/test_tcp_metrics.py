@@ -140,3 +140,141 @@ def test_tcp_metrics_exact_under_concurrent_sessions_across_listeners():
         assert errors == []
     assert server.get_tcp_metrics() == {**EMPTY, "accepted": clients, "closed": clients}
     assert server.get_udp_metrics()["received"] == 0
+
+
+# --- round-6 closure (C2): documented-but-unpinned counter branches -----------------
+
+import errno
+
+from virtual_plc import FaultPlan
+
+
+@pytest.mark.parametrize("action", ["rst", "close_before_response", "close_after_response"])
+def test_tcp_metrics_fault_close_counts_accepted_and_closed(action):
+    plan = FaultPlan([{"action": {"type": action}}])
+    with Server(port=0, tcp_metrics=True, fault_plan=plan) as server:
+        with socket.create_connection(server.address, timeout=5) as client:
+            client.sendall(READ)
+            try:
+                while client.recv(4096):
+                    pass
+            except OSError:
+                pass  # rst surfaces as a reset
+        wait_for(lambda: server.get_tcp_metrics()["closed"] == 1)
+        assert server.get_tcp_metrics() == dict(EMPTY, accepted=1, closed=1)
+
+
+def test_tcp_metrics_silent_hold_session_is_closed_by_stop():
+    plan = FaultPlan([{"action": {"type": "silent_hold"}}])
+    server = Server(port=0, tcp_metrics=True, fault_plan=plan)
+    server.start()
+    with socket.create_connection(server.address, timeout=5) as client:
+        client.sendall(READ)
+        wait_for(lambda: server.get_tcp_metrics()["accepted"] == 1)
+        server.stop()
+    assert server.get_tcp_metrics() == dict(EMPTY, accepted=1, closed=1)
+
+
+def _tcp_pair():
+    """A connected loopback TCP pair (socket.socketpair() is AF_UNIX on POSIX, where
+    TCP_NODELAY setup fails and would turn the scenario into a setup failure)."""
+    with socket.create_server(("127.0.0.1", 0)) as listener:
+        client = socket.create_connection(listener.getsockname(), timeout=5)
+        accepted, _ = listener.accept()
+    return accepted, client
+
+
+def _scripted(server, make_connection):
+    """Run the real accept loop over a fake listener that yields one connection."""
+    original = server._accept_loop
+    done = threading.Event()
+
+    def scripted(_real_listener):
+        class Once:
+            served = False
+
+            def accept(self):
+                if Once.served:
+                    raise OSError(errno.EBADF, "scripted listener exhausted")
+                Once.served = True
+                return make_connection(), ("127.0.0.1", 1)
+
+        try:
+            return original(Once())
+        finally:
+            done.set()
+
+    server._accept_loop = scripted
+    return done
+
+
+def test_tcp_metrics_counts_rejection_while_stopping():
+    server = Server(port=0, tcp_metrics=True)
+    peers = []
+
+    def connection_seen_while_stopping():
+        left, right = _tcp_pair()
+        peers.append(right)
+        server._stopping.set()  # the stop flag is raised between accept() and admission
+        return left
+
+    done = _scripted(server, connection_seen_while_stopping)
+    server.start()
+    try:
+        assert done.wait(5)
+        assert server.get_tcp_metrics() == dict(EMPTY, rejected=1)
+    finally:
+        server.stop()
+        for peer in peers:
+            peer.close()
+
+
+def test_tcp_metrics_ignore_sockets_that_fail_setup_before_admission():
+    class BrokenSetup:
+        closed = False
+
+        def setsockopt(self, *args):
+            raise OSError(errno.EINVAL, "synthetic TCP_NODELAY failure")
+
+        def close(self):
+            BrokenSetup.closed = True
+
+    server = Server(port=0, tcp_metrics=True)
+    done = _scripted(server, BrokenSetup)
+    with server:
+        assert done.wait(5)
+        assert BrokenSetup.closed
+        assert server.get_tcp_metrics() == EMPTY
+
+
+def test_tcp_metrics_worker_start_failure_keeps_accepted_equal_closed(monkeypatch):
+    server = Server(port=0, tcp_metrics=True)
+    peers = []
+    gate = threading.Event()  # hold accept() until the patch below is in place
+
+    def connection():
+        assert gate.wait(5)
+        left, right = _tcp_pair()
+        peers.append(right)
+        return left
+
+    done = _scripted(server, connection)
+    original_start = threading.Thread.start
+
+    def failing_start(thread):
+        if getattr(thread, "_target", None) == server._serve:
+            raise RuntimeError("can't start new thread")
+        return original_start(thread)
+
+    server.start()
+    monkeypatch.setattr(threading.Thread, "start", failing_start)
+    gate.set()
+    try:
+        assert done.wait(5)
+        assert server.get_tcp_metrics() == dict(EMPTY, accepted=1, closed=1)
+        assert not server._clients
+    finally:
+        monkeypatch.undo()
+        server.stop()
+        for peer in peers:
+            peer.close()
