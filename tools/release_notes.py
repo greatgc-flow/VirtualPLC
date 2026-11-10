@@ -2,7 +2,7 @@
 
 Each release has a section headed ``## <date> release X.Y.Z — release-note source``.
 The release workflow publishes its body (above the auto-generated PR list) and fails
-closed before publishing to PyPI when the section is missing.
+closed before building or publishing to PyPI when the section is missing.
 
     python tools/release_notes.py 0.9.0 [docs/HANDOFF.md] > notes.md
 """
@@ -12,9 +12,10 @@ import re
 import sys
 from pathlib import Path
 
-REPO_BLOB = "https://github.com/greatgc-flow/VirtualPLC/blob/main/"
+REPO_BLOB = "https://github.com/greatgc-flow/VirtualPLC/blob/v{version}/"
 
 HEADING = r"^## [^\n]*\brelease {version} \S+ release-note source[ \t]*\r?$"
+FENCE = re.compile(r"^\s*(```|~~~)")
 
 
 def extract(version, handoff_text):
@@ -23,21 +24,35 @@ def extract(version, handoff_text):
     match = pattern.search(handoff_text)
     if match is None:
         raise LookupError("no 'release %s — release-note source' section in HANDOFF" % version)
-    rest = handoff_text[match.end():]
-    following = re.search(r"^## ", rest, re.M)
-    body = (rest[:following.start()] if following else rest).strip()
+    body_lines, in_fence = [], False
+    for line in handoff_text[match.end():].splitlines()[1:]:
+        if FENCE.match(line):
+            in_fence = not in_fence
+        elif not in_fence and line.startswith("## "):
+            break  # next section; a '## ' inside a code fence is content
+        body_lines.append(line)
+    if in_fence:
+        raise LookupError("release %s note section has an unterminated code fence" % version)
+    body = "\n".join(body_lines).strip()
     if not body:
         raise LookupError("release %s note section is empty" % version)
-    return _absolute_links(body) + "\n"
+    return _absolute_links(body, REPO_BLOB.format(version=version)) + "\n"
 
 
-def _absolute_links(text):
-    """HANDOFF lives in docs/: make its relative Markdown links work on the release page."""
+def _absolute_links(text, base):
+    """HANDOFF lives in docs/: make its relative links work on the release page.
+
+    Links are pinned to the release tag so anchors keep working after docs move.
+    """
     def fix(match):
         target = match.group(1)
         if target.startswith(("http://", "https://", "mailto:", "#")):
             return match.group(0)
-        return "](" + REPO_BLOB + posixpath.normpath(posixpath.join("docs", target)) + ")"
+        if target.startswith("/"):  # repository-root path
+            path = posixpath.normpath(target.lstrip("/"))
+        else:
+            path = posixpath.normpath(posixpath.join("docs", target))
+        return "](" + base + path + ")"
     return re.sub(r"\]\(([^)\s]+)\)", fix, text)
 
 

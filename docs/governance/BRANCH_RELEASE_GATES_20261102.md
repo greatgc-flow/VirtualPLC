@@ -26,6 +26,10 @@
   assets. Its first step fails closed unless a `ci.yml` **push** run on
   `main` completed with `success` for the exact tagged commit, so tag only
   after main CI is green.
+  It also fails closed before building or publishing unless `docs/HANDOFF.md`
+  has a `## <date> release X.Y.Z — release-note source` section
+  (`tools/release_notes.py`); that body, with links pinned to the tag, becomes
+  the top of the GitHub release notes.
 
 Ruleset reference:
 https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets

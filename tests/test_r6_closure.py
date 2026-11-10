@@ -54,6 +54,14 @@ def test_every_release_version_has_a_curated_release_note_section():
 def test_release_workflow_publishes_the_curated_notes():
     text = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     assert "tools/release_notes.py" in text and "--notes-file" in text
+    # Extraction fails closed in the build job, before anything is built or published.
+    assert (text.index("tools/release_notes.py") < text.index("python -m build")
+            < text.index("upload-artifact") < text.index("pypa/gh-action-pypi-publish"))
+    publish = text[text.index("  publish:"):text.index("  github-release:")]
+    assert "needs: build" in publish and "release-notes" not in publish
+    # A release created beforehand (e.g. by hand) still gets the curated notes if empty.
+    attach = text[text.index("Attach distributions to release"):]
+    assert "gh release edit" in attach and attach.count("--notes-file release-notes/notes.md") == 2
 
 
 def test_release_notes_rewrite_relative_links_to_absolute_repo_urls():
@@ -65,7 +73,7 @@ def test_release_notes_rewrite_relative_links_to_absolute_repo_urls():
     text = ("## 2026-01-01 release 1.2.3 — release-note source\n\n"
             "See [B](BEHAVIOR.md#x), [R](../README.md), [abs](https://e.x/y) and [a](#top).\n\n## next\n")
     notes = release_notes.extract("1.2.3", text)
-    base = "https://github.com/greatgc-flow/VirtualPLC/blob/main/"
+    base = "https://github.com/greatgc-flow/VirtualPLC/blob/v1.2.3/"  # pinned to the tag
     assert "[B](%sdocs/BEHAVIOR.md#x)" % base in notes
     assert "[R](%sREADME.md)" % base in notes
     assert "[abs](https://e.x/y)" in notes and "[a](#top)" in notes
@@ -94,3 +102,23 @@ def test_write_atomic_overlay_keeps_cap_atomicity_and_dword_halves():
     big.write_words("LTN", 4, [0x5678, 0x1234])
     big.write_atomic([("LTN", 4, "word", [0xBEEF])])  # low half only: high half read through
     assert big.read_words("LTN", 4, 2) == [0xBEEF, 0x1234]
+
+
+def _release_notes():
+    sys.path.insert(0, str(ROOT / "tools"))
+    try:
+        import release_notes
+    finally:
+        sys.path.pop(0)
+    return release_notes
+
+
+def test_release_notes_ignore_headings_inside_code_fences_and_fix_root_links():
+    rn = _release_notes()
+    text = "\n".join([
+        "## d release 2.0.0 — release-note source", "", "Intro [root](/README.md)", "",
+        "```text", "## not a heading", "```", "", "after fence", "",
+        "## 2026 release 1.0.0 — release-note source", "old", ""])
+    notes = rn.extract("2.0.0", text)
+    assert "after fence" in notes and "old" not in notes
+    assert "[root](https://github.com/greatgc-flow/VirtualPLC/blob/v2.0.0/README.md)" in notes

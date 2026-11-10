@@ -102,6 +102,11 @@ jobs:
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release upload "$RELEASE_TAG" dist/* --clobber
+            # A release created beforehand keeps its body unless it is empty.
+            if [ -z "$(gh release view "$RELEASE_TAG" --json body --jq .body)" ]; then
+              gh release edit "$RELEASE_TAG" --notes-file release-notes/notes.md
+            fi
           else
-            gh release create "$RELEASE_TAG" dist/* --verify-tag --title "$RELEASE_TAG"               --notes-file release-notes/notes.md --generate-notes
+            gh release create "$RELEASE_TAG" dist/* --verify-tag --title "$RELEASE_TAG" \
+              --notes-file release-notes/notes.md --generate-notes
           fi
