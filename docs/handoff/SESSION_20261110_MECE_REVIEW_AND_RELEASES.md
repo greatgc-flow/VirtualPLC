@@ -138,10 +138,24 @@ Dates are UTC release dates (GitHub `publishedAt`); the session ran into 2026-11
 - #95: non-deduction recommendations from r11.
 - §6 peer-instruction diet (R7).
 
-## 6. Peer instruction diet (R7) — in progress
+## 6. Peer instruction diet (R7)
 
-Status as of 2026-11-10 (UTC): an audit of per-turn / per-ask instruction
-payloads for cc, cx, ag and peerhub (sizes, frequency, redundancy, stale
-content, and workspace-only rules stored in global locations) was started and
-had not reported when 0.10.0 was released. Its prioritised action list is
-tracked outside this release; configuration changes need owner approval.
+Audit (2026-11-11 UTC): per-turn / per-ask payloads ranked by size × frequency.
+The largest costs were the cc Artifact tool (~15K tokens per lead call), the cc
+skill listing (~4K), unused Codex app connectors and plugin skills (~3–6K per
+cx call), and a machine-global agy rules file that carried another workspace's
+rules (including rules that contradict this workspace's peer usage).
+
+| Item | Change | Measured effect |
+|---|---|---|
+| cx | `CODEX_HOME/config.toml` `[features]`: `apps`, `plugins`, `remote_plugin`, `image_generation`, `multi_agent` = false (backup kept) | first-call input 13.3K tokens (baseline 15.5–19.5K) |
+| cc peers | `VirtualPLC/.claude/settings.local.json` (git-ignored): `enableArtifact` / `enableWorkflows` / `syncClaudeAiSkills` false, `skillOverrides` for unused skills; the lead session is unchanged | `claude -p` total input 20.4K (baseline 26.8K, −24%) |
+| ag | global `~/.gemini/GEMINI.md` is workspace-neutral; workspace rules live in the workspace's own GEMINI.md | conflicting rules no longer reach this workspace's asks |
+| lead memory | always-loaded index trimmed; overlapping quota notes merged; stale handoff memory replaced by a short state note | index 991 B → 724 B |
+
+Not changed (need the owner's wording decision): starting a new `--stream`
+per independent task instead of reusing long sessions, and not pasting whole
+`peerhub guide` / `diag` outputs into prompts (session reuse made cc asks
+re-read ~0.7M input tokens at the median); and the cadence of quota checks.
+Kept on purpose: safety rules, agy permission rules, the AGENTS.md
+auto-injection (~0.8K once per session) and the VirtualPLC AGENTS.md.
