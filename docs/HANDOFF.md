@@ -10,6 +10,15 @@
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
 - Session record (requirements, design, process, scores, results) for 0.8.0–0.11.0: [SESSION_20261110](handoff/SESSION_20261110_MECE_REVIEW_AND_RELEASES.md).
 
+## Unreleased
+
+Review follow-ups for the UDP rate limit and UDP fault actions ([#95](https://github.com/greatgc-flow/VirtualPLC/issues/95)).
+
+- Changed: under `-v`, a UDP flood no longer logs one stderr line per rate-limited datagram. The first drop of a burst per source IP is logged, then at most one summary line per IP per 10 s ("N more datagrams dropped from IP in the last T s"); the log state shares the 1024-peer LRU bound. Without `-v` nothing is logged, and the `rate_limited` metric is unchanged. Details: [BEHAVIOR.md](https://github.com/greatgc-flow/VirtualPLC/blob/main/docs/BEHAVIOR.md#udp-rate-limit-opt-in).
+- Guide: `guide troubleshoot` now notes that `--udp-rate-limit` drops are silent and visible via `rate_limited` (udp_metrics) or `-v`.
+- Tests: rate limit combined with `truncate` and `corrupt_header` on 1E binary/ASCII and 3E/4E ASCII frames, and a `times: 2` step under the limiter (rate-limited datagrams consume neither nth nor times).
+- Docs: DESIGN.md open items record that POSIX-only socket behaviour is caught only by Linux CI on Windows hosts.
+
 ## 2026-11-10 release 0.11.0 — release-note source
 
 Deprecation step for #78 (owner decisions on the issue). No behaviour change for keyword calls.

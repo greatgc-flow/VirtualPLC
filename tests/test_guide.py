@@ -35,6 +35,14 @@ def test_every_topic_renders_within_budget(parser):
         assert len(text) <= 4000, topic
 
 
+def test_troubleshoot_udp_timeout_points_at_rate_limit_visibility(parser):
+    text = guide.render(parser, "troubleshoot")
+    start = text.index("UDP timeout:")
+    hint = text[start:text.index("\n1E:", start)]
+    assert "--udp-rate-limit" in hint and "rate_limited" in hint
+    assert "udp_metrics" in hint and "-v" in hint
+
+
 def test_overview_has_the_required_parts(parser):
     text = guide.render(parser)
     for recipe in guide.RECIPES:

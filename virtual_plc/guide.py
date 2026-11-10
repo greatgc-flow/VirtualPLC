@@ -94,6 +94,7 @@ TROUBLESHOOT = """
 Symptom -> cause -> fix
 "cannot listen on H:P" (exit 1): port busy or denied -> choose another --port, or --port 0 and read the banner.
 UDP timeout: each datagram must contain exactly one full frame (max 8192 bytes); invalid requests get no response.
+  --udp-rate-limit drops are silent too: see rate_limited (udp_metrics) or -v.
 1E: --slmp-1e supports batch 00..03, random 04/05, TCP owner-bound RUN/STOP 13/14, type 15 and loopback 16; not mixed with 3E/4E.
 Exit 2 and "see: virtual-plc guide TOPIC": bad option, JSON file or plan -> read that topic; nothing was bound.
 Client times out: wrong host/port, a fault plan that holds or drops replies, or --idle-timeout closed the socket
