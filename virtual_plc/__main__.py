@@ -108,6 +108,8 @@ def build_parser():
                         help="retained span; repeatable; default all L")
     parser.add_argument("--limit", action="append", type=device_range, default=[], metavar="DEV:LO-HI",
                         help="inclusive device limit; repeatable; default profile ceiling")
+    parser.add_argument("--max-cells", type=int, default=None, metavar="N",
+                        help="optional cap on distinct stored points; new points beyond it get C056; default: none")
     parser.add_argument("-v", "--verbose", action="store_true", help="log requests and connection close reasons")
     return parser
 
@@ -203,8 +205,8 @@ def main(argv=None):
         if args.ethernet_model:
             options["ethernet_model"] = args.ethernet_model
             options["ethernet_overrides"] = overrides
-        if args.init is not None or args.limit:
-            options["memory"] = Memory(args.profile, dict(args.limit))
+        if args.init is not None or args.limit or args.max_cells is not None:
+            options["memory"] = Memory(args.profile, dict(args.limit), args.max_cells)
         if args.init is not None:
             # Load before Server() so its initial_state rewrites any snapshot SD203 mirror.
             options["memory"].load(json.loads(Path(args.init).read_text(encoding="utf-8-sig")))

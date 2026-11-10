@@ -173,8 +173,21 @@ See the [canonical CLI reference](../README.md#cli-reference),
 - Q/L/QnA/iQ-L/iQ-R have synthetic CPU identities; names occupy 16 bytes, filled with
   `text_pad` (default NUL).
 - Echo response: length uint16 + text. ASCII encodes numeric fields as uppercase hex.
-- `memory.Memory(profile='Q', limits=None)` accepts inclusive `{device: (min, max)}`
+- `memory.Memory(profile='Q', limits=None, max_cells=None)` accepts inclusive `{device: (min, max)}`
   point ranges.
+- Optional stored-cell cap (#79, simulator safety policy, not PLC behavior): `max_cells`
+  (CLI `--max-cells N`) must be a positive `int` or `None` (default: uncapped, unchanged).
+  It bounds the number of distinct stored native points across all families
+  (`Memory.stored_cells`; bit points, word points and native dword points each count
+  once, a bit-device word view counts 16, and the server's SD203 mirror counts). Only
+  NEW points count: overwrites, including writing 0, are always allowed, and
+  `clear`/remote clears free points. A write that would exceed the cap raises
+  `memory.CellCapExceeded` (an `OutOfRange` subclass) before mutating anything; batch,
+  random (3E/4E random writes now commit through `write_atomic`) and 1E writes check
+  the whole request and answer `C056` (the address/device-capacity code already used for
+  range errors; 1E batch writes, whose other storage errors map to C05C, also use C056).
+  `Memory.load` / `--init` snapshots that would exceed the cap raise ValueError (exit 2)
+  and leave memory unchanged.
 - Profile devices expose `code`, `base`, `kind`, `minimum`, `maximum`; ranges remain
   synthetic.
 - `.read_words(device, head, count)` / `.read_bits(...)` return unsigned lists;
