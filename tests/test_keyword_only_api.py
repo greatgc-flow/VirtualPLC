@@ -68,16 +68,6 @@ def test_server_keyword_calls_never_warn():
     _no_warnings(lambda: Server(HOST, 0, "Q", memory=None, max_points=5))
 
 
-@pytest.mark.parametrize("call", [
-    lambda: Server(HOST, 0, memory=None, port=1),
-    lambda: Server(HOST, 0, "Q", None, memory=None),
-    lambda: Server(HOST, 0, "Q", *([None] * 30)),
-])
-def test_server_argument_errors_still_raise_type_error_not_a_warning(call):
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        with pytest.raises(TypeError):
-            call()
 
 
 def test_server_duplicate_argument_message_is_unchanged():
@@ -123,16 +113,67 @@ def test_memory_keyword_calls_never_warn():
     _no_warnings(lambda: Memory(max_cells=3))
 
 
-@pytest.mark.parametrize("call", [
-    lambda: Memory("Q", {}, limits={}),
-    lambda: Memory("Q", None, None, None),
-    lambda: Memory("Q", profile="Q"),
-])
-def test_memory_argument_errors_still_raise_type_error_not_a_warning(call):
+
+
+# Invalid calls: the original TypeError, never the warning -------------------
+
+def _unwrapped_type_error(cls, args, kwargs):
+    """The TypeError message the undecorated __init__ raises for this call."""
+    init = inspect.unwrap(cls.__init__)
+    with pytest.raises(TypeError) as raised:
+        init(object.__new__(cls), *args, **kwargs)
+    return str(raised.value)
+
+
+@pytest.mark.parametrize("cls,args,kwargs", [
+    (Server, (HOST, 0), {"memory": None, "port": 1}),
+    (Server, (HOST, 0, "Q", None), {"memory": None}),
+    (Server, (HOST, 0, "Q", *([None] * 30)), {}),
+    (Server, (HOST, 0, "Q", None), {"host": "x"}),       # duplicate of a kept positional
+    (Server, (HOST, 0, "Q", None), {"bogus": 1}),        # unknown keyword
+    (Memory, ("Q", {}), {"limits": {}}),
+    (Memory, ("Q", None, None, None), {}),
+    (Memory, ("Q",), {"profile": "Q"}),
+    (Memory, ("Q", {}), {"profile": "Q"}),               # duplicate of the kept positional
+    (Memory, ("Q", {}), {"bogus": 1}),                   # unknown keyword
+], ids=lambda value: getattr(value, "__name__", None))
+def test_invalid_calls_raise_the_original_type_error_without_a_warning(cls, args, kwargs):
+    expected = _unwrapped_type_error(cls, args, kwargs)
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        with pytest.raises(TypeError):
-            call()
+        with pytest.raises(TypeError) as raised:
+            cls(*args, **kwargs)
+    assert str(raised.value) == expected
+
+
+@pytest.mark.parametrize("cls,keep", [(Server, 3), (Memory, 1)])
+def test_warning_fires_exactly_when_the_call_binds_with_positional_extras(cls, keep):
+    """Oracle: inspect.signature(...).bind() on the unwrapped __init__, over generated calls."""
+    signature = inspect.signature(inspect.unwrap(cls.__init__))
+    names = list(signature.parameters)[1:]
+    defaults = [signature.parameters[name].default for name in names]
+    keyword_sets = [{}, {"bogus": 1}, *({name: defaults[i]} for i, name in enumerate(names))]
+    checked = 0
+    for count in range(len(names) + 2):
+        args = tuple(defaults[:count]) + (None,) * (count - len(names))
+        for kwargs in keyword_sets:
+            try:
+                signature.bind(None, *args, **kwargs)
+                binds = True
+            except TypeError:
+                binds = False
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                try:
+                    cls(*args, **kwargs)
+                except TypeError:
+                    assert not binds, (args, kwargs)
+                else:
+                    assert binds, (args, kwargs)
+            warned = [w for w in caught if w.category is DeprecationWarning]
+            assert len(warned) == (1 if binds and count > keep else 0), (count, kwargs)
+            checked += 1
+    assert checked == (len(names) + 2) * len(keyword_sets)
 
 
 # Internal callers emit nothing -----------------------------------------------
@@ -197,6 +238,7 @@ def _positional_extras(source):
             continue
         func = node.func
         name = func.id if isinstance(func, ast.Name) else func.attr if isinstance(func, ast.Attribute) else None
+        # `*args` cannot be counted statically, so any starred call is flagged (conservative).
         if name in KEEP and (len(node.args) > KEEP[name] or any(isinstance(a, ast.Starred) for a in node.args)):
             yield f"{name}() line {node.lineno}"
 
@@ -204,3 +246,17 @@ def _positional_extras(source):
 def test_repository_code_and_documented_snippets_use_keywords_after_profile():
     offenders = [f"{where}: {call}" for where, source in _python_sources() for call in _positional_extras(source)]
     assert offenders == []
+
+
+@pytest.mark.parametrize("source", [
+    "def __init__(self, a=1, **extra): pass",
+    "def __init__(self, a=1, *rest): pass",
+    "def __init__(self, a=1, *, b=2): pass",
+    "def __init__(self, a, b=2): pass",
+])
+def test_shim_refuses_signatures_its_bind_check_would_not_model_exactly(source):
+    from virtual_plc._compat import warn_positional
+    namespace = {}
+    exec(source, namespace)
+    with pytest.raises(TypeError, match="defaulted plain parameters"):
+        warn_positional(1)(namespace["__init__"])

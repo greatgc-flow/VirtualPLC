@@ -114,8 +114,11 @@ See the [canonical CLI reference](../README.md#cli-reference),
   parameter positionally (e.g. `Server("127.0.0.1", 0, "Q", memory)` or
   `Memory("Q", limits)`) emits a `DeprecationWarning` attributed to the calling line
   that names the parameters; the call otherwise behaves exactly as before, and
-  invalid calls (duplicate or too many arguments) still raise the same `TypeError`
-  without a warning. 1.0 makes those parameters keyword-only (positional use then
+  calls that would not bind (a parameter given twice, too many positional
+  arguments, or an unknown keyword) still raise the same `TypeError` without a
+  warning. Argument values are validated later, so with warnings as errors a
+  positional extra that also has an invalid value surfaces the
+  `DeprecationWarning` before the `ValueError`. 1.0 makes those parameters keyword-only (positional use then
   raises `TypeError`). Use keywords, e.g. `Server(port=0, memory=m)`,
   `Memory("Q", limits=..., max_cells=...)`. `inspect.signature` and `help()` are
   unchanged; until 1.0, `Server.__init__`/`Memory.__init__` are thin wrappers whose
