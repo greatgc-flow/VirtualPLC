@@ -15,7 +15,7 @@ ACTIVE_DOCS = [ROOT / "README.md", ROOT / "llms.txt", ROOT / "AGENTS.md"] + [
     path for path in sorted((ROOT / "docs").glob("*.md")) if path.name != "HANDOFF.md"]
 # Closed issues an active doc may cite only as delivered work ("Resolved: ... #95").
 RESOLVED_FEATURES = {79, 95}
-# Closed issue cited as implementation history, marked "(closed)" in that file.
+# Closed issue cited as implementation history; each citation line must say "(closed)".
 HISTORY = {("docs/ETHERNET_MODEL_SETTINGS.md", 14)}
 # "#N" that is not a PR, a vendor FAQ number or an HTML entity.
 ISSUE_REF = re.compile(r"(?<![&\w])(?<!PR )(?<!FAQ )#(\d+)\b|/issues/(\d+)\b")
@@ -30,17 +30,18 @@ def _open_issues():
 # F1: active docs must not name closed issues (#14, #22) as open trackers.
 def test_active_docs_cite_only_open_or_resolved_feature_issues():
     allowed = _open_issues() | RESOLVED_FEATURES
-    stray = sorted(
-        "{}: #{}".format(name, number)
-        for path in ACTIVE_DOCS
-        for name in [path.relative_to(ROOT).as_posix()]
-        for match in ISSUE_REF.finditer(path.read_text(encoding="utf-8"))
-        for number in [int(match.group(1) or match.group(2))]
-        if number not in allowed and (name, number) not in HISTORY)
+    stray, history = [], set()
+    for path in ACTIVE_DOCS:
+        name = path.relative_to(ROOT).as_posix()
+        for line in path.read_text(encoding="utf-8").splitlines():
+            for match in ISSUE_REF.finditer(line):
+                number = int(match.group(1) or match.group(2))
+                if (name, number) in HISTORY and "(closed)" in line:
+                    history.add((name, number))
+                elif number not in allowed:
+                    stray.append("{}: #{}".format(name, number))
     assert stray == []
-    for name, number in HISTORY:
-        assert "#{}](".format(number) in (ROOT / name).read_text(encoding="utf-8")
-        assert "(closed)" in (ROOT / name).read_text(encoding="utf-8")
+    assert history == HISTORY  # every exception is still used
 
 
 def test_issue_reference_scanner_catches_a_closed_tracker():

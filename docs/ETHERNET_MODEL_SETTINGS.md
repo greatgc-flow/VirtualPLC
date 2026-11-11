@@ -121,7 +121,7 @@ The `Server` constructor validates model/PLC profile matching before listening. 
 - **No auto-open of manufacturer default system ports.** QJ71E71's UDP/5000 and RJ71EN71's auto UDP/5000 or MELSOFT UDP/5001, TCP/5002 are described only as reference metadata. Only explicitly provided `--listen` endpoints bind. MELSOFT service handshake is not implemented.
 - **No in-process independent PLC supervisor.** Run another independent OS process for another PLC, each with its own network ports, memory, configuration file, fault plan and snapshot file.
 - **No external network or physical PLC guarantee:** manufacturer timer presets never override local-only binding or `--allow-nonlocal --idle-timeout` rules; see [README safety](../README.md#30-second-quickstart).
-- **No native GX Works project import, no outbound active-open, no fullpassive restriction or vendor socket-state machine.** These may require separate simulator milestones and official manual/firmware evidence. Future model parity and RnCPU/FX5 coverage are tracked in [#68](https://github.com/greatgc-flow/VirtualPLC/issues/68) and [#69](https://github.com/greatgc-flow/VirtualPLC/issues/69) (#14 is closed).
+- **No native GX Works project import, no outbound active-open, no fullpassive restriction or vendor socket-state machine.** These may require separate simulator milestones and official manual/firmware evidence. Future model parity and RnCPU/FX5 coverage are tracked in [#68](https://github.com/greatgc-flow/VirtualPLC/issues/68) and [#69](https://github.com/greatgc-flow/VirtualPLC/issues/69).
 
 ## 6. Regression and verification
 
