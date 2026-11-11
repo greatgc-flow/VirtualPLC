@@ -125,6 +125,8 @@ class Server:
         self.slmp_1e_run_switch = slmp_1e_run_switch
         self.slmp_1e = slmp_1e
         self._allow_nonlocal = allow_nonlocal
+        if not isinstance(host, str):
+            raise ValueError("host must be a string such as '127.0.0.1'")
         if not is_loopback_host(host):
             if not allow_nonlocal:
                 raise ValueError("non-loopback host requires allow_nonlocal=True (CLI: --allow-nonlocal)")

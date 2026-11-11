@@ -198,8 +198,8 @@ This follows [VerySimpleGuide](https://github.com/greatgc-flow/VerySimpleGuide):
 small interfaces, one source of truth, no invented unknown vendor defaults.
 Only model-selected binary/ASCII wire mode and RUN-write policy are simulated;
 OS network-stack and manufacturer timers are reference-only. Legacy Q mode and
-socket `idle_timeout` are not modified. The broader fidelity backlog remains
-in [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14).
+socket `idle_timeout` are not modified. The broader fidelity backlog is tracked
+in [#68](https://github.com/greatgc-flow/VirtualPLC/issues/68) and [#69](https://github.com/greatgc-flow/VirtualPLC/issues/69).
 **One independent PLC per OS process**; multiple listeners within that
 process share one PLC state.
 
@@ -576,7 +576,7 @@ The preflight rejects invalid values, leaves omitted factory
 configuration UNKNOWN, never certifies recovery for a recommended
 choice, and has no physical-hardware side effects. The related
 [RnCPU documentation](research/RNCPU_REMOTE_OPENING_SAFETY_20261101.md)
-and issue #14 define the pending CPU/firmware/timer oracle gates.
+and issues #2 and #68 define the pending CPU/firmware/timer oracle gates.
 Do not share RJ71EN71 network-module defaults without direct evidence.
 
 ### 2026-11-01 R04CPU built-in A038H reference validator

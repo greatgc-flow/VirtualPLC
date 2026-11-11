@@ -80,7 +80,7 @@ uploaded to public issues, or sent to CI logs.
 The origin label is self-reported and every report sets `physical_hardware_certified=false`. Vector equality is not proof of Ethernet setting, model, firmware, timing, STOP ownership, or device addressing (see [README safety](../README.md#30-second-quickstart)).
 
 Tracked follow-ups: GitHub issues #2 (physical oracle),
-#14 (model-specific Ethernet) and #22 (1E command/fidelity).
+#68 (R04CPU manual-revision clauses) and #69 (1E vendor/firmware fidelity).
 Source: https://github.com/greatgc-flow/VirtualPLC
 
 tests/test_physical_oracle_offline.py covers independent literal vectors,
