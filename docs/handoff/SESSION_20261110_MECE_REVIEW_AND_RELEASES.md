@@ -167,3 +167,38 @@ re-read ~0.7M input tokens at the median); quota checks run right before each
 delegation instead of every turn.
 Kept on purpose: safety rules, agy permission rules, the AGENTS.md
 auto-injection (~0.8K once per session) and the VirtualPLC AGENTS.md.
+
+## 7. Re-running the audit (next session)
+
+Final state (2026-11-11 UTC): v0.11.3 released. A fresh whole-product audit of
+v0.11.2 scored 99.90; its three findings were fixed in 0.11.3, and the 0.11.3
+candidate re-scored **100.00 (4200/4200)** with C1–C8 all passing. Both score
+tables are posted verbatim on [#25](https://github.com/greatgc-flow/VirtualPLC/issues/25).
+
+Brief used for each whole-product audit (one independent read-only reviewer;
+replace the version and commit):
+
+- Target: the released tree vX.Y.Z = main COMMIT, clean checkout. Score the
+  entire product fresh; do not rely on earlier rounds. Probe every row (raw
+  3E/4E/1E frames binary and ASCII, Memory API, transport and lifecycle, TCP and
+  UDP fault plans, UDP rate limit, CLI and guide, oracle, packaging, CI and
+  release workflow, docs closure).
+- Read-only: no repository edits, no git or gh writes, scratch files outside the
+  repository. Read AGENTS.md first. Run targeted tests only (the coordinator
+  runs the full suite).
+- Grid: rows P1–P7 × columns Q1–Q6 (§2.1), closure checks C1–C8, materiality
+  rule (§2.2). Out of scope but must be documented as open: #78 (1.0
+  enforcement), #13 (UDP reorder), #2, #5, #68, #69 (external evidence).
+- Output (≤ 600 words): 42-cell table, C1–C8 verdicts, overall average,
+  numbered material findings (cell, evidence, repro, exact fix) or "none",
+  out-of-scope confirmation, recommendations without deduction.
+
+Lessons from the last two rounds:
+
+- Each fresh audit of a released version found a few minor items that the
+  per-change re-scores had missed (stale issue references, validation of
+  unusual argument types). Run one after every release.
+- Encode a finding class as a closure test where possible
+  (`tests/test_v0112_audit_closure.py` checks issue citations in active docs).
+- Keep the auditor's table verbatim in the session record or on #25, so the
+  score evidence survives the session.
