@@ -1,6 +1,6 @@
 # GX Works2/3 Ethernet settings — VirtualPLC runtime contract
 
-Implementation: issue [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14). Source-of-truth code: `virtual_plc/ethernet.py` (runnable presets) and `virtual_plc/ethernet_reference.py` / `virtual_plc/rncpu_reference.py` (offline reference SSOT). Detailed manufacturer research and model/firmware caveats: [GX Works Ethernet research](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md).
+Implemented under issue [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14) (closed). Source-of-truth code: `virtual_plc/ethernet.py` (runnable presets) and `virtual_plc/ethernet_reference.py` / `virtual_plc/rncpu_reference.py` (offline reference SSOT). Detailed manufacturer research and model/firmware caveats: [GX Works Ethernet research](research/GXWORKS_ETHERNET_PARAMETERS_20261031.md).
 
 > **One independent PLC = one OS process.** A process can open many TCP/UDP listeners sharing one CPU state, Memory, and request lock; presets are opt-in local test emulation only (see [README safety](../README.md#30-second-quickstart)).
 
@@ -121,7 +121,7 @@ The `Server` constructor validates model/PLC profile matching before listening. 
 - **No auto-open of manufacturer default system ports.** QJ71E71's UDP/5000 and RJ71EN71's auto UDP/5000 or MELSOFT UDP/5001, TCP/5002 are described only as reference metadata. Only explicitly provided `--listen` endpoints bind. MELSOFT service handshake is not implemented.
 - **No in-process independent PLC supervisor.** Run another independent OS process for another PLC, each with its own network ports, memory, configuration file, fault plan and snapshot file.
 - **No external network or physical PLC guarantee:** manufacturer timer presets never override local-only binding or `--allow-nonlocal --idle-timeout` rules; see [README safety](../README.md#30-second-quickstart).
-- **No native GX Works project import, no outbound active-open, no fullpassive restriction or vendor socket-state machine.** These may require separate simulator milestones and official manual/firmware evidence. Keep [#14](https://github.com/greatgc-flow/VirtualPLC/issues/14) open for future model parity and RnCPU/FX5 coverage.
+- **No native GX Works project import, no outbound active-open, no fullpassive restriction or vendor socket-state machine.** These may require separate simulator milestones and official manual/firmware evidence. Future model parity and RnCPU/FX5 coverage are tracked in [#68](https://github.com/greatgc-flow/VirtualPLC/issues/68) and [#69](https://github.com/greatgc-flow/VirtualPLC/issues/69) (#14 is closed).
 
 ## 6. Regression and verification
 

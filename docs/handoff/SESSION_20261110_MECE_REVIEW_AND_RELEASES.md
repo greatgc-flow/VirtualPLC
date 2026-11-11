@@ -108,6 +108,7 @@ ag A-7D, later ag G-7D) were rested.
 | r11 | 0.10.0 candidate | 99.5 (two doc findings) → 99.9 (date finding) → re-score of the released commit: **100** |
 | r12 | 0.11.0 candidate (#98) | 99.6 (shim warned on invalid calls) → fixed with a `bind()` oracle test → **100** |
 | final | whole-product audit of v0.11.1 | 99.76 → six minor findings fixed in 0.11.2 |
+| final-2 | whole-product audit of v0.11.2 | 99.90 → three minor findings (closed-issue references in active docs, session PR list, non-string `host`) fixed in 0.11.3, plus an issue-reference closure test |
 
 ## 5. Results
 
@@ -127,7 +128,7 @@ Dates are UTC release dates (GitHub `publishedAt`); the session ran into 2026-11
 
 ### 5.2 Pull requests
 
-#86 (0.8.0), #87, #89, #90 (0.9.0), #91 (0.9.1), #92, #93, #94, #96 (0.10.0), #97 (session record), #98, #99 (0.11.0), #100, #101 (0.11.1), #102 (final audit fixes).
+#86 (0.8.0), #87, #89, #90 (0.9.0), #91 (0.9.1), #92, #93, #94, #96 (0.10.0), #97 (session record), #98, #99 (0.11.0), #100, #101 (0.11.1), #102 (final audit fixes), #103 (0.11.2).
 
 ### 5.3 Issues filed (lessons learned / follow-ups)
 
