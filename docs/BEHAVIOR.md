@@ -265,7 +265,7 @@ See the [canonical CLI reference](../README.md#cli-reference),
   commands stay available.
 
 - `Memory.check(device, head, count, unit)` validates without mutation and returns the
-  device spec; other `unit` values raise ValueError.
+  device spec; `unit` is `"bit"` or `"word"`, and any other value raises ValueError.
 - `Memory.clear(latch_ranges, mode)` clears stored points (`latch`, `non_latch`, `all`),
   preserving SM/SD; other `mode` values raise ValueError.
 - `Server.password` exposes the configured simulated lock password; `set_state(state)`

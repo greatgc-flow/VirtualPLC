@@ -14,7 +14,7 @@
 
 Input-validation hardening from the v0.11.2 audit recommendations, plus issue housekeeping.
 
-- Fixed: `Memory.write_words` / `write_bits` given a non-iterable `values` (for example `5` or `None`) raise ValueError ("values must be an iterable of integers") instead of TypeError, and store nothing.
+- Fixed: `Memory.write_words` / `write_bits` / `write_atomic` given a non-iterable `values` (for example `5` or `None`) raise ValueError ("values must be an iterable of integers") instead of TypeError, and store nothing.
 - Fixed: `Memory.check(..., unit)` rejects units other than `"bit"` and `"word"` with ValueError (previously an unknown unit skipped the bit/word checks).
 - Fixed: `Memory.clear(latch_ranges, mode)` rejects modes other than `latch`, `non_latch` and `all` with ValueError before clearing anything (previously an unknown mode cleared nothing silently).
 - Issues: #13 is closed (all of its hardware-free items shipped); the remaining UDP `reorder` fault action is the backlog issue [#106](https://github.com/greatgc-flow/VirtualPLC/issues/106). DESIGN.md, FAULTS.md and HANDOFF.md point at #106.
