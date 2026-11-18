@@ -1,6 +1,7 @@
 # Client compatibility and verification boundaries
 
-**Baseline:** VirtualPLC v0.5.0, `main` at `1ccf10be7352`, reviewed 2026-10-31 KST.
+**Baseline:** first reviewed at VirtualPLC v0.5.0 (`main` `1ccf10be7352`, 2026-10-31 KST); re-checked for v0.11.4 on 2026-11-18 UTC.
+The client contract below is unchanged since then: the tested client is still PyPI `pymcprotocol==0.3.0`, and the fork snapshot is still the fork's `main` at `46eb391a2116`.
 
 This is the **single version-specific contract** for interpreting client-facing
 examples and regressions. It does not claim that a physical Mitsubishi PLC

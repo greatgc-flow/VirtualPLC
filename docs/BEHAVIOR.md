@@ -239,7 +239,7 @@ See the [canonical CLI reference](../README.md#cli-reference),
   (`min(manual_cap, max_points)` when set); direct `Memory` calls (`read_words`,
   `write_words`, `read_bits`, `write_bits`) are not capped. Direct writes validate
   every value as an integer (bools stored as 0/1) in range before storing any,
-  and raise ValueError otherwise.
+  and raise ValueError otherwise (including non-iterable `values`).
 - Random counts are uint8; total count zero or over-limit returns C053 (bits) or C054 (words/dwords) (manual-derived per SH-080008 p.98/105/108 and SH-081257 3.5; C053/C054 assignment unverified, not verified PLC behavior). Limits are keyed on the request wire class (`Wire` in `profiles.py`) and independent of `max_points`: read (0403) `words + dwords <= 192` (Q-class) / `96` (iQ-R); word/dword write (1402) `words*12 + dwords*14 <= 1920` (Q-class) / `960` (iQ-R); bit write (1402) `points <= 188` (Q-class) / `94` (iQ-R). A single zero count with the other nonzero is valid. Responses put words before dwords; dwords store low word first.
 - Duplicate/overlapping random writes apply in wire order. SS/SC/SN use STS/STC/STN
   client names.
@@ -265,9 +265,9 @@ See the [canonical CLI reference](../README.md#cli-reference),
   commands stay available.
 
 - `Memory.check(device, head, count, unit)` validates without mutation and returns the
-  device spec.
+  device spec; `unit` is `"bit"` or `"word"`, and any other value raises ValueError.
 - `Memory.clear(latch_ranges, mode)` clears stored points (`latch`, `non_latch`, `all`),
-  preserving SM/SD.
+  preserving SM/SD; other `mode` values raise ValueError.
 - `Server.password` exposes the configured simulated lock password; `set_state(state)`
   updates state and SD203.
 - Direct memory/state access is intended for test setup; callers must serialize it with
