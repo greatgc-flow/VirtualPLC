@@ -112,9 +112,10 @@ class Memory:
             if unit not in ("bit", "word"):
                 raise ValueError("write_atomic needs bit or word unit")
             try:
-                values = list(iter(raw_values))
+                iterator = iter(raw_values)
             except TypeError as exc:
                 raise ValueError("write_atomic values must be an iterable of integers") from exc
+            values = list(iterator)
             if any(type(v) is not int for v in values):
                 raise ValueError("write_atomic values must be integers")
             max_value = 1 if unit == "bit" else 0xFFFF
