@@ -221,5 +221,5 @@ other UDP listeners.
 No retransmission, streaming, request-side fault, reorder, authentication
 or timing guarantee is implied. Whether the two `duplicate` datagrams, or any
 datagram, arrive and in which order is up to the network; loopback tests
-only observe the send order. Reorder remains open #13 scope (see
+only observe the send order. Reorder is backlog issue #106 (see
 [DESIGN](DESIGN.md)). No actual PLC or production network should be used.

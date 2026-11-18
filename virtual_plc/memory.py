@@ -27,7 +27,11 @@ def valid_span(device, span):
 
 def _integers(values, maximum, message):
     """Validate every value before any storage changes; bools are stored as 0/1."""
-    values = list(values)
+    try:
+        iterator = iter(values)
+    except TypeError as exc:
+        raise ValueError("values must be an iterable of integers") from exc
+    values = list(iterator)
     if not all(isinstance(value, int) and 0 <= value <= maximum for value in values):
         raise ValueError(message)
     return [int(value) for value in values]
@@ -136,6 +140,8 @@ class Memory:
 
     def check(self, device, head, count, unit):
         """Validate one access; `count` is in `unit`s. Returns the device spec."""
+        if unit not in ("bit", "word"):
+            raise ValueError('unit must be "bit" or "word"')
         if type(head) is not int or type(count) is not int:
             raise ValueError("memory head and count must be int (not bool/float)")
         spec = self.profile.devices.get(device)
@@ -182,6 +188,8 @@ class Memory:
 
         mode is latch, non_latch, or all. Special devices are always preserved.
         """
+        if mode not in ("latch", "non_latch", "all"):
+            raise ValueError('mode must be "latch", "non_latch" or "all"')
         for device, cells in self._cells.items():
             if device in {"SM", "SD"}:
                 continue

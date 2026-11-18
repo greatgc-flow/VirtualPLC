@@ -289,7 +289,7 @@ because 1E replies can be 2 bytes and the plan is validated without knowing
 the frame. The match model (command, global nth, peer IP) is unchanged and
 one action applies per response.
 
-Remaining #13 scope: **reorder** is not implemented. It needs a held reply
+Remaining scope (backlog [#106](https://github.com/greatgc-flow/VirtualPLC/issues/106), split from #13): **reorder** is not implemented. It needs a held reply
 that is released by a later response (or by stop/timeout), i.e. cross-request
 state in the listener worker plus a bounded release rule; it does not fall out
 of the one-response/one-action model. A scheduler also remains out of scope.

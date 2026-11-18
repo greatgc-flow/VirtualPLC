@@ -126,6 +126,7 @@ Dates are UTC release dates (GitHub `publishedAt`); the session ran into 2026-11
 | 0.11.1 | 2026-11-10 | `-v` logs one line per IP per 10 s for UDP rate-limit drops; rate limit × fault-action tests; troubleshoot hint (#95) |
 | 0.11.2 | 2026-11-11 | Whole-product audit fixes: oracle stdout bytes, deep-JSON exit 2, ValueError for bad profile/limits/state, `UdpFaultPlan.from_file` documented, TCP `corrupt_header` short-reply guard |
 | 0.11.3 | 2026-11-11 | v0.11.2 audit fixes: non-string `host` raises ValueError, active docs cite only open issues (closure test), session record PR list |
+| 0.11.4 | 2026-11-18 | Audit recommendations: ValueError for non-iterable write values and unknown `check` unit / `clear` mode; #13 closed, reorder moved to backlog #106 |
 
 ### 5.2 Pull requests
 
@@ -141,7 +142,7 @@ Dates are UTC release dates (GitHub `publishedAt`); the session ran into 2026-11
 
 ### 5.4 Open items
 
-- #13 remaining: UDP reorder action.
+- #106: UDP reorder action (backlog, split from #13 on 2026-11-18; #13 closed).
 - #78: 1.0 enforcement (add `*`, remove the shim).
 - §6 peer-instruction diet (R7).
 
@@ -188,7 +189,7 @@ replace the version and commit):
   runs the full suite).
 - Grid: rows P1–P7 × columns Q1–Q6 (§2.1), closure checks C1–C8, materiality
   rule (§2.2). Out of scope but must be documented as open: #78 (1.0
-  enforcement), #13 (UDP reorder), #2, #5, #68, #69 (external evidence).
+  enforcement), #106 (UDP reorder), #2, #5, #68, #69 (external evidence).
 - Output (≤ 600 words): 42-cell table, C1–C8 verdicts, overall average,
   numbered material findings (cell, evidence, repro, exact fix) or "none",
   out-of-scope confirmation, recommendations without deduction.

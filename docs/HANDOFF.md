@@ -1,14 +1,24 @@
 # VirtualPLC — Project Handoff
 
 ## Current state
-- Released version: v0.11.3 (2026-11-11); previous v0.11.2 (2026-11-11). Release dates are UTC (GitHub `publishedAt`).
+- Released version: v0.11.4 (2026-11-18); previous v0.11.3 (2026-11-11). Release dates are UTC (GitHub `publishedAt`).
 - Upstream client oracle pin: `pymcprotocol==0.3.0` (`requirements-dev.txt`).
 - Governance tracker #54 closed (rulesets active: branch 26796594, tag 26796603; see [gates](governance/BRANCH_RELEASE_GATES_20261102.md)); #7 closed. Rebase each PR onto main and get fresh required checks before merging (strict=false).
-- Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #13 (narrowed hardware-free scope), #25 (handoff), #78 (keyword-only API, 1.0; design comment posted).
+- Open issues: #2, #5, #68, #69 (blocked on vendor/physical evidence), #106 (UDP reorder backlog, split from #13), #25 (handoff), #78 (keyword-only API, 1.0; design comment posted).
 - Ruleset 26796594 requires 11 checks (build + Ubuntu/Windows 3.10–3.14) since 2026-11-09; `test-macos` is informational.
 - Release gate: tag only a main commit whose `ci.yml` push run succeeded (release.yml enforces it).
 - Active documentation SSOT: see [AGENTS.md](../AGENTS.md) and [README.md](../README.md).
 - Session record (requirements, design, process, scores, results) from 0.8.0 onward: [SESSION_20261110](handoff/SESSION_20261110_MECE_REVIEW_AND_RELEASES.md).
+
+## 2026-11-18 release 0.11.4 — release-note source
+
+Input-validation hardening from the v0.11.2 audit recommendations, plus issue housekeeping.
+
+- Fixed: `Memory.write_words` / `write_bits` given a non-iterable `values` (for example `5` or `None`) raise ValueError ("values must be an iterable of integers") instead of TypeError, and store nothing.
+- Fixed: `Memory.check(..., unit)` rejects units other than `"bit"` and `"word"` with ValueError (previously an unknown unit skipped the bit/word checks).
+- Fixed: `Memory.clear(latch_ranges, mode)` rejects modes other than `latch`, `non_latch` and `all` with ValueError before clearing anything (previously an unknown mode cleared nothing silently).
+- Issues: #13 is closed (all of its hardware-free items shipped); the remaining UDP `reorder` fault action is the backlog issue [#106](https://github.com/greatgc-flow/VirtualPLC/issues/106). DESIGN.md, FAULTS.md and HANDOFF.md point at #106.
+- Docs: CLIENT_COMPATIBILITY.md records that its client baseline was re-checked for this release (the client contract is unchanged).
 
 ## 2026-11-11 release 0.11.3 — release-note source
 

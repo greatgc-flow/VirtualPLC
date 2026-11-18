@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ACTIVE_DOCS = [ROOT / "README.md", ROOT / "llms.txt", ROOT / "AGENTS.md"] + [
     path for path in sorted((ROOT / "docs").glob("*.md")) if path.name != "HANDOFF.md"]
 # Closed issues an active doc may cite only as delivered work ("Resolved: ... #95").
-RESOLVED_FEATURES = {79, 95}
+RESOLVED_FEATURES = {13, 79, 95}
 # Closed issue cited as implementation history; each citation line must say "(closed)".
 HISTORY = {("docs/ETHERNET_MODEL_SETTINGS.md", 14)}
 # "#N" that is not a PR, a vendor FAQ number or an HTML entity.
