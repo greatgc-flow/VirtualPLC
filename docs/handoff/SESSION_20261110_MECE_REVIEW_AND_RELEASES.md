@@ -132,6 +132,8 @@ Dates are UTC release dates (GitHub `publishedAt`); the session ran into 2026-11
 
 #86 (0.8.0), #87, #89, #90 (0.9.0), #91 (0.9.1), #92, #93, #94, #96 (0.10.0), #97 (session record), #98, #99 (0.11.0), #100, #101 (0.11.1), #102 (final audit fixes), #103 (0.11.2), #104 (v0.11.2 audit fixes and 0.11.3), #105 (session record §7), #107 (0.11.4).
 
+Convention: a release PR carries its version in parentheses, `#N (X.Y.Z)`. The closure test `test_session_record_pr_list_covers_every_release_row` requires every §5.1 version to appear this way.
+
 ### 5.3 Issues filed (lessons learned / follow-ups)
 
 - peerhub [#338](https://github.com/greatgc-flow/peerhub/issues/338) — show which store `diag` reads

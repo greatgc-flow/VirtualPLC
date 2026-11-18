@@ -76,6 +76,16 @@ def test_write_atomic_non_iterable_raises_value_error(bad_values):
     assert mem.read_words("D", 0, 1) == [9]
 
 
+def test_write_atomic_does_not_relabel_a_typeerror_raised_while_iterating():
+    def broken():
+        yield 1
+        raise TypeError("boom")
+
+    mem = Memory()
+    with pytest.raises(TypeError, match="boom"):
+        mem.write_atomic([("D", 0, "word", broken())])
+
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
